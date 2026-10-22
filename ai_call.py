@@ -1,6 +1,6 @@
 """
-Sistema de IA para chamadas da Órbita — "Lula Droid"
-Ativação por comando de voz: "Ei Lula Droid" + desejo ou pesquisa.
+Sistema de IA para chamadas da Órbita — "Lula"
+Ativação por comando de voz: "Ei Lula" + desejo ou pesquisa.
 Integração preparada para LLM Grok + memória adaptável.
 """
 from __future__ import annotations
@@ -20,7 +20,7 @@ from pathlib import Path
 STT_PROVIDER = os.getenv("AI_STT_PROVIDER", "simulation")
 LLM_PROVIDER = os.getenv("AI_LLM_PROVIDER", "grok")  # preparado para Grok
 AI_ENABLED = os.getenv("AI_CALL_ENABLED", "true").lower() == "true"
-WAKE_WORD = "ei lula droid"
+WAKE_WORD = "ei lula"
 MEMORY_FILE = Path(os.getenv("LULA_MEMORY_FILE") or (Path(tempfile.gettempdir()) / "orbita_lula_droid_memory.json"))
 MAX_TEXT = 2000
 MAX_ENTRIES_PER_CALL = 200
@@ -118,25 +118,16 @@ def _normalize(text: str) -> str:
     return unicodedata.normalize("NFD", text or "").encode("ascii", "ignore").decode().lower()
 
 def detect_wake_word(text: str) -> tuple[bool, str]:
-    """Detecta Ei/Eai/Oi/Ola Lula Droid e extrai o restante como comando."""
+    """Detecta Ei/Eai/Oi/Olá Lula e extrai a pergunta; não aceita Lula."""
     raw = str(text or "")
     if not raw.strip():
         return False, ""
-    # Aceita "eai", "e aí", "ei", "oi", "olá", com ou sem acento/hífen/espaço.
     pattern = re.compile(
-        r"\b(?:ei|e\s*a[ií]|oi|ol[aá])\s*[,!.]?\s*lula\s*[-_]?\s*droid\b[\s,.:;!?\-]*(?P<command>.*)",
+        r"\b(?:ei|e\s*a[ií]|oi|ol[aá])\s*[,!.]?\s*lula\b[\s,.:;!?-]*(?P<command>.*)",
         re.IGNORECASE | re.DOTALL,
     )
     match = pattern.search(raw)
-    if match:
-        return True, match.group("command").strip()
-    # Fallback para textos já normalizados (sem acento).
-    normalized = _normalize(raw)
-    for variant in ("eai lula droid", "e ai lula droid", "ei lula droid", "ei luladroid", "eai luladroid", "oi lula droid", "ola lula droid"):
-        if variant in normalized:
-            idx = normalized.find(variant)
-            return True, normalized[idx + len(variant):].strip(" ,.:;!?-")
-    return False, ""
+    return (True, match.group("command").strip()) if match else (False, "")
 
 def simulate_stt(audio_chunk_info: dict) -> str:
     return audio_chunk_info.get("sample_text") or "Fala simulada."
@@ -166,13 +157,13 @@ def generate_opinion(context: list[dict], question: str = "", use_memory: bool =
     searched = any(w in (question + context_text).lower() for w in ["pesquisa", "busca", "internet", "atual", "notícia", "procure"])
     if searched:
         answer = (
-            f"Lula Droid aqui. Com base no que foi falado{memory_hint} e numa consulta simulada: "
+            f"Lula aqui. Com base no que foi falado{memory_hint} e numa consulta simulada: "
             "o assunto merece confirmação em fontes confiáveis. "
             f"Analisei {len(context)} falas recentes."
         )
     else:
         answer = (
-            f"Lula Droid: analisei o contexto da chamada{memory_hint}. "
+            f"Lula: analisei o contexto da chamada{memory_hint}. "
             "Minha opinião é que o ponto discutido está coerente e pode ser aprofundado. "
             "Se quiser que eu pesquise algo específico, é só pedir."
         )
@@ -213,7 +204,7 @@ async def generate_answer(context: list[dict], question: str = "") -> dict:
 
     key = os.getenv("NVIDIA_API_KEY", "").strip()
     if not key:
-        raise HTTPException(503, "Configure NVIDIA_API_KEY no servidor para usar o LulaDroid.")
+        raise HTTPException(503, "Configure NVIDIA_API_KEY no servidor para usar o Lula.")
 
     model = os.getenv("NVIDIA_NIM_MODEL", "nvidia/nemotron-3-ultra-550b-a55b").strip()
     # "nvidia_nim/" is a LiteLLM routing prefix, not part of NVIDIA's API model ID.
@@ -232,7 +223,7 @@ async def generate_answer(context: list[dict], question: str = "") -> dict:
     query = (question or "Resuma o que foi falado até agora.")[:1000]
     messages = [
         {"role": "system", "content": (
-            "Você é LulaDroid, assistente de voz da Órbita. Responda em português "
+            "Você é Lula, assistente de voz da Órbita. Responda em português "
             "brasileiro, naturalmente, em até 80 palavras. Para perguntas sobre a "
             "conversa, baseie-se apenas no histórico fornecido. Se a resposta não "
             "constar do histórico, diga que não foi mencionada. Não invente falas, "
