@@ -40,12 +40,13 @@ export function initProfileAppearance(ctx) {
   }
 
   function openDecorationGallery() {
-    showDialog('Profile Decoration', container => {
+    showDialog('Decorações de Perfil', container => {
       container.classList.add('decoration-dialog');
       const hero = el('div', 'deco-hero');
       const heroIcon = el('div', 'deco-hero-icon', '✦');
-      const heroText = el('div');
-      heroText.append(el('p', '', 'Efeitos, quadros e capas para destacar o seu perfil. Escolha o seu favorito — tudo grátis.'));
+      heroIcon.setAttribute('aria-hidden', 'true');
+      const heroText = el('div', 'deco-hero-text');
+      heroText.append(el('h3', 'deco-title', 'Decorações de Perfil'), el('p', '', 'Personalize seu perfil com efeitos exclusivos e destaque-se na Órbita.'));
       hero.append(heroIcon, heroText);
       container.append(hero);
 
@@ -58,6 +59,7 @@ export function initProfileAppearance(ctx) {
       let prefs = loadProfilePrefs();
       let showAll = false;
       const tabs = el('div', 'shop-tabs');
+      tabs.setAttribute('role', 'tablist');
       const grid = el('div', 'shop-grid');
       const more = button('Ver todos', () => { showAll = !showAll; render(); }, 'deco-show-all');
       const foot = el('div', 'deco-foot');
@@ -103,8 +105,8 @@ export function initProfileAppearance(ctx) {
         }
         art.append(avatar);
         if (current === 'effect') art.append(el('span', 'deco-aura'), el('span', 'deco-spark s1'), el('span', 'deco-spark s2'), el('span', 'deco-spark s3'));
-        if (selectedId() === d.id) art.append(el('span', 'deco-check', '✓'));
         card.append(art);
+        if (selectedId() === d.id) card.append(el('span', 'deco-check', '✓'));
         const meta = el('div', 'deco-meta');
         meta.append(el('strong', '', d.name), el('small', '', d.theme || 'Efeito'));
         card.append(meta, el('span', 'deco-price', 'Grátis'));
@@ -112,6 +114,8 @@ export function initProfileAppearance(ctx) {
         return card;
       }
 
+      const footText = el('div', 'deco-foot-text');
+      footText.append(el('p', '', 'Todas as decorações listadas são gratuitas.'), el('small', '', 'Escolha uma e destaque seu perfil!'));
       function render() {
         grid.replaceChildren();
         const all = DECORATIONS.filter(d => d.type === current);
@@ -126,7 +130,7 @@ export function initProfileAppearance(ctx) {
         });
         foot.replaceChildren(
           el('span', 'deco-free-icon', '✦'),
-          el('p', '', 'Todas as decorações são gratuitas. Escolha uma e destaque seu perfil.'),
+          footText,
         );
       }
 
@@ -156,7 +160,9 @@ export function initProfileAppearance(ctx) {
         render();
         toast('Decoração removida.');
       }, 'deco-clear');
-      container.append(tabs, grid, more, foot, clear);
+      const links = el('div', 'deco-links');
+      links.append(more, clear);
+      container.append(tabs, grid, links, foot);
       render();
     });
   }
