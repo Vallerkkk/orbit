@@ -1851,6 +1851,9 @@ body[data-color-mode=light] .jump-latest{background:#fff;color:#222333;box-shado
 @media(max-width:780px){
   #luladroid-toggle{width:44px!important;min-width:44px!important;padding:0!important;font-size:0;gap:0;justify-content:center}
   #luladroid-toggle::before{font-size:19px}
+  /* "Ouvir juntos" continua no menu "Mais opções" da chamada. */
+  #voice-view .chat-actions .feature-options{display:none!important}
+  #voice-view .chat-actions{gap:5px}
   .luladroid-panel{
     left:8px;right:8px;top:auto;bottom:calc(8px + env(safe-area-inset-bottom));
     width:auto;max-height:min(74dvh,560px);
