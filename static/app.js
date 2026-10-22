@@ -610,7 +610,7 @@ function updateCallUI() {
       let card=participantCards.get(participant.identity);
       if(!card){card=el('div','participant');card.dataset.participantId=participant.identity;card.append(el('span','avatar'),el('strong','participant-name'),el('small','participant-status'));
         participantCards.set(participant.identity,card);}
-      card.classList.toggle('speaking',!!participant.isSpeaking);const name=peopleById.get(participant.identity)?.display_name||participant.name||'Participante';card.querySelector('.avatar').textContent=initials(name);card.querySelector('.participant-name').textContent=name;
+      card.classList.toggle('speaking',!!participant.isSpeaking);const name=peopleById.get(participant.identity)?.display_name||participant.name||'Participante';setAvatar(card.querySelector('.avatar'),{...person(participant.identity),display_name:name});card.querySelector('.participant-name').textContent=name;
       card.dataset.mic=participant.isMicrophoneEnabled?'on':'off';card.querySelector('.participant-status').textContent=`${participant.isMicrophoneEnabled?'Microfone ligado':'Microfone desligado'} · ${qualityText(participant.connectionQuality)}`;
       for(const slider of card.querySelectorAll('input[data-audio-source]')){
         const source=slider.dataset.audioSource;slider.setAttribute('aria-label',(source==='microphone'?'Volume do microfone de ':'Volume da transmissão de ')+name);
@@ -917,7 +917,21 @@ async function hydrateProfileMedia(){
   while(profileMediaUrls.size>256)profileMediaUrls.delete(profileMediaUrls.keys().next().value);
   for(const p of profiles){p.avatar_src=profileMediaUrls.get(p.avatar_url)?.url||'';p.banner_src=profileMediaUrls.get(p.banner_url)?.url||'';}
 }
-function setAvatar(node,p){node.dataset.userId=p?.id||'';node.textContent=initials(p?.display_name);node.style.backgroundColor=p?.avatar_color||'#8b80ff';node.style.color=p?.avatar_src?'transparent':foreground(p?.avatar_color||'#8b80ff');node.style.backgroundImage=p?.avatar_src?`url("${p.avatar_src.replaceAll('"','%22')}")`:'';node.classList.toggle('has-photo',!!p?.avatar_src);}
+function setAvatar(node,p){
+  // Foto como <img> real (object-fit: cover, centralizada) com as iniciais por baixo como fallback.
+  // Antes era background-image: quadros de decoração com `background:` resetavam o background-size (zoom/recorte)
+  // e URLs assinadas expiradas deixavam um círculo vazio.
+  const src=p?.avatar_src||'',color=p?.avatar_color||'#8b80ff';node.dataset.userId=p?.id||'';node.style.backgroundColor=color;node.style.backgroundImage='';
+  let label=node.querySelector(':scope>.avatar-initials'),img=node.querySelector(':scope>img.avatar-img');
+  if(!label||[...node.childNodes].some(n=>n!==label&&n!==img)){node.replaceChildren();label=el('span','avatar-initials');node.append(label);img=null;}
+  label.textContent=initials(p?.display_name);node.style.color=foreground(color);
+  if(!src||avatarFailed.has(src)){img?.remove();node.classList.remove('has-photo');return;}
+  if(!img){img=el('img','avatar-img');img.alt='';img.decoding='async';img.draggable=false;node.append(img);}
+  img.onerror=()=>{avatarFailed.add(src);img.remove();node.classList.remove('has-photo');node.style.color=foreground(color);refreshAvatarUrls(p);};
+  if(img.getAttribute('src')!==src)img.src=src;node.classList.add('has-photo');
+}
+const avatarFailed=new Set();let avatarRefreshTimer=0;
+function refreshAvatarUrls(p){if(p?.avatar_url)profileMediaUrls.delete(p.avatar_url);if(avatarRefreshTimer)return;avatarRefreshTimer=setTimeout(async()=>{avatarRefreshTimer=0;try{await hydrateProfileMedia();}catch{}for(const node of document.querySelectorAll('.avatar-initials'))if(!node.parentElement.classList.contains('has-photo')){const id=node.parentElement.dataset.userId,q=id&&peopleById.get(id);if(q?.avatar_src&&!avatarFailed.has(q.avatar_src))setAvatar(node.parentElement,q);}},1500);}
 async function initSocial() {
   const transition=sessionTransition,uid=session?.user.id,current=()=>sessionTransition===transition&&session?.user.id===uid;
   await loadSocial();
