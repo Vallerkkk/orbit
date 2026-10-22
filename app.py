@@ -2,6 +2,7 @@
 import os
 import json
 import re
+import time
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from pathlib import Path
@@ -227,42 +228,76 @@ from ai_call import (
     add_transcript,
 )
 
+async def is_site_admin(identity):
+    """Confirma o cargo no banco com o JWT do usuário, nunca com dado do cliente."""
+    user, headers = identity
+    s = settings()
+    if not s['SUPABASE_URL'] or not s['SUPABASE_PUBLISHABLE_KEY']:
+        raise HTTPException(503, 'Configure o Supabase no arquivo .env.')
+    try:
+        async with client_for(app) as client:
+            response = await client.get(s['SUPABASE_URL'] + '/rest/v1/site_roles', headers=headers,
+                params={'user_id': 'eq.' + user['id'], 'select': 'role'})
+    except httpx.HTTPError:
+        raise HTTPException(503, 'Não foi possível verificar a administração.')
+    if response.is_error:
+        raise HTTPException(503, 'Não foi possível verificar a administração.')
+    roles = read_json(response, list)
+    return any(isinstance(r, dict) and r.get('role') in ('admin', 'creator') for r in roles)
+
+async def require_site_admin(identity):
+    if not await is_site_admin(identity):
+        raise HTTPException(403, 'Transcrições disponíveis somente aos administradores.')
+    return identity
+
+def ai_call_id(value):
+    call_id = str(value or '').strip()
+    if not re.fullmatch(r'[A-Za-z0-9_-]{1,80}', call_id):
+        raise HTTPException(400, 'call_id inválido.')
+    return call_id
+
 @app.get("/api/ai/status")
 async def ai_status():
     return {"enabled": ai_enabled(), "stt": "simulation", "llm": "simulation"}
 
 @app.post("/api/ai/transcript")
 async def ai_transcript(payload: dict, identity=Depends(current_user)):
-    """Recebe um chunk de áudio transcrito (ou simulado) de um participante."""
+    """Recebe uma fala já transcrita. O autor vem sempre do token, não do corpo."""
     if not ai_enabled():
         raise HTTPException(503, "IA de chamadas desativada.")
-    call_id = str(payload.get("call_id") or "")
-    user_id = str(payload.get("user_id") or "")
-    display_name = str(payload.get("display_name") or "Participante")
+    user, _ = identity
+    call_id = ai_call_id(payload.get("call_id"))
     text = str(payload.get("text") or "").strip()
-    if not call_id or not user_id or not text:
-        raise HTTPException(400, "call_id, user_id e text são obrigatórios.")
-    entry = add_transcript(call_id, user_id, display_name, text, time.time(), time.time())
+    if not text:
+        raise HTTPException(400, "text é obrigatório.")
+    if len(text) > 2000:
+        raise HTTPException(413, "Fala limitada a 2000 caracteres.")
+    display_name = str(payload.get("display_name") or (user.get('user_metadata') or {}).get('display_name') or "Participante").strip()[:60]
+    entry = add_transcript(call_id, user['id'], display_name, text, time.time(), time.time())
     return {"ok": True, "entry": entry}
 
 @app.get("/api/ai/transcript/{call_id}")
 async def ai_get_transcript(call_id: str, identity=Depends(current_user)):
+    await require_site_admin(identity)
+    call_id = ai_call_id(call_id)
     items = get_recent_transcript(call_id)
     return {"call_id": call_id, "items": items, "count": len(items)}
 
 @app.post("/api/ai/opinion")
 async def ai_opinion(payload: dict, identity=Depends(current_user)):
-    """Pede opinião da IA sobre o assunto da chamada (com opção de pesquisa)."""
+    """Pede opinião da IA. Contexto de chamada só é usado para administradores."""
     if not ai_enabled():
         raise HTTPException(503, "IA de chamadas desativada.")
-    call_id = str(payload.get("call_id") or "")
-    question = str(payload.get("question") or "")
-    context = get_recent_transcript(call_id)
+    call_id = ai_call_id(payload.get("call_id"))
+    question = str(payload.get("question") or "").strip()[:1000]
+    context = get_recent_transcript(call_id) if await is_site_admin(identity) else []
     result = generate_opinion(context, question)
     return result
 
 @app.delete("/api/ai/transcript/{call_id}")
 async def ai_clear(call_id: str, identity=Depends(current_user)):
+    await require_site_admin(identity)
+    call_id = ai_call_id(call_id)
     clear_call(call_id)
     return {"ok": True}
 

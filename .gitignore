@@ -13,3 +13,7 @@ supabase/.temp/
 
 static/dist/meta.json
 npm-debug.log
+artifacts/
+orbita_lula_droid_memory.json
+work-*.log
+work-*.err

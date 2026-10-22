@@ -1,6 +1,7 @@
 """Teste do Lula Droid: wake word, opinião e memória adaptável."""
 import json
 from datetime import datetime
+from pathlib import Path
 from ai_call import (
     process_audio_chunk, get_recent_transcript, generate_opinion,
     clear_call, get_memory_summary, detect_wake_word
@@ -25,6 +26,9 @@ def main():
     # Wake word
     woke, cmd = detect_wake_word("Ei Lula Droid, o que você acha do andamento?")
     log("Wake word detectado", {"woke": woke, "command": cmd})
+    eai_woke, eai_cmd = detect_wake_word("eai LulaDroid qual a capital?")
+    if not eai_woke or "capital" not in eai_cmd:
+        raise AssertionError("Variação eai LulaDroid não reconhecida")
 
     result = process_audio_chunk(
         call_id, "u1", "Ana",
@@ -41,7 +45,8 @@ def main():
     log("Memória adaptável", mem)
 
     log("Teste concluído")
-    out = "/workspace/artifacts/lula_droid_test_log.json"
+    out = Path(__file__).resolve().parent / "artifacts" / "lula_droid_test_log.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "w", encoding="utf-8") as f:
         json.dump({"test": "Lula Droid - Grok + memória", "entries": LOG}, f, ensure_ascii=False, indent=2)
     print(f"Log: {out}")
