@@ -1,8 +1,8 @@
 let binary;
-export function createNoiseProcessor(){
+export function createNoiseProcessor(defaults={}){
   return {
     name:'orbita-rnnoise',processedTrack:undefined,
-    async init({track, sensitivity=50, mode='enhanced'}){
+    async init({track, sensitivity=defaults.sensitivity??50, mode=defaults.mode??'enhanced'}){
       try{
         const Audio=window.AudioContext||window.webkitAudioContext;
         this.context=new Audio({sampleRate:48000});

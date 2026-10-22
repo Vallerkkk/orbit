@@ -23,9 +23,9 @@ export function initAudioControls(ctx){
     record.pending=(async()=>{do{record.again=false;
       if(!enhanced()){if(record.processor){await track.stopProcessor();record.processor=null;}continue;}
       if(record.processor)continue;
-      const processor=createNoiseProcessor();
+      // O LiveKit chama processor.init() dentro de setProcessor; iniciar antes criava um segundo AudioContext.
+      const processor=createNoiseProcessor({sensitivity:sensitivity(),mode:noiseMode()});
       try{
-        await processor.init({track:track.mediaStreamTrack||track, sensitivity:sensitivity(), mode:noiseMode()});
         await requestWithDeadline(()=>track.setProcessor(processor),{timeout:12000});
         if(ctx.room()!==room){await track.stopProcessor();return;}
         record.processor=processor;
