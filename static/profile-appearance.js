@@ -1,4 +1,5 @@
 import {DECORATIONS} from './profile-decoration-catalog.js';
+import {uiSound} from './ui-sounds.js';
 
 export function initProfileAppearance(ctx) {
   const {el, button, showDialog, loadProfilePrefs, saveProfilePrefs, applyDecorations, toast} = ctx;
@@ -95,6 +96,7 @@ export function initProfileAppearance(ctx) {
         const applied = stored(cat()) === d.id;
         const c = el('button', 'dg-card' + (selected ? ' selected' : ''));
         c.type = 'button';
+        c.dataset.decoId = d.id;
         c.setAttribute('aria-pressed', String(selected));
         c.setAttribute('aria-label', d.name + (applied ? ' — aplicado' : ''));
         const stage = el('div', 'dg-stage ' + (current === 'effect' ? d.css || '' : ''));
@@ -107,7 +109,8 @@ export function initProfileAppearance(ctx) {
         const meta = el('div', 'dg-meta');
         meta.append(el('strong', '', d.name), el('small', '', d.theme || ''));
         c.append(meta);
-        c.onclick = () => { pending[current] = d.id; render(); };
+        c.onmouseenter = () => uiSound('tick', {gap: 160});
+        c.onclick = () => { const changed = pending[current] !== d.id; pending[current] = d.id; render(); if (changed) { uiSound('chime'); const fresh = grid.querySelector(`[data-deco-id="${CSS.escape(d.id)}"]`); fresh?.classList.add('dg-just-selected'); fresh?.focus({preventScroll: true}); } };
         c.ondblclick = () => { pending[current] = d.id; applyAll(); };
         return c;
       }
@@ -130,7 +133,7 @@ export function initProfileAppearance(ctx) {
           if (c.id === 'name') next.effect = find('name', pending.name)?.value || '';
           else next[c.key] = pending[c.id] || c.empty;
         }
-        persist(next); render(); toast('Decorações aplicadas.');
+        persist(next); render(); uiSound('chime'); toast('Decorações aplicadas.');
       }
       function removeCurrent() {
         const c = cat(), next = {...loadProfilePrefs()};
@@ -144,7 +147,7 @@ export function initProfileAppearance(ctx) {
         t.type = 'button'; t.dataset.category = c.id; t.setAttribute('role', 'tab');
         const count = DECORATIONS.filter(d => d.type === c.id).length;
         t.append(el('span', 'dg-tab-icon', c.icon), el('span', '', c.label), el('small', 'dg-count', String(count)));
-        t.onclick = () => { current = c.id; render(); };
+        t.onclick = () => { if (current === c.id) return; current = c.id; render(); uiSound('tab'); grid.classList.remove('dg-switch'); void grid.offsetWidth; grid.classList.add('dg-switch'); };
         tabs.append(t);
       });
 

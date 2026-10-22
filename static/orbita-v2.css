@@ -437,3 +437,34 @@ body[data-color-mode=light] #app-dialog #dialog-title { color: #1b1d2b; } body[d
 @media (prefers-reduced-motion: reduce) { .dg-stage *, .dg-stage::before, .dg-stage::after { animation-duration: 0s !important; } }
 /* Avatares decorados em qualquer lugar: imagem sempre recortada, nunca estica o layout */
 .avatar > img, .up-avatar > img, .rp-avatar > img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ===== Decorações — animações dos cards (layout aprovado inalterado) ===== */
+.dg-card { transition: transform .22s cubic-bezier(.2,.8,.2,1), border-color .2s, box-shadow .25s; will-change: transform; }
+.dg-card:hover, .dg-card:focus-visible { transform: translateY(-4px); border-color: rgba(224,122,214,.55) !important; box-shadow: 0 0 0 1px rgba(224,122,214,.25), 0 12px 28px -12px rgba(224,122,214,.55); }
+.dg-card .dg-stage > .dg-avatar, .dg-card .dg-stage > .dg-banner, .dg-card .dg-stage-name { transition: transform .35s cubic-bezier(.2,.8,.2,1), filter .35s; }
+.dg-card:hover .dg-stage > .dg-avatar, .dg-card:focus-visible .dg-stage > .dg-avatar { transform: scale(1.08); }
+.dg-card:hover .dg-stage > .dg-banner { transform: scale(1.06); filter: saturate(1.25); }
+.dg-card:hover .dg-stage-name { transform: scale(1.1); }
+/* Ciclo leve em repouso; acelera e ganha brilho no hover */
+.dg-stage { animation: dg-idle 6s ease-in-out infinite; }
+.dg-card:nth-child(3n+2) .dg-stage { animation-delay: -2s; } .dg-card:nth-child(3n) .dg-stage { animation-delay: -4s; }
+.dg-card:hover .dg-stage { animation: dg-hover 1.6s ease-in-out infinite; }
+.dg-stage > .dg-avatar::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; pointer-events: none; opacity: 0; box-shadow: 0 0 18px 4px rgba(224,122,214,.55); transition: opacity .3s; }
+.dg-card:hover .dg-stage > .dg-avatar::after { opacity: 1; animation: dg-glow 1.6s ease-in-out infinite; }
+.dg-card.dg-just-selected { animation: dg-pop .42s cubic-bezier(.3,1.6,.5,1); }
+.dg-card.dg-just-selected .dg-check { animation: dg-bounce .5s cubic-bezier(.3,1.8,.5,1) both; }
+.dg-grid.dg-switch > .dg-card { animation: dg-in .32s cubic-bezier(.2,.8,.2,1) both; }
+.dg-grid.dg-switch > .dg-card:nth-child(n+2) { animation-delay: .02s; } .dg-grid.dg-switch > .dg-card:nth-child(n+4) { animation-delay: .05s; } .dg-grid.dg-switch > .dg-card:nth-child(n+7) { animation-delay: .08s; } .dg-grid.dg-switch > .dg-card:nth-child(n+11) { animation-delay: .11s; }
+.dg-tab { transition: background .25s, color .2s, box-shadow .25s, transform .15s; } .dg-tab:active { transform: scale(.96); }
+.dg-apply:not(:disabled) { animation: dg-ready 2.4s ease-in-out infinite; }
+@keyframes dg-idle { 0%,100% { background-position: 50% 40%; filter: brightness(1); } 50% { filter: brightness(1.08); } }
+@keyframes dg-hover { 0%,100% { filter: brightness(1.05) saturate(1.1); } 50% { filter: brightness(1.2) saturate(1.3); } }
+@keyframes dg-glow { 0%,100% { box-shadow: 0 0 12px 2px rgba(224,122,214,.4); } 50% { box-shadow: 0 0 22px 6px rgba(224,122,214,.65); } }
+@keyframes dg-pop { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
+@keyframes dg-bounce { 0% { transform: scale(0); } 60% { transform: scale(1.3); } 100% { transform: scale(1); } }
+@keyframes dg-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes dg-ready { 0%,100% { box-shadow: 0 4px 14px rgba(224,122,214,.25); } 50% { box-shadow: 0 6px 22px rgba(224,122,214,.5); } }
+@media (prefers-reduced-motion: reduce) {
+  .dg-card, .dg-card *, .dg-card *::after, .dg-stage, .dg-grid > .dg-card, .dg-apply, .dg-tab { animation: none !important; transition: none !important; }
+  .dg-card:hover, .dg-card:focus-visible { transform: none; }
+}

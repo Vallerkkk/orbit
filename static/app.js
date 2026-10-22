@@ -1,3 +1,4 @@
+import {configureUiSounds,uiSoundsEnabled,setUiSoundsEnabled} from './ui-sounds.js';
 import {createAuthRecovery,isInvalidSessionError} from './auth-recovery.js';
 import './ui-polish.js';
 import {initSocialLogin} from './social-login.js';
@@ -800,6 +801,7 @@ let noise = localStorage.getItem('orbita-noise') !== 'false';
 let echoCancellation = localStorage.getItem('orbita-echo') !== 'false';
 let autoGainControl = localStorage.getItem('orbita-agc') !== 'false';
 let deafened = false;
+configureUiSounds({muted:()=>deafened});
 const audioCapture = () => ({
   noiseSuppression: noise,
   echoCancellation: echoCancellation,
@@ -1089,14 +1091,15 @@ function openAudioPanel(){showDialog('Configurações de Áudio',container=>{
   const echoCheck=audioRow('Cancelamento de Eco','Reduz eco do seu microfone.',echoCancellation,'Cancelamento de eco');
   const agcCheck=audioRow('Controle Automático de Ganho (AGC)','Ajusta o volume do microfone automaticamente.',autoGainControl,'Controle automático de ganho');
   const ptt=audioRow('Pressionar para Falar','Microfone fechado até você segurar Espaço ou o botão Falar.',pushToTalk,'Pressionar para falar');
+  const sfxCheck=audioRow('Efeitos Sonoros','Sons discretos ao entrar/sair de chamadas, mudo, câmera, tela e ao escolher decorações.',uiSoundsEnabled(),'Efeitos sonoros');
   const sensWrap=el('div','audio-sensitivity'),sensHead=el('strong','audio-row-title','Sensibilidade do Microfone'),info=el('span','audio-row-info','i'),sensRow=el('span','audio-sens-row'),sens=el('input'),sensOut=el('output','audio-sens-value');info.setAttribute('aria-hidden','true');sensHead.append(info);sens.type='range';sens.min='10';sens.max='100';sens.value=localStorage.getItem('orbita-mic-sensitivity')||'50';sens.setAttribute('aria-label','Sensibilidade do microfone');const paint=()=>{sensOut.value=sens.value+'%';sens.style.setProperty('--fill',((sens.value-10)/90*100)+'%');};paint();sens.oninput=paint;sensRow.append(sens,sensOut);sensWrap.append(sensHead,sensRow,el('small','audio-row-desc','Arraste para ajustar a sensibilidade do seu microfone.'));form.append(sensWrap);
   const more=el('button','audio-devices-link','Entrada, saída e redução de ruído avançada');more.type='button';more.onclick=()=>audioTools?.open();form.append(more);
-  const actions=el('div','audio-actions'),reset=el('button','audio-reset','Redefinir'),apply=el('button','primary audio-apply','Aplicar');reset.type='button';apply.type='submit';reset.onclick=()=>{noiseCheck.checked=true;echoCheck.checked=true;agcCheck.checked=true;ptt.checked=false;sens.value='50';paint();};actions.append(reset,apply);form.append(actions);
+  const actions=el('div','audio-actions'),reset=el('button','audio-reset','Redefinir'),apply=el('button','primary audio-apply','Aplicar');reset.type='button';apply.type='submit';reset.onclick=()=>{noiseCheck.checked=true;echoCheck.checked=true;agcCheck.checked=true;ptt.checked=false;sfxCheck.checked=true;sens.value='50';paint();};actions.append(reset,apply);form.append(actions);
   form.onsubmit=async event=>{event.preventDefault();apply.disabled=true;try{
     noise=noiseCheck.checked;localStorage.setItem('orbita-noise',String(noise));
     echoCancellation=echoCheck.checked;localStorage.setItem('orbita-echo',String(echoCancellation));
     autoGainControl=agcCheck.checked;localStorage.setItem('orbita-agc',String(autoGainControl));
-    pushToTalk=ptt.checked;localStorage.setItem('orbita-push-to-talk',String(pushToTalk));localStorage.setItem('orbita-mic-sensitivity',sens.value);
+    pushToTalk=ptt.checked;localStorage.setItem('orbita-push-to-talk',String(pushToTalk));setUiSoundsEnabled(sfxCheck.checked);localStorage.setItem('orbita-mic-sensitivity',sens.value);
     if(room){for(const pub of room.localParticipant.audioTrackPublications.values())if(pub.track?.source==='microphone')await pub.track.restartTrack(audioCapture());await audioTools?.sync(room);talkHeld=false;if(pushToTalk||deafened)await microphoneSwitch.set(room.localParticipant,false);}
     if(form.isConnected)$('app-dialog').close();toast('Configurações de áudio aplicadas.');
   }catch(e){toast(errorText(e));}finally{apply.disabled=false;}};
@@ -1569,7 +1572,9 @@ const feedContext={
   menu:()=>{document.body.classList.add('mobile-menu-open');document.querySelectorAll('.mobile-nav-btn').forEach(node=>node.setAttribute('aria-expanded','true'));},
   closeMenu:closeMobileMenu,
   rooms:()=>channels.filter(c=>c.kind==='voice'&&!c.is_private).map(c=>({...c,participants:publicVoicePresence.filter(p=>p.channel_id===c.id).length})),
-  joinRoom:async channel=>{await selectChannel(channel);$('join-call').click();}
+  joinRoom:async channel=>{await selectChannel(channel);$('join-call').click();},
+  liveIds:()=>new Set(publicVoicePresence.filter(p=>p.channel_id).map(p=>p.id)),
+  roomPeople:id=>publicVoicePresence.filter(p=>p.channel_id===id).map(p=>person(p.id)).filter(Boolean)
 };
 let feedInstance,feedTask,feedNavigation=0;
 const feedNav=el('button','server-icon action-rail','◈');feedNav.id='feed-nav';feedNav.title='Feed da Órbita';feedNav.setAttribute('aria-label',feedNav.title);$('friends-nav').after(feedNav);
