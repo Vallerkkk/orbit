@@ -1,8 +1,8 @@
 {
-  "version": "183f883104b00a3c",
-  "entry": "/static/dist/app-UEYJVHCX.js",
+  "version": "0502128301e6bd93",
+  "entry": "/static/dist/app-Q4OUT2QX.js",
   "files": [
-    "/static/dist/app-UEYJVHCX.js",
+    "/static/dist/app-Q4OUT2QX.js",
     "/static/dist/call-layout-41217c9121da3858.css",
     "/static/dist/chunk-admin-controls-PZRQMPK4.js",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js",
@@ -30,7 +30,7 @@
     "/static/dist/identity-6ebc994080d21c0a.css",
     "/static/dist/interface-c30ad38a9a1b3db8.css",
     "/static/dist/modern-dfbf9772c6bc459c.css",
-    "/static/dist/orbita-v2-5d837ef78dd10bb9.css",
+    "/static/dist/orbita-v2-58be9dc9d8127af4.css",
     "/static/dist/polish-6c0d15ea9ef1d5d6.css",
     "/static/dist/social-feed-62c05a9ca6c15537.css",
     "/static/dist/style-3dca03de5587366e.css",
@@ -48,10 +48,10 @@
     "/static/themes.css": "/static/dist/themes-798ce3001de508c9.css",
     "/static/polish.css": "/static/dist/polish-6c0d15ea9ef1d5d6.css",
     "/static/modern.css": "/static/dist/modern-dfbf9772c6bc459c.css",
-    "/static/orbita-v2.css": "/static/dist/orbita-v2-5d837ef78dd10bb9.css"
+    "/static/orbita-v2.css": "/static/dist/orbita-v2-58be9dc9d8127af4.css"
   },
   "integrity": {
-    "/static/dist/app-UEYJVHCX.js": "9c6050ca52a803538e7fd6adb7dc13463684515e8a96fdffcc0326e69a482170",
+    "/static/dist/app-Q4OUT2QX.js": "177bdb910c3acd7e6206b98c88bb72e13b099f7bcca64cd2aedcfde928cea41c",
     "/static/dist/call-layout-41217c9121da3858.css": "41217c9121da385886b24e21b88d59a06c04e575277db89d6c1901b1a99d41da",
     "/static/dist/chunk-admin-controls-PZRQMPK4.js": "33a26d5d098f87e76a30ed76cb87665afe5d9c565aab6fd4cff170d40364ff2e",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js": "db2508c2c9152fbe631806e53dd148bd67a8b3695a0094caa6145d906b978027",
@@ -79,7 +79,7 @@
     "/static/dist/identity-6ebc994080d21c0a.css": "6ebc994080d21c0a7762bce8511b194c8789ec236e30410ea87dc9dbc01e0035",
     "/static/dist/interface-c30ad38a9a1b3db8.css": "c30ad38a9a1b3db8298e710ba83d5285f4859f9a0ba254d1407d34971e5cb4eb",
     "/static/dist/modern-dfbf9772c6bc459c.css": "dfbf9772c6bc459cf02777db2a4552b159ad6db43b2be1f7969b7d686c52a25a",
-    "/static/dist/orbita-v2-5d837ef78dd10bb9.css": "5d837ef78dd10bb9dc0a83c4fd587aaa53809af757fb1e32774bae1c77823082",
+    "/static/dist/orbita-v2-58be9dc9d8127af4.css": "58be9dc9d8127af4c13ad2ed8fbda2cd75069787e4039b5867bd437ba457fbcb",
     "/static/dist/polish-6c0d15ea9ef1d5d6.css": "6c0d15ea9ef1d5d6131b91f10183f888ca76167b3318c4c5497f4023e3aff5be",
     "/static/dist/social-feed-62c05a9ca6c15537.css": "62c05a9ca6c15537bf253125c4c084de10a50bfc9bc981f016b493158cb66c53",
     "/static/dist/style-3dca03de5587366e.css": "3dca03de5587366e78779ba9eeb25529b7dee989e39d686a122b304a8da6d80b",

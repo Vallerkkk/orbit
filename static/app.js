@@ -1,4 +1,4 @@
-import {configureUiSounds,uiSoundsEnabled,setUiSoundsEnabled} from './ui-sounds.js';
+import {configureUiSounds,uiSoundsEnabled,setUiSoundsEnabled,uiSound} from './ui-sounds.js';
 import {createAuthRecovery,isInvalidSessionError} from './auth-recovery.js';
 import './ui-polish.js';
 import {initSocialLogin} from './social-login.js';
@@ -193,13 +193,14 @@ function renderChannels() {
     node.setAttribute('aria-pressed', String(selected?.id === channel.id && !home));
     (channel.kind === 'text' ? text : voice).push(node);
     if (channel.kind === 'voice') {
-      const peers = publicVoicePresence.filter(p => p.channel_id === channel.id), signature = JSON.stringify(peers.map(info => [info, person(info.id).display_name, person(info.id).avatar_src]));
+      const peers = publicVoicePresence.filter(p => p.channel_id === channel.id), signature = JSON.stringify(peers.map(info => [info.id, person(info.id).display_name, person(info.id).avatar_src]));
       let tree = voiceTrees.get(channel.id);
       if (!tree || tree.dataset.signature !== signature) {
         tree = el('div', 'voice-tree-live'); tree.dataset.signature = signature;
-        for (const info of peers) { const p = person(info.id), row = el('div', 'voice-tree-person'), avatar = el('span', 'avatar'); setAvatar(avatar, p); row.append(avatar, el('span', '', p.display_name), el('small', '', info.screen ? 'AO VIVO' : info.microphone ? '◖' : '🔇')); tree.append(row); }
+        for (const info of peers) { const p = person(info.id), row = el('div', 'voice-tree-person'), avatar = el('span', 'avatar'); row.dataset.uid = info.id; setAvatar(avatar, p); row.append(avatar, el('span', 'vt-name', p.display_name), el('span', 'vt-icons')); tree.append(row); }
         voiceTrees.set(channel.id, tree);
       }
+      paintVoiceTree(tree, channel.id);
       if (tree.children.length) voice.push(tree);
     }
   }
@@ -553,6 +554,7 @@ function onTrack(track, participant, publication) {
     const figure = el('figure', 'media-tile' + (isScreen ? ' media-screen' : '')); if(sid)figure.dataset.track=sid;figure.dataset.participantId=participant.identity;entry.tile=figure;
     media.muted = true; media.playsInline = true;
     const caption = el('figcaption');
+    if(isScreen){const pill=el('span','tile-live-pill','Compartilhando tela');figure.append(pill);}
     caption.append(el('span', '', (peopleById.get(participant.identity)?.display_name || participant.name || 'Participante') + (isScreen ? ' · Tela' : ' · Câmera')));
     const expand = el('button', 'expand-video', 'Tela cheia');
     expand.type = 'button'; expand.setAttribute('aria-label', `Ver ${isScreen ? 'tela' : 'câmera'} de ${peopleById.get(participant.identity)?.display_name || participant.name || 'Participante'} em tela cheia`);
@@ -601,7 +603,7 @@ function updateCallUI() {
   $('participants').hidden = !here; $('media-grid').hidden = !here;
   if(participantRoom!==room){participantCards.clear();participantRoom=room;}const participantNodes=[];
   $('voice-stage').setAttribute('aria-label',here?'Chamada conectada':'Sala de voz');
-  publishVoicePresence().catch(()=>{});
+  publishVoicePresence().catch(()=>{});refreshVoiceTrees();
   if (room) {
     const participants = [room.localParticipant, ...room.remoteParticipants.values()];
     for (const participant of participants) {
@@ -624,7 +626,40 @@ function updateCallUI() {
   const activeIds=new Set(participantNodes.map(node=>node.dataset.participantId));for(const id of participantCards.keys())if(!activeIds.has(id))participantCards.delete(id);reconcileNodes($('participants'),participantNodes);
   renderChannels();
 }
+const VT_ICON={
+  muted:'<svg viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 5.2 2"/><path d="M15 9.5V6a3 3 0 0 0-.9-2.1M19 11a7 7 0 0 1-1.1 3.7M5 11a7 7 0 0 0 11 5.7M12 18v3"/><path class="vt-slash" d="M4 4l16 16"/></svg>',
+  deaf:'<svg viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 13.7-5.6M20 12v3"/><path d="M4 15h3v5H5a1 1 0 0 1-1-1zM20 15h-3v5h2a1 1 0 0 0 1-1z"/><path class="vt-slash" d="M4 4l16 16"/></svg>',
+  camera:'<svg viewBox="0 0 24 24"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3z"/></svg>'};
+function voiceStateFor(info, channelId){
+  const st={muted:!info.microphone,deaf:!!info.deafened,camera:!!info.camera,screen:!!info.screen,speaking:false};
+  if(room&&callChannel?.id===channelId){
+    const local=info.id===session?.user?.id, part=local?room.localParticipant:[...room.remoteParticipants.values()].find(p=>p.identity===info.id);
+    if(part){st.muted=!part.isMicrophoneEnabled;st.camera=!!part.isCameraEnabled;st.screen=!!part.isScreenShareEnabled;st.speaking=!!part.isSpeaking&&part.isMicrophoneEnabled;}
+    if(local)st.deaf=deafened;
+  }
+  if(st.deaf)st.speaking=false;
+  return st;
+}
+function paintVoiceTree(tree, channelId){
+  for(const row of tree.querySelectorAll('.voice-tree-person')){
+    const info=publicVoicePresence.find(p=>p.id===row.dataset.uid&&p.channel_id===channelId)||{id:row.dataset.uid};
+    const st=voiceStateFor(info,channelId), box=row.querySelector('.vt-icons');
+    row.classList.toggle('speaking',st.speaking);
+    const want=[st.deaf?'deaf':st.muted?'muted':null,st.camera?'camera':null,st.screen?'live':null].filter(Boolean);
+    for(const node of [...box.children]){if(!want.includes(node.dataset.k)&&!node.classList.contains('vt-out')){node.classList.add('vt-out');setTimeout(()=>node.remove(),reducedMotion()?0:180);}}
+    for(const k of want){
+      let node=box.querySelector(`[data-k="${k}"]:not(.vt-out)`);if(node)continue;
+      node=el('span',`vt-icon vt-${k}`);node.dataset.k=k;
+      if(k==='live'){node.textContent='AO VIVO';node.title='Compartilhando tela';}else{node.innerHTML=VT_ICON[k];node.title=k==='deaf'?'Áudio desativado':k==='muted'?'Microfone desativado':'Câmera ligada';}
+      node.setAttribute('aria-label',node.title);
+      const after=box.querySelector(`[data-k="${want[want.indexOf(k)+1]}"]`);box.insertBefore(node,after||null);
+    }
+  }
+}
+function reducedMotion(){return matchMedia('(prefers-reduced-motion: reduce)').matches;}
+function refreshVoiceTrees(){for(const [id,tree] of voiceTrees)paintVoiceTree(tree,id);}
 function updateSpeakingUI() {
+  refreshVoiceTrees();
   if(!room)return;
   const speaking=new Set([room.localParticipant,...room.remoteParticipants.values()].filter(p=>p.isSpeaking).map(p=>p.identity));
   for(const card of participantCards.values())card.classList.toggle('speaking',speaking.has(card.dataset.participantId));
@@ -684,6 +719,7 @@ $('join-call').onclick = async () => {
       .on(RoomEvent.TrackUnpublished, (publication, participant) => {if(room!==connected)return;removeTrack(publication.track,publication,participant);updateCallUI();})
       .on(RoomEvent.LocalTrackPublished, publication => { if(room!==connected)return;if(publication.track?.kind==='audio')audioTools?.sync(connected).catch(()=>{});if(publication.track?.kind==='video')onTrack(publication.track,connected.localParticipant,publication);updateCallUI(); })
       .on(RoomEvent.LocalTrackUnpublished, publication => {if(room!==connected)return;removeTrack(publication.track,publication,connected.localParticipant);updateCallUI();});
+    connected.on(RoomEvent.ParticipantConnected,()=>{if(room===connected)uiSound('peerJoin');}).on(RoomEvent.ParticipantDisconnected,()=>{if(room===connected)uiSound('peerLeave');});
     for (const event of [RoomEvent.ParticipantConnected, RoomEvent.ParticipantDisconnected, RoomEvent.TrackMuted, RoomEvent.TrackUnmuted]) connected.on(event, updateCallUI);
     connected.on(RoomEvent.ActiveSpeakersChanged,updateSpeakingUI);
     connected.on(RoomEvent.DataReceived,receiveCallData);
@@ -693,6 +729,7 @@ $('join-call').onclick = async () => {
     connected.on(RoomEvent.Disconnected, () => { if (room === connected) { leaveCall(); toast('Você saiu da chamada.'); } });
     await connected.connect(result.url, result.token);
     if (!current() || room !== connected) { await connected.disconnect(); return; }
+    uiSound('join');
     try { await connected.startAudio(); } catch { toast('A chamada entrou. Toque na tela para liberar o áudio neste navegador.'); }
     if(!current()||room!==connected){await connected.disconnect();return;}
     enhancements.connected(connected,RoomEvent,result);
@@ -1129,7 +1166,7 @@ $('pins-toggle').onclick=()=>{pinsOnly=!pinsOnly;$('pins-toggle').setAttribute('
 $('back-to-call').onclick=()=>{if(callChannel)selectChannel(callChannel);};
 $('dock-leave').onclick=()=>leaveCall();
 let microphoneBeforeDeafen=false;
-$('deafen').onclick=()=>{if(!deafened)microphoneBeforeDeafen=!!room?.localParticipant.isMicrophoneEnabled;deafened=!deafened;syncRemoteVolumes();$('deafen').setAttribute('aria-pressed',String(deafened));if(room){talkHeld=false;microphoneSwitch.set(room.localParticipant,!deafened&&microphoneBeforeDeafen&&!pushToTalk&&room.localParticipant.permissions?.canPublish!==false);}updateCallUI();};
+$('deafen').onclick=()=>{if(!deafened)microphoneBeforeDeafen=!!room?.localParticipant.isMicrophoneEnabled;deafened=!deafened;publishVoicePresence().catch(()=>{});refreshVoiceTrees();syncRemoteVolumes();$('deafen').setAttribute('aria-pressed',String(deafened));if(room){talkHeld=false;microphoneSwitch.set(room.localParticipant,!deafened&&microphoneBeforeDeafen&&!pushToTalk&&room.localParticipant.permissions?.canPublish!==false);}updateCallUI();};
 async function refreshMessages(){return loadMessages(generation,true);}
 async function refreshMessage(id,target={...selected}){
   const user=session?.user.id,key=conversationKey(user,target),version=generation;
@@ -1441,7 +1478,7 @@ window.addEventListener('pagehide',()=>{if(extraSubscription)db?.removeChannel(e
 async function publishVoicePresence(force=false){
   if(!presenceChannel||!session||!profile)return;
   if(profile.presence_status==='invisible'){if(force)await presenceChannel.untrack();return;}
-  const value={status:enhancements?.presenceStatus()||profile.presence_status||'online',channel_id:room&&!callChannel?.private&&!callChannel?.is_private&&!communities.find(c=>c.id===callChannel?.community_id)?.invite_only?callChannel?.id:null,microphone:!!room?.localParticipant.isMicrophoneEnabled,screen:!!room?.localParticipant.isScreenShareEnabled};
+  const value={status:enhancements?.presenceStatus()||profile.presence_status||'online',channel_id:room&&!callChannel?.private&&!callChannel?.is_private&&!communities.find(c=>c.id===callChannel?.community_id)?.invite_only?callChannel?.id:null,microphone:!!room?.localParticipant.isMicrophoneEnabled,deafened:!!room&&deafened,camera:!!room?.localParticipant.isCameraEnabled,screen:!!room?.localParticipant.isScreenShareEnabled};
   const signature=JSON.stringify(value);if(!force&&signature===lastPresenceSignature)return;lastPresenceSignature=signature;await presenceChannel.track(value);
 }
 
@@ -1857,3 +1894,12 @@ const authRecovery=createAuthRecovery({auth:()=>db.auth,currentUser:()=>session?
 let resumeAuth;
 function checkResumedSession(){clearTimeout(resumeAuth);if(!session||sessionInitializing||document.hidden)return;const account=session.user.id;resumeAuth=setTimeout(()=>{if(session?.user.id===account)authRecovery.get(account).catch(error=>{if(error?.name!=='AbortError'&&session?.user.id===account)toast('Não foi possível verificar a sessão. Confira sua conexão e tente novamente.');});},200);}
 window.addEventListener('focus',checkResumedSession);window.addEventListener('online',checkResumedSession);window.addEventListener('pageshow',checkResumedSession);document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkResumedSession();});
+
+// Call control toggle feedback: pop/ripple + soft sounds, driven by aria-pressed changes.
+(()=>{
+  const sounds={mic:['unmute','mute'],deafen:['deafen','undeafen'],camera:['on','off'],screen:['on','off']};
+  const ripple=btn=>{btn.classList.remove('tg-pop');void btn.offsetWidth;btn.classList.add('tg-pop');if(reducedMotion())return;const r=el('span','tg-ripple');btn.append(r);setTimeout(()=>r.remove(),520);};
+  for(const id of Object.keys(sounds)){const btn=$(id);if(!btn)continue;let last=btn.getAttribute('aria-pressed');
+    new MutationObserver(()=>{const now=btn.getAttribute('aria-pressed');if(now===last)return;const was=last;last=now;if(was==null)return;ripple(btn);uiSound(sounds[id][now==='true'?0:1],{gap:120,force:id==='deafen'});}).observe(btn,{attributes:true,attributeFilter:['aria-pressed']});}
+  $('leave-call')?.addEventListener('click',()=>{if(room){ripple($('leave-call'));uiSound('leave');}},true);
+})();
