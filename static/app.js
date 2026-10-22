@@ -185,7 +185,7 @@ function renderChannels() {
     }
     node.orbitaChannel = channel;
     const name = node.querySelector('.channel-name'); if (name.textContent !== channel.name) name.textContent = channel.name;
-    const icon=node.querySelector('.channel-icon'),symbol=channel.kind==='text'?'#':'◖';if(icon.textContent!==symbol)icon.textContent=symbol;
+    const icon=node.querySelector('.channel-icon'),symbol=channel.kind==='text'?'#':'◖';if(icon.textContent!==symbol)icon.textContent=symbol;icon.dataset.kind=channel.kind;node.dataset.kind=channel.kind;
     node.classList.toggle('active', selected?.id === channel.id && !home); node.classList.toggle('connected', callChannel?.id === channel.id);
     node.setAttribute('aria-label', channel.name + ' · ' + (channel.kind === 'voice' ? 'Sala de voz' : 'Canal de texto'));
     node.setAttribute('aria-pressed', String(selected?.id === channel.id && !home));
@@ -607,7 +607,7 @@ function updateCallUI() {
       if(!card){card=el('div','participant');card.dataset.participantId=participant.identity;card.append(el('span','avatar'),el('strong','participant-name'),el('small','participant-status'));
         participantCards.set(participant.identity,card);}
       card.classList.toggle('speaking',!!participant.isSpeaking);const name=peopleById.get(participant.identity)?.display_name||participant.name||'Participante';card.querySelector('.avatar').textContent=initials(name);card.querySelector('.participant-name').textContent=name;
-      card.querySelector('.participant-status').textContent=`${participant.isMicrophoneEnabled?'Microfone ligado':'Microfone desligado'} · ${qualityText(participant.connectionQuality)}`;
+      card.dataset.mic=participant.isMicrophoneEnabled?'on':'off';card.querySelector('.participant-status').textContent=`${participant.isMicrophoneEnabled?'Microfone ligado':'Microfone desligado'} · ${qualityText(participant.connectionQuality)}`;
       for(const slider of card.querySelectorAll('input[data-audio-source]')){
         const source=slider.dataset.audioSource;slider.setAttribute('aria-label',(source==='microphone'?'Volume do microfone de ':'Volume da transmissão de ')+name);
         if(document.activeElement!==slider)slider.value=sourceVolume(participant.identity,source);
@@ -962,65 +962,58 @@ async function removeFriend(f){
 }
 function showProfile(p) {
   showDialog(p.display_name, container => {
-    const panel = el('div', 'rich-profile');panel.dataset.userId=p.id;
-    // Banner (taller, Discord-like)
+    const own=p.id===session?.user.id,panel = el('div', 'rich-profile pv2');panel.dataset.userId=p.id;
     const banner = el('div', 'rp-banner');
-    banner.style.height = '160px';
     if (p.banner_src) banner.style.backgroundImage = `url("${p.banner_src.replaceAll('"','%22')}")`;
-    else if(p.id===session?.user.id&&/^#[0-9a-f]{6}$/i.test(loadProfilePrefs().bannerColor||''))banner.style.background=loadProfilePrefs().bannerColor;
+    else if(own&&/^#[0-9a-f]{6}$/i.test(loadProfilePrefs().bannerColor||''))banner.style.background=loadProfilePrefs().bannerColor;
     else if (p.avatar_color) banner.style.background=`linear-gradient(135deg, ${p.avatar_color}, #2a1f3d)`;
     panel.append(banner);
-    // Avatar + status
-    const wrap = el('div', 'rp-avatar-wrap');
-    const av = el('div', 'rp-avatar');
-    setAvatar(av, p);
-    const st = el('span', 'rp-status');
-    st.style.background = ({online:'var(--online)',idle:'var(--idle)',dnd:'var(--dnd)',invisible:'var(--offline)'}[p.presence_status] || 'var(--offline)');
-    wrap.append(av, st);
-    panel.append(wrap);
-    // Body
+    const wrap = el('div', 'rp-avatar-wrap'), av = el('div', 'rp-avatar');setAvatar(av, p);
+    const st = el('span', 'rp-status');st.dataset.status=p.presence_status||'offline';
+    st.style.background = ({online:'var(--v2-online)',idle:'var(--idle)',dnd:'var(--dnd)',invisible:'var(--offline)'}[p.presence_status] || 'var(--offline)');
+    wrap.append(av, st);panel.append(wrap);
     const body = el('div', 'rp-body');
-    const nameEl = el('h3', 'rp-name', p.display_name || 'Participante');
-    body.append(nameEl);
-    const userLine = el('div', 'rp-username', '@' + (p.username || 'user') + (p.pronouns ? ' · ' + p.pronouns : ''));
-    body.append(userLine);
-    if (p.custom_status) body.append(el('div', 'rp-bio', '✦ ' + p.custom_status));
-    if (p.bio) body.append(el('div', 'rp-bio', p.bio));
-    if (p.presence_activity) body.append(el('div', 'rp-username', p.presence_activity));
-    // Member since
-    if (p.created_at) {
-      const since = el('div', 'rp-section');
-      since.append(el('div', 'rp-section-title', 'Membro desde'));
-      since.append(el('div', '', new Date(p.created_at).toLocaleDateString('pt-BR', {day:'numeric', month:'short', year:'numeric'})));
-      body.append(since);
-    }
-    // Voice
-    const voiceSec = el('div', 'rp-section');
-    voiceSec.append(el('div', 'rp-section-title', 'Em voz'));
-    voiceSec.append(el('div', '', room&&(p.id===room.localParticipant.identity||room.remoteParticipants.has(p.id))?'Conectado a '+(callChannel?.name||'chamada'):'Sem chamada visível neste servidor'));
-    body.append(voiceSec);
-    body.append(button('Perguntas deste perfil',async()=>{const tools=await loadSocialTools();if(session)tools.questions(p.id);}));if(p.id!==session.user.id)body.append(button('Denunciar perfil',async()=>{const tools=await loadSocialTools();if(session)tools.report('profile',p.id);}));
-    const badgeLine=el('p','profile-badges');body.append(badgeLine);const lastSeen=el('small','muted');body.append(lastSeen);if(p.presence_status!=='invisible')checked(db.from('profile_activity').select('last_seen').eq('user_id',p.id).maybeSingle()).then(activity=>{if(activity&&lastSeen.isConnected&&!online.has(p.id))lastSeen.textContent='Visto '+relativeTime(activity.last_seen);}).catch(()=>{});const viewing=session.user.id;checked(db.rpc('profile_badges',{target:p.id})).then(badges=>{if(session?.user.id===viewing&&badgeLine.isConnected&&Array.isArray(badges))badgeLine.textContent=badges.join(' · ');}).catch(()=>{});
-    // Feed posts link
-    const feedBtn = button('Ver publicações no Feed', () => {
-      $('app-dialog').close();
-      if (feed && typeof feed.open === 'function') feed.open('profile', { author: p.id });
-      else toast('Feed não disponível');
-    }, 'rp-action');
-    body.append(feedBtn);
-    // Actions
-    const actions = el('div', 'rp-section');
-    if (p.id === session?.user.id) {
-      actions.append(button('Editar perfil', () => { $('app-dialog').close(); $('settings').click(); }, 'rp-action'));
-      actions.append(button('Profile Decoration', () => { $('app-dialog').close(); openDecorationGallery(); }, 'rp-action'));
-      actions.append(button('Definir status', () => { $('app-dialog').close();closeMobileMenu();$('status-popover').classList.remove('hidden');requestAnimationFrame(()=>$('status-popover').querySelector('button')?.focus()); }, 'rp-action'));
+    const nameRow = el('div', 'rp-name-row'), nameEl = el('h3', 'rp-name', p.display_name || 'Participante');
+    const tag=el('span', 'rp-tag', '@' + (p.username || 'user'));nameRow.append(nameEl, tag);body.append(nameRow);
+    const bioText=[p.custom_status,p.bio].filter(Boolean).join(' · ')||p.presence_activity||(p.pronouns?p.pronouns:'Explorando a Órbita.');
+    body.append(el('p', 'rp-bio', bioText),el('hr','rp-divider'));
+    const voiceSec = el('div', 'rp-voice');
+    const inCall=!!(room&&(p.id===room.localParticipant.identity||room.remoteParticipants.has(p.id)));
+    const voiceHead=el('div','rp-voice-head');voiceHead.append(el('span','rp-section-title','Status de Voz'),el('span','rp-voice-state'+(inCall?' on':''),inCall?'Conectado':'Desconectado'));
+    const voiceRoom=el('div','rp-voice-room'+(inCall?' on':'')),vIcon=el('span','rp-voice-icon'),vText=el('span','rp-voice-text'),bars=el('span','rp-voice-bars');
+    vIcon.setAttribute('aria-hidden','true');bars.setAttribute('aria-hidden','true');for(let i=0;i<4;i++)bars.append(el('i'));
+    vText.append(el('strong','',inCall?(callChannel?.name||'Chamada'):'Nenhuma sala de voz'),el('small','',inCall?'Canal de voz':'Fora de chamadas no momento'));
+    voiceRoom.append(vIcon,vText,bars);voiceSec.append(voiceHead,voiceRoom);body.append(voiceSec);
+    const actions = el('div', 'rp-actions');
+    if (own) {
+      actions.classList.add('rp-own-actions');
+      actions.append(button('Editar perfil', () => { $('app-dialog').close(); $('settings').click(); }, 'rp-action rp-primary'));
+      actions.append(button('Decorações', () => { $('app-dialog').close(); openDecorationGallery(); }, 'rp-action rp-outline'));
     } else {
       const f = friendships.find(f => [f.requester_id, f.recipient_id].includes(p.id));
-      if (f?.status === 'accepted') actions.append(button('Enviar mensagem', async () => { $('app-dialog').close(); await startConversation(p); }, 'rp-action'));
-      else if (!f) actions.append(button('Adicionar amigo', async () => { await sendFriend(p); $('app-dialog').close(); }, 'rp-action'));
+      if (f?.status === 'accepted') actions.append(button('Enviar mensagem', async () => { $('app-dialog').close(); await startConversation(p); }, 'rp-action rp-primary'));
+      else if (!f) actions.append(button('Adicionar amigo', async () => { await sendFriend(p); $('app-dialog').close(); }, 'rp-action rp-primary'));
       else actions.append(el('p', 'muted', 'Pedido de amizade pendente.'));
     }
     body.append(actions);
+    if (own) {
+      const quick = el('div', 'rp-quick');
+      for (const [id, label] of [['up-mic-btn', 'Microfone'], ['up-deafen-btn', 'Fones de ouvido'], ['settings', 'Configurações de áudio']]) {
+        const original = $(id); if (!original) continue;
+        const b = button('', () => { if (id === 'settings') { openAudioPanel(); return; } original.click(); quick.querySelectorAll('button').forEach((n, i) => n.classList.toggle('active', [$('up-mic-btn'), $('up-deafen-btn')][i]?.classList.contains('active') || false)); });
+        b.innerHTML = original.querySelector('svg')?.outerHTML || ''; b.setAttribute('aria-label', label); b.title = label; quick.append(b);
+      }
+      body.append(quick);
+    }
+    const more=el('details','rp-more'),moreBody=el('div','rp-more-body');more.append(el('summary','','Mais do perfil'),moreBody);
+    if(p.created_at)moreBody.append(el('div','rp-username','Membro desde '+new Date(p.created_at).toLocaleDateString('pt-BR',{day:'numeric',month:'short',year:'numeric'})));
+    if(p.custom_status&&p.bio&&p.presence_activity)moreBody.append(el('div','rp-username',p.presence_activity));
+    const badgeLine=el('p','profile-badges');moreBody.append(badgeLine);const lastSeen=el('small','muted');moreBody.append(lastSeen);if(p.presence_status!=='invisible')checked(db.from('profile_activity').select('last_seen').eq('user_id',p.id).maybeSingle()).then(activity=>{if(activity&&lastSeen.isConnected&&!online.has(p.id))lastSeen.textContent='Visto '+relativeTime(activity.last_seen);}).catch(()=>{});const viewing=session.user.id;checked(db.rpc('profile_badges',{target:p.id})).then(badges=>{if(session?.user.id===viewing&&badgeLine.isConnected&&Array.isArray(badges))badgeLine.textContent=badges.join(' · ');}).catch(()=>{});
+    if(own)moreBody.append(button('Definir status', () => { $('app-dialog').close();closeMobileMenu();$('status-popover').classList.remove('hidden');requestAnimationFrame(()=>$('status-popover').querySelector('button')?.focus()); }, 'rp-link'));
+    moreBody.append(button('Ver publicações no Feed', () => {$('app-dialog').close();if (feed && typeof feed.open === 'function') feed.open('profile', { author: p.id });else toast('Feed não disponível');}, 'rp-link'));
+    moreBody.append(button('Perguntas deste perfil',async()=>{const tools=await loadSocialTools();if(session)tools.questions(p.id);},'rp-link'));
+    if(!own)moreBody.append(button('Denunciar perfil',async()=>{const tools=await loadSocialTools();if(session)tools.report('profile',p.id);},'rp-link rp-danger'));
+    body.append(more);
     panel.append(body);
     container.append(panel);
     setTimeout(applyDecorations, 30);
@@ -1076,14 +1069,7 @@ $('settings').onclick=()=>showDialog('Seu perfil e áudio',container=>{
   const name=inputField(form,'Nickname (também será seu @)',/^[A-Za-z0-9_]{3,24}$/.test(profile.display_name)?profile.display_name:profile.username,24),bio=inputField(form,'Sobre você',profile.bio,160),pronouns=inputField(form,'Pronomes',profile.pronouns,32),activity=inputField(form,'Atividade (ex.: Jogando Minecraft / Ouvindo música)',profile.presence_activity,80),color=inputField(form,'Cor do perfil',profile.avatar_color,7);color.type='color';
   name.pattern='[A-Za-z0-9_]{3,24}';name.minLength=3;name.required=true;const nicknameHint=el('p','muted');name.closest('label').after(nicknameHint);const hint=()=>nicknameHint.textContent='Para adicionar você: @'+name.value.trim().toLowerCase()+' · 3–24 letras, números ou _';name.addEventListener('input',hint);hint();
   const avatarFile=profileFileField(form,'Foto do perfil',profile.avatar_src),bannerFile=profileFileField(form,'Banner (pode ser GIF animado)',profile.banner_src);
-  form.append(el('h3','','Áudio'));
-  form.append(el('p','muted','Ajustes aplicados ao microfone. O navegador e o dispositivo podem limitar o efeito real.'));
-
-  const noiseLabel=el('label','check-field');const noiseCheck=el('input');noiseCheck.type='checkbox';noiseCheck.checked=noise;noiseLabel.append(noiseCheck,document.createTextNode('Supressão de ruído'));form.append(noiseLabel,el('p','muted','Reduz ruídos de fundo. Use o modo Agressivo (estilo Krisp) para ambientes barulhentos.'));
-  const echoLabel=el('label','check-field');const echoCheck=el('input');echoCheck.type='checkbox';echoCheck.checked=echoCancellation;echoLabel.append(echoCheck,document.createTextNode('Cancelamento de eco'));form.append(echoLabel,el('p','muted','Evita que o áudio dos alto-falantes volte pelo microfone.'));
-  const agcLabel=el('label','check-field');const agcCheck=el('input');agcCheck.type='checkbox';agcCheck.checked=autoGainControl;agcLabel.append(agcCheck,document.createTextNode('Controle automático de ganho'));form.append(agcLabel,el('p','muted','Mantém o volume da sua voz mais estável.'));
-
-  const pttLabel=el('label','check-field'),ptt=el('input');ptt.type='checkbox';ptt.checked=pushToTalk;pttLabel.append(ptt,document.createTextNode('Pressionar Espaço ou Segurar para falar'));form.append(pttLabel,el('p','muted','Com esta opção ativa, o microfone fica fechado até você segurar o botão Falar ou a tecla Espaço na chamada.'));
+  const audioOpen=el('button','soft-button settings-audio-link','Configurações de Áudio');audioOpen.type='button';audioOpen.onclick=()=>openAudioPanel();form.append(audioOpen);
   const save=el('button','primary','Salvar alterações');save.type='submit';form.append(save);card.append(form); container.append(card);
   form.onsubmit=async event=>{event.preventDefault();save.disabled=true;const uid=session.user.id,prior={...profile},created=[];let saved=false;try{
     const avatarUrl=avatarFile.files[0]?await uploadProfileAsset(avatarFile.files[0],'avatar'):prior.avatar_url||'';if(avatarUrl!==prior.avatar_url)created.push(avatarUrl);
@@ -1092,14 +1078,28 @@ $('settings').onclick=()=>showDialog('Seu perfil e áudio',container=>{
     const updated=await checked(db.from('profiles').update({display_name:name.value.trim(),username:name.value.trim().toLowerCase(),bio:bio.value.trim(),pronouns:pronouns.value.trim(),presence_activity:activity.value.trim(),avatar_color:color.value,avatar_url:avatarUrl,banner_url:bannerUrl}).eq('id',uid).select('id'));
     if(!updated.length)throw Error('O perfil não pôde ser atualizado. Entre novamente.');saved=true;
     const retired=[prior.avatar_url,prior.banner_url].filter(path=>path?.startsWith('profiles/'+uid+'/')&&!new Set([avatarUrl,bannerUrl]).has(path));if(retired.length){const removed=await db.storage.from('orbita-files').remove([...new Set(retired)]);if(removed.error)toast('Perfil salvo. Não foi possível liberar o espaço das imagens antigas agora.');}
+    await loadSocial();if(form.isConnected)$('app-dialog').close();toast('Perfil atualizado.');
+  }catch(e){if(!saved&&created.length)await db.storage.from('orbita-files').remove(created.filter(Boolean));toast(e.code==='23505'?'Esse nome de usuário já está em uso.':errorText(e));}finally{save.disabled=false;}};
+});
+function openAudioPanel(){showDialog('Configurações de Áudio',container=>{
+  container.classList.add('audio-panel');const form=el('form','audio-panel-form');container.append(el('p','panel-subtitle','Ajuste como seu microfone soa para os outros.'),form);
+  const audioRow=(title,desc,checkedValue,name=title)=>{const row=el('label','audio-row'),text=el('span','audio-row-text'),head=el('strong','audio-row-title',title),info=el('span','audio-row-info','i'),box=el('input');info.setAttribute('aria-hidden','true');info.title=desc;head.append(info);text.append(head,el('small','audio-row-desc',desc));box.type='checkbox';box.checked=checkedValue;box.setAttribute('aria-label',name);row.append(text,box);form.append(row);return box;};
+  const noiseCheck=audioRow('Supressão de Ruído','Remove ruídos de fundo automaticamente.',noise,'Supressão de ruído');
+  const echoCheck=audioRow('Cancelamento de Eco','Reduz eco do seu microfone.',echoCancellation,'Cancelamento de eco');
+  const agcCheck=audioRow('Controle Automático de Ganho (AGC)','Ajusta o volume do microfone automaticamente.',autoGainControl,'Controle automático de ganho');
+  const ptt=audioRow('Pressionar para Falar','Microfone fechado até você segurar Espaço ou o botão Falar.',pushToTalk,'Pressionar para falar');
+  const sensWrap=el('div','audio-sensitivity'),sensHead=el('strong','audio-row-title','Sensibilidade do Microfone'),info=el('span','audio-row-info','i'),sensRow=el('span','audio-sens-row'),sens=el('input'),sensOut=el('output','audio-sens-value');info.setAttribute('aria-hidden','true');sensHead.append(info);sens.type='range';sens.min='10';sens.max='100';sens.value=localStorage.getItem('orbita-mic-sensitivity')||'50';sens.setAttribute('aria-label','Sensibilidade do microfone');const paint=()=>{sensOut.value=sens.value+'%';sens.style.setProperty('--fill',((sens.value-10)/90*100)+'%');};paint();sens.oninput=paint;sensRow.append(sens,sensOut);sensWrap.append(sensHead,sensRow,el('small','audio-row-desc','Arraste para ajustar a sensibilidade do seu microfone.'));form.append(sensWrap);
+  const more=el('button','audio-devices-link','Entrada, saída e redução de ruído avançada');more.type='button';more.onclick=()=>audioTools?.open();form.append(more);
+  const actions=el('div','audio-actions'),reset=el('button','audio-reset','Redefinir'),apply=el('button','primary audio-apply','Aplicar');reset.type='button';apply.type='submit';reset.onclick=()=>{noiseCheck.checked=true;echoCheck.checked=true;agcCheck.checked=true;ptt.checked=false;sens.value='50';paint();};actions.append(reset,apply);form.append(actions);
+  form.onsubmit=async event=>{event.preventDefault();apply.disabled=true;try{
     noise=noiseCheck.checked;localStorage.setItem('orbita-noise',String(noise));
     echoCancellation=echoCheck.checked;localStorage.setItem('orbita-echo',String(echoCancellation));
     autoGainControl=agcCheck.checked;localStorage.setItem('orbita-agc',String(autoGainControl));
-    pushToTalk=ptt.checked;localStorage.setItem('orbita-push-to-talk',String(pushToTalk));
+    pushToTalk=ptt.checked;localStorage.setItem('orbita-push-to-talk',String(pushToTalk));localStorage.setItem('orbita-mic-sensitivity',sens.value);
     if(room){for(const pub of room.localParticipant.audioTrackPublications.values())if(pub.track?.source==='microphone')await pub.track.restartTrack(audioCapture());await audioTools?.sync(room);talkHeld=false;if(pushToTalk||deafened)await microphoneSwitch.set(room.localParticipant,false);}
-    await loadSocial();if(form.isConnected)$('app-dialog').close();toast('Perfil e áudio atualizados.');
-  }catch(e){if(!saved&&created.length)await db.storage.from('orbita-files').remove(created.filter(Boolean));toast(e.code==='23505'?'Esse nome de usuário já está em uso.':errorText(e));}finally{save.disabled=false;}};
-});
+    if(form.isConnected)$('app-dialog').close();toast('Configurações de áudio aplicadas.');
+  }catch(e){toast(errorText(e));}finally{apply.disabled=false;}};
+});}
 function channelEditFields(form,channel){
   const visibility=el('label','check-field'),privateBox=el('input');privateBox.type='checkbox';privateBox.checked=!!channel?.is_private;visibility.append(privateBox,document.createTextNode('Canal privado (só pessoas autorizadas)'));form.append(visibility);
   const announce=el('label','check-field'),announceBox=el('input');announceBox.type='checkbox';announceBox.checked=!!channel?.is_announcement;announce.append(announceBox,document.createTextNode('Canal de anúncios (só cargos autorizados podem publicar)'));form.append(announce);
@@ -1545,7 +1545,7 @@ $('file-input').multiple=true;
 $('file-input').onchange=async()=>{const files=[...$('file-input').files];await enhancements.sendFiles(files);$('file-input').value='';$('file-input').accept='';};
 const updateBeforeDeviceControls=updateCallUI;
 updateCallUI=()=>{updateBeforeDeviceControls();updateCameraControl();};
-callLayout=initCallLayout({audioSettings:()=>audioTools?.open(),soundSettings:box=>enhancements?.soundFields(box),
+callLayout=initCallLayout({audioSettings:()=>audioTools?.open(),micSettings:()=>openAudioPanel(),soundSettings:box=>enhancements?.soundFields(box),
   state:()=>({room,selected,callChannel,deafened}),report:error=>toast(errorText(error)),toast,button,dialog:showDialog,
   paragraph:text=>el('p','muted',text),invite:()=>{if(selected?.private)showDialog('Chamada privada',box=>box.append(el('p','','Esta conversa é privada. Abra Amigos para iniciar uma chamada com outra pessoa.'),button('Abrir Amigos',()=>{$('app-dialog').close();showFriends();})));else showCommunityInvite();},
   avatar:(node,id)=>{const p=person(id);if(p.display_name==='Participante'){p.display_name=node.parentElement.querySelector('.participant-name')?.textContent||p.display_name;}setAvatar(node,p);},
