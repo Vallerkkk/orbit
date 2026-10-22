@@ -1673,9 +1673,9 @@ preferencesObserver.observe($('app-view'),{childList:true,subtree:true,attribute
 
 function applyDecorations() {
   const prefs = loadProfilePrefs();
-  document.querySelectorAll('.rp-avatar, .up-avatar, .avatar').forEach(av => {
+  document.querySelectorAll('.rp-avatar, .up-avatar, .avatar, #user-avatar, .participant-avatar, .tile-avatar').forEach(av => {
     DECORATIONS.filter(d => d.type === 'frame'&&d.css).forEach(d => av.classList.remove(d.css));
-    const owner=av.dataset.userId||av.querySelector('[data-user-id]')?.dataset.userId||av.closest('[data-user-id],[data-participant-id]')?.dataset.userId||av.closest('[data-participant-id]')?.dataset.participantId;
+    const owner=av.dataset.userId||av.querySelector('[data-user-id]')?.dataset.userId||av.closest('[data-user-id],[data-participant-id]')?.dataset.userId||av.closest('[data-participant-id]')?.dataset.participantId||messages.get(av.closest('[data-message-id]')?.dataset.messageId)?.author_id;
     if (prefs.frame&&owner===session?.user.id) {
       const frame = DECORATIONS.find(d => d.id === prefs.frame);
       if (frame?.css&&frame.type==='frame') av.classList.add(frame.css);
@@ -1699,6 +1699,8 @@ showProfile = function(p) {
   applyDecorations();
 };
 setTimeout(applyDecorations, 1000);
+// Reaplica quadros/efeitos quando chat, membros, perfil ou chamada renderizam novos avatares.
+{let decoFrame=0;new MutationObserver(records=>{if(decoFrame||!records.some(r=>r.addedNodes.length))return;decoFrame=requestAnimationFrame(()=>{decoFrame=0;applyDecorations();applyProfileStyles();});}).observe(document.body,{childList:true,subtree:true});}
 
 // The status selector stays reachable when the mobile navigation drawer closes.
 document.body.append($('status-popover'));

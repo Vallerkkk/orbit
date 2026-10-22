@@ -41,128 +41,120 @@ export function initProfileAppearance(ctx) {
 
   function openDecorationGallery() {
     showDialog('Decorações de Perfil', container => {
-      container.classList.add('decoration-dialog');
-      const hero = el('div', 'deco-hero');
-      const heroIcon = el('div', 'deco-hero-icon', '✦');
-      heroIcon.setAttribute('aria-hidden', 'true');
-      const heroText = el('div', 'deco-hero-text');
-      heroText.append(el('h3', 'deco-title', 'Decorações de Perfil'), el('p', '', 'Personalize seu perfil com efeitos exclusivos e destaque-se na Órbita.'));
-      hero.append(heroIcon, heroText);
-      container.append(hero);
-
+      container.classList.add('dg');
       const categories = [
-        {id: 'effect', label: 'Efeitos', hint: 'Animados'},
-        {id: 'frame', label: 'Quadros', hint: 'Avatar'},
-        {id: 'banner', label: 'Capas', hint: 'Perfil'},
+        {id: 'effect', label: 'Efeitos', icon: '✨', key: 'profileEffect', empty: ''},
+        {id: 'frame', label: 'Quadros', icon: '◎', key: 'frame', empty: 'none'},
+        {id: 'banner', label: 'Capas', icon: '▭', key: 'bannerStyle', empty: 'banner-none'},
+        {id: 'name', label: 'Nome', icon: 'Aa', key: 'effect', empty: ''},
       ];
-      let current = 'effect';
+      const profile = ctx.state().profile || {};
+      const name = (profile.display_name || profile.username || 'Você').trim();
+      let current = 'effect', query = '';
       let prefs = loadProfilePrefs();
-      let showAll = false;
-      const tabs = el('div', 'shop-tabs');
+      const cat = () => categories.find(c => c.id === current);
+      const stored = c => c.id === 'name' ? (DECORATIONS.find(d => d.type === 'name' && d.value === (prefs.effect || ''))?.id || 'name-none') : (prefs[c.key] || '');
+      const pending = Object.fromEntries(categories.map(c => [c.id, stored(c)]));
+      const find = (type, id) => DECORATIONS.find(d => d.type === type && d.id === id);
+
+      function avatarNode(cls) {
+        const av = el('div', 'dg-avatar ' + (cls || ''));
+        if (profile.avatar_src) { const img = el('img'); img.src = profile.avatar_src; img.alt = ''; img.loading = 'lazy'; img.decoding = 'async'; av.append(img); }
+        else { av.textContent = (name[0] || 'O').toUpperCase(); av.style.background = profile.avatar_color || 'linear-gradient(135deg,#e07ad6,#8b5cff)'; }
+        return av;
+      }
+      function bannerNode(cls) {
+        const b = el('div', 'dg-banner ' + (cls || ''));
+        if (!cls && profile.banner_src) b.style.backgroundImage = `url("${String(profile.banner_src).replace(/"/g, '%22')}")`;
+        return b;
+      }
+
+      // Pré-visualização ao vivo com todas as escolhas combinadas
+      const live = el('div', 'dg-live');
+      function renderLive() {
+        const fx = find('effect', pending.effect), fr = find('frame', pending.frame), bn = find('banner', pending.banner), nm = find('name', pending.name);
+        live.className = 'dg-live ' + (fx?.css || '');
+        const n = el('strong', 'dg-live-name ' + (nm?.css || ''), name);
+        const info = el('div', 'dg-live-info');
+        info.append(n, el('small', '', '@' + (profile.username || 'voce')));
+        const tags = el('div', 'dg-live-tags');
+        for (const [label, d] of [['Efeito', fx], ['Quadro', fr], ['Capa', bn], ['Nome', nm]]) if (d?.css) tags.append(el('span', 'dg-chip', label + ': ' + d.name));
+        if (!tags.children.length) tags.append(el('span', 'dg-chip muted', 'Sem decorações'));
+        live.replaceChildren(bannerNode(bn?.css), avatarNode(fr?.css), info, tags);
+      }
+
+      const tabs = el('div', 'dg-tabs');
       tabs.setAttribute('role', 'tablist');
-      const grid = el('div', 'shop-grid');
-      const more = button('Ver todos', () => { showAll = !showAll; render(); }, 'deco-show-all');
-      const foot = el('div', 'deco-foot');
+      const search = el('input', 'dg-search');
+      search.type = 'search'; search.placeholder = 'Buscar decoração ou tema'; search.setAttribute('aria-label', 'Buscar decoração');
+      search.oninput = () => { query = search.value.trim().toLowerCase(); render(); };
+      const grid = el('div', 'dg-grid');
 
-      function selectedId() {
-        if (current === 'effect') return prefs.profileEffect || '';
-        if (current === 'frame') return prefs.frame || '';
-        return prefs.bannerStyle || '';
+      function card(d) {
+        const selected = pending[current] === d.id || (!pending[current] && !d.css && d.id === cat().empty);
+        const applied = stored(cat()) === d.id;
+        const c = el('button', 'dg-card' + (selected ? ' selected' : ''));
+        c.type = 'button';
+        c.setAttribute('aria-pressed', String(selected));
+        c.setAttribute('aria-label', d.name + (applied ? ' — aplicado' : ''));
+        const stage = el('div', 'dg-stage ' + (current === 'effect' ? d.css || '' : ''));
+        if (current === 'banner') stage.append(bannerNode(d.css));
+        if (current === 'name') stage.append(el('strong', 'dg-stage-name ' + (d.css || ''), name));
+        else stage.append(avatarNode(current === 'frame' ? d.css : ''));
+        c.append(stage);
+        if (applied) c.append(el('span', 'dg-badge', 'Em uso'));
+        if (selected) c.append(el('span', 'dg-check', '✓'));
+        const meta = el('div', 'dg-meta');
+        meta.append(el('strong', '', d.name), el('small', '', d.theme || ''));
+        c.append(meta);
+        c.onclick = () => { pending[current] = d.id; render(); };
+        c.ondblclick = () => { pending[current] = d.id; applyAll(); };
+        return c;
       }
 
-      function apply(d) {
-        const next = {...loadProfilePrefs()};
-        if (current === 'effect') next.profileEffect = d.id;
-        else if (current === 'frame') next.frame = d.id;
-        else next.bannerStyle = d.id;
-        saveProfilePrefs(next);
-        prefs = next;
-        applyDecorations();
-        render();
-        toast(d.name + ' aplicado — grátis');
-      }
-
-      function preview(d) {
-        const profile = ctx.state().profile || {};
-        const name = (profile.display_name || 'Você').trim();
-        const initial = (name[0] || 'O').toUpperCase();
-        const card = el('button', 'deco-card' + (selectedId() === d.id ? ' selected' : ''));
-        card.type = 'button';
-        card.setAttribute('aria-pressed', String(selectedId() === d.id));
-        card.setAttribute('aria-label', d.name + ' — grátis');
-
-        const art = el('div', 'deco-preview ' + (current === 'effect' ? d.css || '' : ''));
-        if (current === 'banner') art.classList.add('deco-preview-banner', d.css || 'banner-gradient');
-        const avatar = el('div', 'deco-avatar ' + (current === 'frame' ? d.css || '' : ''));
-        if (profile.avatar_src) {
-          const img = el('img');
-          img.src = profile.avatar_src;
-          img.alt = '';
-          avatar.append(img);
-        } else {
-          avatar.textContent = initial;
-          avatar.style.background = profile.avatar_color || 'linear-gradient(135deg,#ff4f9a,#8b5cff)';
-        }
-        art.append(avatar);
-        if (current === 'effect') art.append(el('span', 'deco-aura'), el('span', 'deco-spark s1'), el('span', 'deco-spark s2'), el('span', 'deco-spark s3'));
-        card.append(art);
-        if (selectedId() === d.id) card.append(el('span', 'deco-check', '✓'));
-        const meta = el('div', 'deco-meta');
-        meta.append(el('strong', '', d.name), el('small', '', d.theme || 'Efeito'));
-        card.append(meta, el('span', 'deco-price', 'Grátis'));
-        card.onclick = () => apply(d);
-        return card;
-      }
-
-      const footText = el('div', 'deco-foot-text');
-      footText.append(el('p', '', 'Todas as decorações listadas são gratuitas.'), el('small', '', 'Escolha uma e destaque seu perfil!'));
       function render() {
-        grid.replaceChildren();
-        const all = DECORATIONS.filter(d => d.type === current);
-        const items = showAll ? all : (all.filter(d => d.featured).length ? all.filter(d => d.featured) : all.slice(0, 6));
-        items.forEach(d => grid.append(preview(d)));
-        more.hidden = all.length <= items.length;
-        more.textContent = showAll ? 'Mostrar destaque' : `Ver todos (${all.length})`;
-        tabs.querySelectorAll('.shop-tab').forEach(tab => {
-          const active = tab.dataset.category === current;
-          tab.classList.toggle('active', active);
-          tab.setAttribute('aria-selected', String(active));
-        });
-        foot.replaceChildren(
-          el('span', 'deco-free-icon', '✦'),
-          footText,
-        );
+        tabs.querySelectorAll('.dg-tab').forEach(t => { const on = t.dataset.category === current; t.classList.toggle('active', on); t.setAttribute('aria-selected', String(on)); });
+        const items = DECORATIONS.filter(d => d.type === current && (!query || (d.name + ' ' + (d.theme || '')).toLowerCase().includes(query)));
+        grid.replaceChildren(...items.map(card));
+        if (!items.length) grid.append(el('p', 'dg-empty', 'Nenhuma decoração encontrada.'));
+        renderLive();
+        const dirty = categories.some(c => pending[c.id] !== stored(c));
+        applyBtn.disabled = !dirty;
+        applyBtn.textContent = dirty ? 'Aplicar decorações' : 'Tudo aplicado';
       }
 
-      categories.forEach(cat => {
-        const tab = el('button', 'shop-tab' + (cat.id === current ? ' active' : ''));
-        tab.type = 'button';
-        tab.dataset.category = cat.id;
-        tab.setAttribute('role', 'tab');
-        tab.setAttribute('aria-selected', String(cat.id === current));
-        tab.append(el('span', '', cat.label), el('small', '', cat.hint));
-        tab.onclick = () => {
-          current = cat.id;
-          showAll = false;
-          render();
-        };
-        tabs.append(tab);
+      function persist(next) { saveProfilePrefs(next); prefs = next; applyDecorations(); }
+      function applyAll() {
+        const next = {...loadProfilePrefs()};
+        for (const c of categories) {
+          if (c.id === 'name') next.effect = find('name', pending.name)?.value || '';
+          else next[c.key] = pending[c.id] || c.empty;
+        }
+        persist(next); render(); toast('Decorações aplicadas.');
+      }
+      function removeCurrent() {
+        const c = cat(), next = {...loadProfilePrefs()};
+        if (c.id === 'name') { next.effect = ''; pending.name = 'name-none'; }
+        else { next[c.key] = c.empty; pending[c.id] = c.empty; }
+        persist(next); render(); toast(c.label + ': decoração removida.');
+      }
+
+      categories.forEach(c => {
+        const t = el('button', 'dg-tab');
+        t.type = 'button'; t.dataset.category = c.id; t.setAttribute('role', 'tab');
+        const count = DECORATIONS.filter(d => d.type === c.id).length;
+        t.append(el('span', 'dg-tab-icon', c.icon), el('span', '', c.label), el('small', 'dg-count', String(count)));
+        t.onclick = () => { current = c.id; render(); };
+        tabs.append(t);
       });
 
-      const clear = button('Remover decoração', () => {
-        const next = {...loadProfilePrefs()};
-        if (current === 'effect') next.profileEffect = '';
-        else if (current === 'frame') next.frame = 'none';
-        else next.bannerStyle = 'banner-none';
-        saveProfilePrefs(next);
-        prefs = next;
-        applyDecorations();
-        render();
-        toast('Decoração removida.');
-      }, 'deco-clear');
-      const links = el('div', 'deco-links');
-      links.append(more, clear);
-      container.append(tabs, grid, links, foot);
+      const bar = el('div', 'dg-bar');
+      const removeBtn = button('Remover desta categoria', removeCurrent, 'dg-remove');
+      const applyBtn = button('Aplicar decorações', applyAll, 'primary dg-apply');
+      bar.append(removeBtn, applyBtn);
+      const tools = el('div', 'dg-tools');
+      tools.append(tabs, search);
+      container.append(live, tools, grid, bar);
       render();
     });
   }
