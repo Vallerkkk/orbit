@@ -14,6 +14,8 @@ export function initAudioControls(ctx){
     const ok=await room.switchActiveDevice(kind,value||'default');if(ok===false)throw Error('Dispositivo indisponível');
   }
   const enhanced=()=>ctx.noise()&&localStorage.getItem('orbita-noise-mode')!=='browser';
+  const sensitivity=()=>Number(localStorage.getItem('orbita-mic-sensitivity')||'50');
+  const noiseMode=()=>localStorage.getItem('orbita-noise-mode')||'enhanced';
   async function process(track,room){
     if(!track||track.source!=='microphone'||typeof track.setProcessor!=='function')return;
     const prior=tracks.get(track);if(prior?.pending){prior.again=true;return prior.pending;}
@@ -23,6 +25,7 @@ export function initAudioControls(ctx){
       if(record.processor)continue;
       const processor=createNoiseProcessor();
       try{
+        await processor.init({track:track.mediaStreamTrack||track, sensitivity:sensitivity(), mode:noiseMode()});
         await requestWithDeadline(()=>track.setProcessor(processor),{timeout:12000});
         if(ctx.room()!==room){await track.stopProcessor();return;}
         record.processor=processor;
@@ -42,9 +45,21 @@ export function initAudioControls(ctx){
     const box=el('section','audio-settings');box.append(el('h3','','Entrada e saída de áudio'),el('p','muted','As alterações abaixo são aplicadas imediatamente neste aparelho.'));
     const input=el('select'),output=el('select'),mode=el('select'),status=el('p','muted');
     for(const [node,label] of [[input,'Dispositivo de entrada (microfone)'],[output,'Dispositivo de saída (fone ou alto-falante)'],[mode,'Redução de ruído adicional']]){const field=el('label','field',label);node.setAttribute('aria-label',label);field.append(node);box.append(field);}
-    mode.append(new Option('Aprimorada · RNNoise (gratuita e local)','enhanced'),new Option('Somente a supressão do navegador','browser'));mode.value=localStorage.getItem('orbita-noise-mode')||'enhanced';
+    mode.append(
+  new Option('Padrão (navegador)','browser'),
+  new Option('Aprimorada · RNNoise','enhanced'),
+  new Option('Agressiva · estilo Krisp','aggressive')
+);mode.value=localStorage.getItem('orbita-noise-mode')||'enhanced';
     const setStatus=()=>status.textContent=!ctx.noise()?'Ative Supressão de ruído e salve o perfil para filtrar o microfone.':mode.value==='enhanced'?'Filtro de voz local com redução de ruídos contínuos e graves. Em caso de incompatibilidade, usa o filtro do navegador.':'Usando a redução de ruído do navegador.';
     mode.onchange=async()=>{mode.disabled=true;localStorage.setItem('orbita-noise-mode',mode.value);try{await sync();setStatus();}catch{ctx.toast('Não foi possível atualizar o filtro. Tente novamente.');}finally{mode.disabled=false;}};
+    // Sensibilidade do microfone
+    const sensLabel=el('label','field','Sensibilidade do microfone');
+    const sens=el('input');sens.type='range';sens.min='10';sens.max='100';sens.value=sensitivity();sens.setAttribute('aria-label','Sensibilidade do microfone');
+    const sensVal=el('span','muted',sens.value+'%');
+    sens.oninput=()=>{sensVal.textContent=sens.value+'%';localStorage.setItem('orbita-mic-sensitivity',sens.value);};
+    sens.onchange=async()=>{try{await sync();}catch{}};
+    sensLabel.append(sens,sensVal);box.append(sensLabel);
+
     async function refresh(){
       try{const devices=await navigator.mediaDevices?.enumerateDevices()||[];if(!box.isConnected)return;
         for(const [node,kind,key] of [[input,'audioinput','input'],[output,'audiooutput','output']]){node.replaceChildren(new Option('Padrão do sistema',''));const saved=read(key),choices=devices.filter(d=>d.kind===kind&&d.deviceId&&d.deviceId!=='default'&&d.deviceId!=='communications');for(const [index,d] of choices.entries())node.append(new Option(d.label||(key==='input'?'Microfone ':'Saída ')+(index+1),d.deviceId));if(saved&&!choices.some(d=>d.deviceId===saved))node.append(new Option('Dispositivo salvo · reconecte ou escolha outro',saved));node.value=saved;}

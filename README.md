@@ -149,3 +149,17 @@ A interface de produção é compilada com `npm ci` e `npm run build`, com arqui
 Consulte [recursos e operação](docs/social-expansion.md) para os novos controles, limites, login social, funções do Supabase e integrações preparadas sem contratação.
 
 LulaDroid: [transcrição consentida e assistente de voz](docs/luladroid.md).
+
+
+## Correção do deploy da interface no Render
+
+O build de produção da interface precisa ser executado durante o deploy. O `render.yaml` foi ajustado para instalar as dependências Python e, em seguida, executar `npm ci` e `npm run build`. Isso regenera `static/dist/` a partir dos arquivos atuais em `static/`, evitando publicar um bundle antigo.
+
+Se o deploy não atualizar a aparência, confirme nos logs do Render que `npm ci` e `npm run build` terminaram com sucesso e faça um **Manual Deploy → Clear build cache & deploy**. Não é necessário enviar `.env` nem a pasta `.venv/` para o repositório.
+
+Para reproduzir localmente, na pasta `jesus/` execute:
+
+```bash
+npm ci
+npm run build
+```
