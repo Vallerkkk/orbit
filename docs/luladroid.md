@@ -1,38 +1,50 @@
-# LulaDroid — respostas com OpenRouter
+# LulaDroid — NVIDIA NIM / Nemotron 3 Ultra
 
-O LulaDroid acompanha **somente a fala dos participantes que ativarem individualmente a escuta** em uma sala de voz, usando o reconhecimento de fala disponibilizado pelo navegador. O texto é enviado à API autenticada da Órbita. A frase **“Ei, LulaDroid”** aciona uma resposta contextual gerada pelo **OpenRouter**, reproduzida via `speechSynthesis` no **próprio aparelho** de quem ativou o assistente.
+O LulaDroid utiliza a API **NVIDIA NIM** com o modelo `nvidia/nemotron-3-ultra-550b-a55b` para responder perguntas curtas em português brasileiro, com base nas transcrições disponíveis da sala de voz.
 
-## Configuração no Render
+**Escuta e transcrição continuam locais ao navegador**, mediante consentimento individual, utilizando `SpeechRecognition` / `webkitSpeechRecognition`. A resposta de texto da NVIDIA é reproduzida como voz por `speechSynthesis` **somente no próprio dispositivo** de quem ativou o assistente. Não há participante automatizado LiveKit nem transcrição por NVIDIA.
 
-Configure as variáveis **apenas no ambiente do servidor**:
+## Render.com: configurar sem expor segredos
 
-```env
-OPENROUTER_API_KEY=
-OPENROUTER_LULADROID_MODEL=openrouter/auto
+Defina as variáveis no painel do serviço de backend (`Environment`):
+
+```dotenv
+NVIDIA_API_KEY=<sua chave NVIDIA NIM>
+NVIDIA_NIM_MODEL=nvidia/nemotron-3-ultra-550b-a55b
 ```
 
-A chave não deve ficar no GitHub nem no JavaScript do navegador. Chaves enviadas em chats ou já divulgadas devem ser revogadas e substituídas. Em seguida, atualize o serviço do Render e verifique se `GET /api/ai/status` mostra `llm: "openrouter"`.
+Nunca adicione a chave ao repositório, JavaScript ou `.env.example`. Se uma chave foi compartilhada em um chat, revogue-a e gere outra antes de uso continuado.
 
-## Como usar
+A NVIDIA disponibiliza o endpoint compatível com OpenAI:
 
-1. Entre em uma sala de voz na Órbita.
-2. Abra o painel **LulaDroid** e permita a escuta **do seu microfone**.
-3. Diga **“Ei, LulaDroid, o que foi combinado?”**. A pergunta é enviada ao OpenRouter e a resposta é reproduzida localmente.
-4. Pare a escuta a qualquer momento pelo painel.
+- `POST https://integrate.api.nvidia.com/v1/chat/completions`
+- `model: "nvidia/nemotron-3-ultra-550b-a55b"`
+- `Authorization: Bearer <chave>`
 
-## Limites e privacidade
+O prefixo `nvidia_nim/` é uma convenção de integração do LiteLLM, **não** parte do ID do modelo na API direta. O código também normaliza esse prefixo caso venha configurado na variável.
 
-- A transcrição é feita pelo recurso `SpeechRecognition`/`webkitSpeechRecognition` do navegador, **não** pelo Whisper/OpenRouter. A disponibilidade varia entre navegadores e o fornecedor do navegador pode processar o áudio.
-- O backend recebe texto transcrito, **não áudio bruto**, neste fluxo. O provedor OpenRouter processa a pergunta e, para administradores do site, o contexto recente da chamada. A API **não permite que participantes comuns vejam o histórico**, conforme o controle atual em `app.py`.
-- Transcrições existentes são mantidas apenas na memória do processo do servidor e podem se perder ao reiniciar; por padrão expiram. O armazenamento persistente do pacote ZIP anterior **não foi mesclado** porque o repositório remoto possui mudanças mais recentes de schema e políticas que exigem revisão independente.
-- A resposta por áudio é local, não transmitida como um participante LiveKit.
-- Por segurança, não registre dados confidenciais. Não há teto de gasto integrado: configure limites de uso e créditos no OpenRouter.
+Configuração para respostas rápidas de voz: `reasoning_effort: "none"`, `stream: false`, `max_tokens: 400`. Sem a chave, o serviço responde 503 (não inventa que executou a IA).
+
+## Como utilizar
+
+1. Abra uma chamada de voz na Órbita e o painel LulaDroid.
+2. Autorize a escuta individual do microfone e a transcrição.
+3. Diga **"Ei, LulaDroid, o que foi combinado?"**.
+4. O backend solicita resposta ao Nemotron; o navegador fala o resultado localmente.
+
+## Privacidade e limitações atuais
+
+- O áudio não é enviado à NVIDIA por esta integração. A NVIDIA recebe **texto** com a pergunta e o contexto recente, quando o backend permite. A transcrição de voz do navegador pode usar serviços do fornecedor do navegador.
+- Conforme o código atual da Órbita, apenas **administradores/creators** enviam o contexto da chamada ao modelo; usuários comuns podem fazer perguntas sem esse histórico. Histórico por chamada permanece em memória no servidor e é temporário.
+- Sem acesso à conversa, o modelo deve informar que não há dados suficientes, sem inventar fatos.
+- O assistente não fala na sala LiveKit para todos: `speechSynthesis` reproduz no dispositivo de origem.
+- A API pode aplicar limites, custos ou disponibilidade conforme o plano NVIDIA; monitore o consumo e ajuste cotas.
 
 ## Operação e verificação
 
-- `GET /api/ai/status` relata se o backend está configurado.
-- `POST /api/ai/opinion` requer autenticação; a geração de respostas falha claramente se `OPENROUTER_API_KEY` estiver ausente, sem fingir que houve consulta ao modelo.
-- Se o OpenRouter estiver indisponível ou sem créditos, a API responde com erro controlado, sem encaminhar corpos de erro do provedor.
-- Depois de publicar, teste uma chamada real com um usuário consentindo na transcrição, a frase de ativação e a reprodução por voz.
+- `GET /api/ai/status`: retorna `llm: "nvidia-nim"` somente quando `NVIDIA_API_KEY` está definida (não confirma que a chave é válida).
+- `POST /api/ai/opinion`: requer login Supabase e retorna resposta ou erro controlado.
+- Execute `python -m unittest tests.test_nvidia_nim_ai` para testes isolados, sem créditos de API.
+- Após publicar, teste uma chamada real com consentimento, "Ei, LulaDroid" e reprodução falada.
 
-A integração usa `POST https://openrouter.ai/api/v1/chat/completions` com Bearer token no backend. Documentação oficial: https://openrouter.ai/docs/quickstart
+Documentação oficial: https://build.nvidia.com/nvidia/nemotron-3-ultra-550b-a55b e https://docs.api.nvidia.com/nim/reference/nvidia-nemotron-3-ultra-550b-a55b-infer
