@@ -1,5 +1,5 @@
 {
-  "version": "ef6b0360fa21c09a",
+  "version": "8316243e49d16b38",
   "entry": "/static/dist/app-C6S6XUZP.js",
   "files": [
     "/static/dist/app-C6S6XUZP.js",
@@ -30,7 +30,7 @@
     "/static/dist/identity-6ebc994080d21c0a.css",
     "/static/dist/interface-c30ad38a9a1b3db8.css",
     "/static/dist/modern-dfbf9772c6bc459c.css",
-    "/static/dist/polish-b8932a68651685a1.css",
+    "/static/dist/polish-6c0d15ea9ef1d5d6.css",
     "/static/dist/social-feed-62c05a9ca6c15537.css",
     "/static/dist/style-3dca03de5587366e.css",
     "/static/dist/themes-798ce3001de508c9.css"
@@ -45,7 +45,7 @@
     "/static/community-ux.css": "/static/dist/community-ux-a28b5109c4b7b2bc.css",
     "/static/identity.css": "/static/dist/identity-6ebc994080d21c0a.css",
     "/static/themes.css": "/static/dist/themes-798ce3001de508c9.css",
-    "/static/polish.css": "/static/dist/polish-b8932a68651685a1.css",
+    "/static/polish.css": "/static/dist/polish-6c0d15ea9ef1d5d6.css",
     "/static/modern.css": "/static/dist/modern-dfbf9772c6bc459c.css"
   },
   "integrity": {
@@ -77,7 +77,7 @@
     "/static/dist/identity-6ebc994080d21c0a.css": "6ebc994080d21c0a7762bce8511b194c8789ec236e30410ea87dc9dbc01e0035",
     "/static/dist/interface-c30ad38a9a1b3db8.css": "c30ad38a9a1b3db8298e710ba83d5285f4859f9a0ba254d1407d34971e5cb4eb",
     "/static/dist/modern-dfbf9772c6bc459c.css": "dfbf9772c6bc459cf02777db2a4552b159ad6db43b2be1f7969b7d686c52a25a",
-    "/static/dist/polish-b8932a68651685a1.css": "b8932a68651685a129e115f083880f847ecd5e7b97ebc746be493a92e54a09c7",
+    "/static/dist/polish-6c0d15ea9ef1d5d6.css": "6c0d15ea9ef1d5d6131b91f10183f888ca76167b3318c4c5497f4023e3aff5be",
     "/static/dist/social-feed-62c05a9ca6c15537.css": "62c05a9ca6c15537bf253125c4c084de10a50bfc9bc981f016b493158cb66c53",
     "/static/dist/style-3dca03de5587366e.css": "3dca03de5587366e78779ba9eeb25529b7dee989e39d686a122b304a8da6d80b",
     "/static/dist/themes-798ce3001de508c9.css": "798ce3001de508c9b84f827c480f6fb7e7a93657fa4b13d8e368392a43386def"
