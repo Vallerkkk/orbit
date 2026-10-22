@@ -224,6 +224,7 @@ from ai_call import (
     process_audio_chunk,
     get_recent_transcript,
     generate_opinion,
+    generate_answer,
     clear_call,
     add_transcript,
 )
@@ -291,7 +292,7 @@ async def ai_opinion(payload: dict, identity=Depends(current_user)):
     call_id = ai_call_id(payload.get("call_id"))
     question = str(payload.get("question") or "").strip()[:1000]
     context = get_recent_transcript(call_id) if await is_site_admin(identity) else []
-    result = generate_opinion(context, question)
+    result = await generate_answer(context, question)
     return result
 
 @app.delete("/api/ai/transcript/{call_id}")

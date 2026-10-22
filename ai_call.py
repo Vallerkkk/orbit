@@ -11,6 +11,7 @@ import re
 import tempfile
 import threading
 import unicodedata
+import httpx
 from typing import Any
 from datetime import datetime, timezone
 from pathlib import Path
@@ -205,3 +206,46 @@ def get_memory_summary() -> dict:
         "style": _memory.get("conversation_style"),
         "recent": _memory.get("learned", [])[-5:],
     }
+
+async def generate_answer(context: list[dict], question: str = "") -> dict:
+    """Usa o Gemini quando GEMINI_API_KEY existe; senão mantém a simulação local."""
+    key = os.getenv("GEMINI_API_KEY", "").strip()
+    if not key:
+        return generate_opinion(context, question)
+    lines = []
+    for item in context[-20:]:
+        lines.append(f"{item.get('display_name') or 'Participante'}: {item.get('text', '')}")
+    recent = "\n".join(lines)[-6000:]
+    prompt = (
+        "Você é LulaDroid, assistente de voz da chamada Órbita. Responda em português do Brasil, "
+        "em no máximo 80 palavras, de forma direta e natural para ser falada em voz alta. "
+        "Use apenas o contexto recente abaixo. Se a resposta não estiver no contexto, diga que não "
+        "sabe e peça para repetirem. Não invente ações, dados privados ou acesso administrativo.\n\n"
+        f"Contexto recente:\n{recent or '(sem falas anteriores)'}\n\n"
+        f"Pergunta: {question or 'Resuma o que foi falado até agora.'}"
+    )
+    model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip() or "gemini-2.5-flash"
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            response = await client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+                headers={"x-goog-api-key": key, "Content-Type": "application/json"},
+                json={
+                    "systemInstruction": {"parts": [{"text": "Você é LulaDroid, um assistente de chamadas curto, seguro e em português do Brasil."}]},
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"maxOutputTokens": 256, "temperature": 0.4, "thinkingConfig": {"thinkingBudget": 0}},
+                },
+            )
+        if response.status_code == 200:
+            parts = response.json().get("candidates", [{}])[0].get("content", {}).get("parts", [])
+            answer = " ".join(p.get("text", "") for p in parts if not p.get("thought")).strip()
+            if answer:
+                return {
+                    "answer": answer[:1200], "context_used": len(context), "source": "gemini",
+                    "searched": False, "question": question or "(opinião geral)",
+                    "memory_used": bool(_memory.get("learned")), "wake_detected": True,
+                }
+    except Exception:
+        pass
+    return generate_opinion(context, question)
+
