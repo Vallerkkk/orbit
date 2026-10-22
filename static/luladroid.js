@@ -187,7 +187,7 @@ export function initLuladroid(ctx) {
       box.classList.add('luladroid-consent');
       box.append(
         el('p', '', 'Ao ativar, o navegador transcreve a sua fala nesta chamada. O texto fica no histórico restrito aos administradores do site. O áudio não é gravado pela Órbita.'),
-        el('p', '', 'Diga “eai LulaDroid” seguido da pergunta. Todos na chamada ouvem a resposta. Não fale dados confidenciais.'),
+        el('p', '', 'Diga “eai LulaDroid” seguido da pergunta. A resposta será reproduzida somente no seu dispositivo. Não fale dados confidenciais.'),
         button('Ativar escuta do LulaDroid', () => {
           document.getElementById('app-dialog').close();
           active = true; listen.hidden = true; stopButton.hidden = false;
