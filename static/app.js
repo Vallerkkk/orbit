@@ -1012,7 +1012,7 @@ function showProfile(p) {
     const actions = el('div', 'rp-section');
     if (p.id === session?.user.id) {
       actions.append(button('Editar perfil', () => { $('app-dialog').close(); $('settings').click(); }, 'rp-action'));
-      actions.append(button('Decorações e efeitos', () => { $('app-dialog').close(); openDecorationGallery(); }, 'rp-action'));
+      actions.append(button('Profile Decoration', () => { $('app-dialog').close(); openDecorationGallery(); }, 'rp-action'));
       actions.append(button('Definir status', () => { $('app-dialog').close();closeMobileMenu();$('status-popover').classList.remove('hidden');requestAnimationFrame(()=>$('status-popover').querySelector('button')?.focus()); }, 'rp-action'));
     } else {
       const f = friendships.find(f => [f.requester_id, f.recipient_id].includes(p.id));

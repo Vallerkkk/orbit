@@ -1,78 +1,165 @@
 import {DECORATIONS} from './profile-decoration-catalog.js';
-export function initProfileAppearance(ctx){const {el,button,showDialog,loadProfilePrefs,saveProfilePrefs,applyDecorations,toast}=ctx,$=id=>document.getElementById(id);
-function openProfileCustomizer() {
-  showDialog('Personalizar perfil', container => {
-    const card = el('div', 'profile-edit-card'); container.append(card); const inner = el('div','profile-edit-content'); card.append(inner); container = inner;
-    const prefs = loadProfilePrefs();
-    const font = el('select');
-    font.innerHTML = '<option value="">Padrão</option><option value="inter">Inter</option><option value="mono">Monospace</option><option value="serif">Serif</option><option value="display">Display</option>';
-    font.value = prefs.font || '';
-    const effect = el('select');
-    effect.innerHTML = '<option value="">Nenhum</option><option value="glow">Glow</option><option value="shimmer">Shimmer</option><option value="rainbow">Rainbow</option>';
-    effect.value = prefs.effect || '';
-    const preview=el('div','profile-color-preview',ctx.state().profile?.display_name||'Sua capa');
-    const bannerColor = el('input'); bannerColor.type = 'color'; bannerColor.value = prefs.bannerColor || '#7c5cff';
-    preview.style.backgroundColor=bannerColor.value;bannerColor.oninput=()=>preview.style.backgroundColor=bannerColor.value;
-    const fontLabel = el('label','field','Fonte do nome'); fontLabel.append(font);
-    const effectLabel = el('label','field','Efeito do nome'); effectLabel.append(effect);
-    const colorLabel = el('label','field','Cor da capa'); colorLabel.append(bannerColor);
-    container.append(preview,el('p','muted','Personalização local do seu perfil neste dispositivo.'),fontLabel, effectLabel, colorLabel,
-      button('Salvar', () => {
-        saveProfilePrefs({ ...loadProfilePrefs(),font: font.value, effect: effect.value, bannerColor: bannerColor.value });
-        $('app-dialog').close();
-        toast('Personalização salva.');
-      }, 'primary')
-    );
-  });
-}
 
-function openDecorationGallery() {
-  showDialog('Profile Decoration', container => {
-    const card = el('div', 'profile-edit-card'); container.append(card); const inner = el('div','profile-edit-content'); card.append(inner); container = inner;
-    let prefs = loadProfilePrefs();
-    const categories = [
-      { id: 'frame', label: 'Bordas de avatar' },
-      { id: 'effect', label: 'Efeitos de perfil' },
-      { id: 'banner', label: 'Capas' },
-    ];
-    let current = 'frame';
-    const tabs = el('div', 'shop-tabs');
-    const grid = el('div', 'shop-grid');
-    function render() {
-      grid.replaceChildren();
-      DECORATIONS.filter(d => d.type === current).forEach(d => {
-        const item = el('button', 'shop-item', d.name);item.type='button';item.setAttribute('aria-pressed',String((current==='frame'?prefs.frame:current==='effect'?prefs.profileEffect:prefs.bannerStyle)===d.id));
-        if ((current === 'frame' && prefs.frame === d.id) || (current === 'effect' && prefs.profileEffect === d.id) || (current === 'banner' && prefs.bannerStyle === d.id)) {
-          item.classList.add('selected');
-        }
-        item.onclick = () => {
-          const next = { ...loadProfilePrefs() };
-          if (current === 'frame') next.frame = d.id;
-          else if (current === 'effect') next.profileEffect = d.id;
-          else next.bannerStyle = d.id;
-          saveProfilePrefs(next);prefs=next;
-          applyDecorations();
-          render();
-          toast(d.name + ' aplicado');
-        };
-        grid.append(item);
-      });
-    }
-    categories.forEach(cat => {
-      const tab = el('button', 'shop-tab' + (cat.id === current ? ' active' : ''), cat.label);
-      tab.onclick = () => {
-        current = cat.id;
-        tabs.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        render();
-      };
-      tabs.append(tab);
+export function initProfileAppearance(ctx) {
+  const {el, button, showDialog, loadProfilePrefs, saveProfilePrefs, applyDecorations, toast} = ctx;
+  const $ = id => document.getElementById(id);
+
+  function openProfileCustomizer() {
+    showDialog('Personalizar perfil', container => {
+      const card = el('div', 'profile-edit-card');
+      container.append(card);
+      const inner = el('div', 'profile-edit-content');
+      card.append(inner);
+      container = inner;
+      const prefs = loadProfilePrefs();
+      const font = el('select');
+      font.innerHTML = '<option value="">Padrão</option><option value="inter">Inter</option><option value="mono">Monospace</option><option value="serif">Serif</option><option value="display">Display</option>';
+      font.value = prefs.font || '';
+      const effect = el('select');
+      effect.innerHTML = '<option value="">Nenhum</option><option value="glow">Glow</option><option value="shimmer">Shimmer</option><option value="rainbow">Rainbow</option>';
+      effect.value = prefs.effect || '';
+      const preview = el('div', 'profile-color-preview', ctx.state().profile?.display_name || 'Sua capa');
+      const bannerColor = el('input');
+      bannerColor.type = 'color';
+      bannerColor.value = prefs.bannerColor || '#ff4f9a';
+      preview.style.backgroundColor = bannerColor.value;
+      bannerColor.oninput = () => preview.style.backgroundColor = bannerColor.value;
+      const fontLabel = el('label', 'field', 'Fonte do nome');
+      fontLabel.append(font);
+      const effectLabel = el('label', 'field', 'Efeito do nome');
+      effectLabel.append(effect);
+      const colorLabel = el('label', 'field', 'Cor da capa');
+      colorLabel.append(bannerColor);
+      container.append(preview, el('p', 'muted', 'Personalização local do seu perfil neste dispositivo.'), fontLabel, effectLabel, colorLabel,
+        button('Salvar', () => {
+          saveProfilePrefs({...loadProfilePrefs(), font: font.value, effect: effect.value, bannerColor: bannerColor.value});
+          $('app-dialog').close();
+          toast('Personalização salva.');
+        }, 'primary'));
     });
-    container.append(tabs,grid,button('Remover efeito de perfil',()=>{saveProfilePrefs({...loadProfilePrefs(),profileEffect:''});prefs=loadProfilePrefs();applyDecorations();render();}));
-    container.append(el('p', 'muted', 'Escolha bordas, efeitos e estilos de capa. As mudanças são aplicadas no seu perfil e salvas localmente. Capas animadas (GIF) podem ser enviadas em Editar perfil.'));
-    render();
-  });
+  }
+
+  function openDecorationGallery() {
+    showDialog('Profile Decoration', container => {
+      container.classList.add('decoration-dialog');
+      const hero = el('div', 'deco-hero');
+      const heroIcon = el('div', 'deco-hero-icon', '✦');
+      const heroText = el('div');
+      heroText.append(el('p', '', 'Efeitos, quadros e capas para destacar o seu perfil. Escolha o seu favorito — tudo grátis.'));
+      hero.append(heroIcon, heroText);
+      container.append(hero);
+
+      const categories = [
+        {id: 'effect', label: 'Efeitos', hint: 'Animados'},
+        {id: 'frame', label: 'Quadros', hint: 'Avatar'},
+        {id: 'banner', label: 'Capas', hint: 'Perfil'},
+      ];
+      let current = 'effect';
+      let prefs = loadProfilePrefs();
+      let showAll = false;
+      const tabs = el('div', 'shop-tabs');
+      const grid = el('div', 'shop-grid');
+      const more = button('Ver todos', () => { showAll = !showAll; render(); }, 'deco-show-all');
+      const foot = el('div', 'deco-foot');
+
+      function selectedId() {
+        if (current === 'effect') return prefs.profileEffect || '';
+        if (current === 'frame') return prefs.frame || '';
+        return prefs.bannerStyle || '';
+      }
+
+      function apply(d) {
+        const next = {...loadProfilePrefs()};
+        if (current === 'effect') next.profileEffect = d.id;
+        else if (current === 'frame') next.frame = d.id;
+        else next.bannerStyle = d.id;
+        saveProfilePrefs(next);
+        prefs = next;
+        applyDecorations();
+        render();
+        toast(d.name + ' aplicado — grátis');
+      }
+
+      function preview(d) {
+        const profile = ctx.state().profile || {};
+        const name = (profile.display_name || 'Você').trim();
+        const initial = (name[0] || 'O').toUpperCase();
+        const card = el('button', 'deco-card' + (selectedId() === d.id ? ' selected' : ''));
+        card.type = 'button';
+        card.setAttribute('aria-pressed', String(selectedId() === d.id));
+        card.setAttribute('aria-label', d.name + ' — grátis');
+
+        const art = el('div', 'deco-preview ' + (current === 'effect' ? d.css || '' : ''));
+        if (current === 'banner') art.classList.add('deco-preview-banner', d.css || 'banner-gradient');
+        const avatar = el('div', 'deco-avatar ' + (current === 'frame' ? d.css || '' : ''));
+        if (profile.avatar_src) {
+          const img = el('img');
+          img.src = profile.avatar_src;
+          img.alt = '';
+          avatar.append(img);
+        } else {
+          avatar.textContent = initial;
+          avatar.style.background = profile.avatar_color || 'linear-gradient(135deg,#ff4f9a,#8b5cff)';
+        }
+        art.append(avatar);
+        if (current === 'effect') art.append(el('span', 'deco-aura'), el('span', 'deco-spark s1'), el('span', 'deco-spark s2'), el('span', 'deco-spark s3'));
+        if (selectedId() === d.id) art.append(el('span', 'deco-check', '✓'));
+        card.append(art);
+        const meta = el('div', 'deco-meta');
+        meta.append(el('strong', '', d.name), el('small', '', d.theme || 'Efeito'));
+        card.append(meta, el('span', 'deco-price', 'Grátis'));
+        card.onclick = () => apply(d);
+        return card;
+      }
+
+      function render() {
+        grid.replaceChildren();
+        const all = DECORATIONS.filter(d => d.type === current);
+        const items = showAll ? all : (all.filter(d => d.featured).length ? all.filter(d => d.featured) : all.slice(0, 6));
+        items.forEach(d => grid.append(preview(d)));
+        more.hidden = all.length <= items.length;
+        more.textContent = showAll ? 'Mostrar destaque' : `Ver todos (${all.length})`;
+        tabs.querySelectorAll('.shop-tab').forEach(tab => {
+          const active = tab.dataset.category === current;
+          tab.classList.toggle('active', active);
+          tab.setAttribute('aria-selected', String(active));
+        });
+        foot.replaceChildren(
+          el('span', 'deco-free-icon', '✦'),
+          el('p', '', 'Todas as decorações são gratuitas. Escolha uma e destaque seu perfil.'),
+        );
+      }
+
+      categories.forEach(cat => {
+        const tab = el('button', 'shop-tab' + (cat.id === current ? ' active' : ''));
+        tab.type = 'button';
+        tab.dataset.category = cat.id;
+        tab.setAttribute('role', 'tab');
+        tab.setAttribute('aria-selected', String(cat.id === current));
+        tab.append(el('span', '', cat.label), el('small', '', cat.hint));
+        tab.onclick = () => {
+          current = cat.id;
+          showAll = false;
+          render();
+        };
+        tabs.append(tab);
+      });
+
+      const clear = button('Remover decoração', () => {
+        const next = {...loadProfilePrefs()};
+        if (current === 'effect') next.profileEffect = '';
+        else if (current === 'frame') next.frame = 'none';
+        else next.bannerStyle = 'banner-none';
+        saveProfilePrefs(next);
+        prefs = next;
+        applyDecorations();
+        render();
+        toast('Decoração removida.');
+      }, 'deco-clear');
+      container.append(tabs, grid, more, foot, clear);
+      render();
+    });
+  }
+
+  return {openProfileCustomizer, openDecorationGallery};
 }
-
-
-return {openProfileCustomizer,openDecorationGallery};}
