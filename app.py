@@ -259,7 +259,7 @@ def ai_call_id(value):
 
 @app.get("/api/ai/status")
 async def ai_status():
-    return {"enabled": ai_enabled(), "stt": "simulation", "llm": "simulation"}
+    return {"enabled": ai_enabled(), "stt": "browser-speech-recognition", "llm": "openrouter" if os.getenv("OPENROUTER_API_KEY", "").strip() else "not-configured"}
 
 @app.post("/api/ai/transcript")
 async def ai_transcript(payload: dict, identity=Depends(current_user)):
