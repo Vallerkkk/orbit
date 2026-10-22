@@ -1,8 +1,8 @@
-/* LulaDroid — assistente de voz da chamada.
+/* Lula — assistente de voz da chamada.
    Transcreve a fala local pelo reconhecimento do navegador, envia o texto ao
    backend autenticado e reproduz a resposta no aparelho. */
 
-const WAKE = /\b(?:ei|e\s*a[ií]|oi|ol[aá])\s*[,!.]?\s*lula\s*[-_]?\s*droid\b[\s,.:;!?\-]*(.*)/i;
+const WAKE = /\b(?:ei|e\s*a[ií]|oi|ol[aá])\s*[,!.]?\s*lula\b[\s,.:;!?\-]*(.*)/i;
 
 export function wakeQuestion(text) {
   const match = String(text || '').match(WAKE);
@@ -23,22 +23,22 @@ export function initLuladroid(ctx) {
   const panel = el('aside', 'luladroid-panel');
   panel.id = 'luladroid-panel';
   panel.hidden = true;
-  panel.setAttribute('aria-label', 'LulaDroid, assistente da chamada');
+  panel.setAttribute('aria-label', 'Lula, assistente da chamada');
 
   const header = el('header', 'luladroid-header');
-  const title = el('h3', '', 'LulaDroid');
+  const title = el('h3', '', 'Lula');
   const dot = el('span', 'luladroid-dot');
   const status = el('span', 'luladroid-status', 'Assistente de voz');
   status.setAttribute('role', 'status');
   const close = button('×', () => setOpen(false), 'luladroid-close');
-  close.setAttribute('aria-label', 'Fechar LulaDroid');
+  close.setAttribute('aria-label', 'Fechar Lula');
   header.append(title, dot, status, close);
 
-  const intro = el('p', 'luladroid-intro', 'Diga “eai LulaDroid” e faça a pergunta. A resposta é falada nesta chamada.');
+  const intro = el('p', 'luladroid-intro', 'Diga “eai Lula” e faça a pergunta. A resposta é falada nesta chamada.');
   const logBox = el('div', 'luladroid-log');
   logBox.setAttribute('role', 'log');
   logBox.setAttribute('aria-live', 'polite');
-  logBox.setAttribute('aria-label', 'Conversa com o LulaDroid');
+  logBox.setAttribute('aria-label', 'Conversa com o Lula');
 
   const actions = el('div', 'luladroid-actions');
   const listen = button('Ativar escuta', () => activate(), 'primary');
@@ -54,7 +54,7 @@ export function initLuladroid(ctx) {
     : 'Este navegador não oferece reconhecimento de voz. Use Chrome, Edge ou outro navegador compatível.');
   panel.append(header, intro, logBox, actions, note);
 
-  const toggle = button('LulaDroid', () => setOpen(panel.hidden), 'soft-button');
+  const toggle = button('Lula', () => setOpen(panel.hidden), 'soft-button');
   toggle.id = 'luladroid-toggle';
   toggle.setAttribute('aria-expanded', 'false');
   toggle.setAttribute('aria-controls', 'luladroid-panel');
@@ -81,7 +81,7 @@ export function initLuladroid(ctx) {
 
   function add(author, text) {
     const row = el('div', 'luladroid-line ' + author);
-    row.append(el('strong', '', author === 'ai' ? 'LulaDroid' : 'Você'), el('p', '', text));
+    row.append(el('strong', '', author === 'ai' ? 'Lula' : 'Você'), el('p', '', text));
     logBox.append(row);
     logBox.scrollTop = logBox.scrollHeight;
     log.push({ author, text, at: Date.now() });
@@ -124,7 +124,7 @@ export function initLuladroid(ctx) {
     };
     recognition.onerror = event => {
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-        active = false; setStatus('Microfone não autorizado'); toast('Autorize o microfone para usar o LulaDroid.'); stopRecognition();
+        active = false; setStatus('Microfone não autorizado'); toast('Autorize o microfone para usar o Lula.'); stopRecognition();
       } else if (event.error !== 'aborted') setStatus('Reconhecimento indisponível');
     };
     recognition.onend = () => {
@@ -174,21 +174,21 @@ export function initLuladroid(ctx) {
       else setStatus('Sem resposta');
     } catch (error) {
       setStatus('Não foi possível responder');
-      toast(error.message || 'O LulaDroid não conseguiu responder.');
+      toast(error.message || 'O Lula não conseguiu responder.');
     }
   }
 
   function activate() {
-    if (!current()) return toast('Entre em uma sala de voz para usar o LulaDroid.');
+    if (!current()) return toast('Entre em uma sala de voz para usar o Lula.');
     if (!Recognition) return toast('Este navegador não oferece reconhecimento de voz.');
-    if (!inRoom()) return toast('Entre na chamada antes de ativar o LulaDroid.');
+    if (!inRoom()) return toast('Entre na chamada antes de ativar o Lula.');
     if (active) return;
-    showDialog('Ativar LulaDroid', box => {
+    showDialog('Ativar Lula', box => {
       box.classList.add('luladroid-consent');
       box.append(
         el('p', '', 'Ao ativar, o navegador transcreve a sua fala nesta chamada. O texto fica no histórico restrito aos administradores do site. O áudio não é gravado pela Órbita.'),
-        el('p', '', 'Diga “eai LulaDroid” seguido da pergunta. A resposta será reproduzida somente no seu dispositivo. Não fale dados confidenciais.'),
-        button('Ativar escuta do LulaDroid', () => {
+        el('p', '', 'Diga “eai Lula” seguido da pergunta. A resposta será reproduzida somente no seu dispositivo. Não fale dados confidenciais.'),
+        button('Ativar escuta do Lula', () => {
           document.getElementById('app-dialog').close();
           active = true; listen.hidden = true; stopButton.hidden = false;
           setStatus('Escuta ativa', true); startRecognition();
