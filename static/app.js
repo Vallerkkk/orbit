@@ -1730,7 +1730,8 @@ function applyDecorations() {
   document.querySelectorAll('.rp-avatar, .up-avatar, .avatar, #user-avatar, .participant-avatar, .tile-avatar').forEach(av => {
     DECORATIONS.filter(d => d.type === 'frame'&&d.css).forEach(d => av.classList.remove(d.css));
     const owner=av.dataset.userId||av.querySelector('[data-user-id]')?.dataset.userId||av.closest('[data-user-id],[data-participant-id]')?.dataset.userId||av.closest('[data-participant-id]')?.dataset.participantId||messages.get(av.closest('[data-message-id]')?.dataset.messageId)?.author_id;
-    const frame=decoFor(owner).frame;if(frame)av.classList.add(frame.css);
+    // Quadros só no cartão de perfil e nos tiles da chamada; listas laterais e chat ficam com avatar simples.
+    const roomy=av.matches('.rp-avatar, #voice-view .participant .avatar');const frame=roomy&&decoFor(owner).frame;if(frame)av.classList.add(frame.css);
   });
   document.querySelectorAll('#voice-view .participant[data-participant-id], #voice-view .media-tile[data-participant-id]:not(.media-screen)').forEach(tile=>{
     const fx=decoFor(tile.dataset.participantId).effect;let layer=tile.querySelector(':scope>.call-deco-fx');

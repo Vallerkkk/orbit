@@ -689,3 +689,8 @@ body:has(#voice-view:not([hidden]) .call-footer:not([hidden])) .vb-actions{displ
 
 /* Polimento: sair da conta fica só em Configurações (o #logout segue no DOM para o atalho do diálogo). */
 #logout{display:none!important}
+
+/* Sem decorações em avatares pequenos (membros, sidebar de voz, chat): nada transborda. */
+:is(#member-list,.voice-tree,.voice-tree-person,#message-list,.user-panel,.up-avatar-wrap) .avatar[class*="avatar-frame-"],#user-avatar[class*="avatar-frame-"]{box-shadow:none!important;animation:none!important;outline:none!important}
+:is(#member-list,.voice-tree,.voice-tree-person,#message-list) .avatar[class*="avatar-frame-"]::before,:is(#member-list,.voice-tree,.voice-tree-person,#message-list) .avatar[class*="avatar-frame-"]::after{content:none!important;display:none!important}
+:is(#member-list .member,.voice-tree-person){contain:paint}
