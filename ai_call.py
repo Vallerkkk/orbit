@@ -123,7 +123,7 @@ def detect_wake_word(text: str) -> tuple[bool, str]:
     if not raw.strip():
         return False, ""
     pattern = re.compile(
-        r"\b(?:ei|e\s*a[ií]|oi|ol[aá])\s*[,!.]?\s*lula\b[\s,.:;!?-]*(?P<command>.*)",
+        r"\b(?:ei|e\s*a[ií]|oi|ol[aá])\s*[,!.]?\s*lula\b(?!\s*[-_]?\s*droid\b)[\s,.:;!?-]*(?P<command>.*)",
         re.IGNORECASE | re.DOTALL,
     )
     match = pattern.search(raw)
