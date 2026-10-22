@@ -2,7 +2,7 @@
    Transcreve a fala local pelo reconhecimento do navegador, envia o texto ao
    backend autenticado e reproduz a resposta no aparelho. */
 
-const WAKE = /\b(?:ei|e\s*a[ií]|oi|ol[aá])\s*[,!.]?\s*lula\b[\s,.:;!?\-]*(.*)/i;
+const WAKE = /\b(?:ei|e\s*a[ií]|oi|ol[aá])\s*[,!.]?\s*lula\b(?!\s*[-_]?\s*droid\b)[\s,.:;!?\-]*(.*)/i;
 
 export function wakeQuestion(text) {
   const match = String(text || '').match(WAKE);
