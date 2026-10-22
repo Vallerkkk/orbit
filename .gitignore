@@ -1,0 +1,15 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+work/
+.npm-cache/
+pip-*/
+
+node_modules/
+desktop/npm-debug.log
+
+supabase/.temp/
+
+static/dist/meta.json
+npm-debug.log
