@@ -1051,13 +1051,7 @@ function showProfile(p) {
     }
     body.append(actions);
     if (own) {
-      const quick = el('div', 'rp-quick');
-      for (const [id, label] of [['up-mic-btn', 'Microfone'], ['up-deafen-btn', 'Fones de ouvido'], ['settings', 'Configurações de áudio']]) {
-        const original = $(id); if (!original) continue;
-        const b = button('', () => { if (id === 'settings') { openAudioPanel(); return; } original.click(); quick.querySelectorAll('button').forEach((n, i) => n.classList.toggle('active', [$('up-mic-btn'), $('up-deafen-btn')][i]?.classList.contains('active') || false)); });
-        b.innerHTML = original.querySelector('svg')?.outerHTML || ''; b.setAttribute('aria-label', label); b.title = label; quick.append(b);
-      }
-      body.append(quick);
+      // Microfone, fones e áudio já ficam no painel do usuário (1 controle por função).
     }
     const more=el('details','rp-more'),moreBody=el('div','rp-more-body');more.append(el('summary','','Mais do perfil'),moreBody);
     if(p.created_at)moreBody.append(el('div','rp-username','Membro desde '+new Date(p.created_at).toLocaleDateString('pt-BR',{day:'numeric',month:'short',year:'numeric'})));
@@ -1142,7 +1136,7 @@ function openAudioPanel(){showDialog('Configurações de Áudio',container=>{
   const echoCheck=audioRow('Cancelamento de Eco','Reduz eco do seu microfone.',echoCancellation,'Cancelamento de eco');
   const agcCheck=audioRow('Controle Automático de Ganho (AGC)','Ajusta o volume do microfone automaticamente.',autoGainControl,'Controle automático de ganho');
   const ptt=audioRow('Pressionar para Falar','Microfone fechado até você segurar Espaço ou o botão Falar.',pushToTalk,'Pressionar para falar');
-  const sfxCheck=audioRow('Efeitos Sonoros','Sons discretos ao entrar/sair de chamadas, mudo, câmera, tela e ao escolher decorações.',uiSoundsEnabled(),'Efeitos sonoros');
+  const sfxCheck=audioRow('Efeitos Sonoros','Sons bem discretos na interface: canais, abas, janelas, envio, reações, curtidas, chamadas e decorações.',uiSoundsEnabled(),'Efeitos sonoros');
   const sensWrap=el('div','audio-sensitivity'),sensHead=el('strong','audio-row-title','Sensibilidade do Microfone'),info=el('span','audio-row-info','i'),sensRow=el('span','audio-sens-row'),sens=el('input'),sensOut=el('output','audio-sens-value');info.setAttribute('aria-hidden','true');sensHead.append(info);sens.type='range';sens.min='10';sens.max='100';sens.value=localStorage.getItem('orbita-mic-sensitivity')||'50';sens.setAttribute('aria-label','Sensibilidade do microfone');const paint=()=>{sensOut.value=sens.value+'%';sens.style.setProperty('--fill',((sens.value-10)/90*100)+'%');};paint();sens.oninput=paint;sensRow.append(sens,sensOut);sensWrap.append(sensHead,sensRow,el('small','audio-row-desc','Arraste para ajustar a sensibilidade do seu microfone.'));form.append(sensWrap);
   const more=el('button','audio-devices-link','Entrada, saída e redução de ruído avançada');more.type='button';more.onclick=()=>audioTools?.open();form.append(more);
   const actions=el('div','audio-actions'),reset=el('button','audio-reset','Redefinir'),apply=el('button','primary audio-apply','Aplicar');reset.type='button';apply.type='submit';reset.onclick=()=>{noiseCheck.checked=true;echoCheck.checked=true;agcCheck.checked=true;ptt.checked=false;sfxCheck.checked=true;sens.value='50';paint();};actions.append(reset,apply);form.append(actions);
@@ -1923,3 +1917,19 @@ window.addEventListener('focus',checkResumedSession);window.addEventListener('on
   $('leave-call')?.addEventListener('click',()=>{if(room){ripple($('leave-call'));uiSound('leave');}},true);
 })();
 
+// Sons sutis da interface (respeitam 'Efeitos Sonoros'; gap evita repetição em cliques/hover rápidos).
+{
+  document.addEventListener('click',event=>{const t=event.target instanceof Element?event.target:null;if(!t)return;
+    if(t.closest('.reaction,.vc-reaction,.emoji-picker button'))return uiSound('react',{gap:150});
+    if(t.closest('.sf-like,[data-feed-like]'))return uiSound('like',{gap:200});
+    if(t.closest('[data-channel-id],.server-rail button,.community-button,.dg-tab,[role="tab"]'))return uiSound('tab',{gap:140});
+    if(t.closest('.primary-button,button[type="submit"],.primary'))return uiSound('tap',{gap:180});
+  },true);
+  $('message-form')?.addEventListener('submit',()=>{if($('message-input').value.trim())uiSound('send',{gap:250});},true);
+  const watchDialog=d=>{if(d.dataset.sfx)return;d.dataset.sfx='1';new MutationObserver(()=>uiSound(d.open?'open':'close',{gap:120})).observe(d,{attributes:true,attributeFilter:['open']});};
+  document.querySelectorAll('dialog').forEach(watchDialog);
+  new MutationObserver(rs=>{for(const r of rs)for(const n of r.addedNodes)if(n instanceof HTMLDialogElement)watchDialog(n);}).observe(document.body,{childList:true});
+}
+
+// 'Estado da conexão' não tinha ação: abre os detalhes de conexão (mesma janela do botão da chamada).
+$('btn-free-setup')?.addEventListener('click',()=>$('connection-info')?.click());

@@ -1,5 +1,5 @@
 importScripts('/static/share-worker.js');
-const CACHE = 'orbita-shell-20261022-v26';
+const CACHE = 'orbita-shell-20261022-v27';
 const SHELL = ['/static/offline.html', '/static/icons/icon-192.png', '/static/icons/icon-512.png'];
 const MAX_ASSETS = 80;
 let cacheWrites = Promise.resolve();

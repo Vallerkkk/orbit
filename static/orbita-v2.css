@@ -686,3 +686,6 @@ body:has(#voice-view:not([hidden]) .call-footer:not([hidden])) .vb-actions{displ
 @keyframes deco-sway { 0%, 100% { transform: rotate(-4deg) scale(1); } 50% { transform: rotate(5deg) scale(1.04); } }
 @keyframes deco-spin { to { transform: rotate(360deg); } }
 @keyframes deco-drift { 0%, 100% { transform: translate3d(-2px, -2px, 0) scale(1); } 50% { transform: translate3d(3px, 3px, 0) scale(1.025); } }
+
+/* Polimento: sair da conta fica só em Configurações (o #logout segue no DOM para o atalho do diálogo). */
+#logout{display:none!important}
