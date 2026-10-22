@@ -1,4 +1,4 @@
-"""Teste do Lula Droid: wake word, opinião e memória adaptável."""
+"""Teste do Lula: wake word, opinião e memória adaptável."""
 import json
 from datetime import datetime
 from pathlib import Path
@@ -17,22 +17,22 @@ def log(msg, data=None):
 def main():
     call_id = "lula-test-001"
     clear_call(call_id)
-    log("Teste Lula Droid iniciado")
+    log("Teste Lula iniciado")
 
     # Falas normais
     process_audio_chunk(call_id, "u1", "Ana", {"sample_text": "Acho que o projeto está indo bem."})
     process_audio_chunk(call_id, "u2", "Bruno", {"sample_text": "Concordo, mas precisamos de mais testes."})
 
     # Wake word
-    woke, cmd = detect_wake_word("Ei Lula Droid, o que você acha do andamento?")
+    woke, cmd = detect_wake_word("Ei Lula, o que você acha do andamento?")
     log("Wake word detectado", {"woke": woke, "command": cmd})
-    eai_woke, eai_cmd = detect_wake_word("eai LulaDroid qual a capital?")
+    eai_woke, eai_cmd = detect_wake_word("eai Lula qual a capital?")
     if not eai_woke or "capital" not in eai_cmd:
-        raise AssertionError("Variação eai LulaDroid não reconhecida")
+        raise AssertionError("Variação eai Lula não reconhecida")
 
     result = process_audio_chunk(
         call_id, "u1", "Ana",
-        {"sample_text": "Ei Lula Droid, pesquise sobre as melhores práticas de transcrição em tempo real."}
+        {"sample_text": "Ei Lula, pesquise sobre as melhores práticas de transcrição em tempo real."}
     )
     log("Resposta após wake word", {
         "wake": result.get("wake"),
@@ -48,7 +48,7 @@ def main():
     out = Path(__file__).resolve().parent / "artifacts" / "lula_droid_test_log.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "w", encoding="utf-8") as f:
-        json.dump({"test": "Lula Droid - Grok + memória", "entries": LOG}, f, ensure_ascii=False, indent=2)
+        json.dump({"test": "Lula - Grok + memória", "entries": LOG}, f, ensure_ascii=False, indent=2)
     print(f"Log: {out}")
 
 if __name__ == "__main__":
