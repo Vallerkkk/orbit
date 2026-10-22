@@ -46,4 +46,9 @@ create policy messages_insert on public.messages for insert to authenticated wit
   and (attachment_id is null or exists(select 1 from public.attachments a
     where a.id = attachment_id and a.owner_id = author_id and a.channel_id = messages.channel_id)));
 
+-- Causa confirmada no banco: 42501 permission denied for function valid_poll.
+-- A constraint CHECK de messages/direct_messages chama orbita_private.valid_poll(jsonb),
+-- que estava sem EXECUTE para o papel authenticated. GRANT é idempotente.
+grant execute on function orbita_private.valid_poll(jsonb) to authenticated;
+
 notify pgrst, 'reload schema';
