@@ -12,6 +12,10 @@ export function wakeQuestion(text) {
 export function initLuladroid(ctx) {
   const { el, button, toast, showDialog, apiFetch, state } = ctx;
   const view = document.getElementById('voice-view');
+  if (!view) return { update() {}, stop() {}, open() {} };
+  // Uma nova entrada na chamada pode acontecer antes da anterior terminar de
+  // montar o painel; remove restos para nunca duplicar botão/painel.
+  document.querySelectorAll('#luladroid-panel,#luladroid-toggle').forEach(node => node.remove());
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   let active = false, muted = false, recognition = null, closed = false;
   let callId = '', log = [], lastFinal = '', lastFinalAt = 0;
@@ -243,7 +247,7 @@ export function initLuladroid(ctx) {
   function shutdown() {
     closed = true; active = false; stopRecognition();
     if ('speechSynthesis' in window) speechSynthesis.cancel();
-    panel.remove(); toggle.remove();
+    document.querySelectorAll('#luladroid-panel,#luladroid-toggle').forEach(node => node.remove());
   }
 
   return { update, stop: shutdown, open: () => { setOpen(true); update(); } };
