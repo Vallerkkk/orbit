@@ -1,6 +1,6 @@
-# LulaDroid — NVIDIA NIM / Nemotron 3 Ultra
+# Lula — NVIDIA NIM / Nemotron 3 Ultra
 
-O LulaDroid utiliza a API **NVIDIA NIM** com o modelo `nvidia/nemotron-3-ultra-550b-a55b` para responder perguntas curtas em português brasileiro, com base nas transcrições disponíveis da sala de voz.
+O Lula utiliza a API **NVIDIA NIM** com o modelo `nvidia/nemotron-3-ultra-550b-a55b` para responder perguntas curtas em português brasileiro, com base nas transcrições disponíveis da sala de voz.
 
 **Escuta e transcrição continuam locais ao navegador**, mediante consentimento individual, utilizando `SpeechRecognition` / `webkitSpeechRecognition`. A resposta de texto da NVIDIA é reproduzida como voz por `speechSynthesis` **somente no próprio dispositivo** de quem ativou o assistente. Não há participante automatizado LiveKit nem transcrição por NVIDIA.
 
@@ -27,9 +27,9 @@ Configuração para respostas rápidas de voz: `reasoning_effort: "none"`, `stre
 
 ## Como utilizar
 
-1. Abra uma chamada de voz na Órbita e o painel LulaDroid.
+1. Abra uma chamada de voz na Órbita e o painel Lula.
 2. Autorize a escuta individual do microfone e a transcrição.
-3. Diga **"Ei, LulaDroid, o que foi combinado?"**.
+3. Diga **"Ei, Lula, o que foi combinado?"**.
 4. O backend solicita resposta ao Nemotron; o navegador fala o resultado localmente.
 
 ## Privacidade e limitações atuais
@@ -45,6 +45,6 @@ Configuração para respostas rápidas de voz: `reasoning_effort: "none"`, `stre
 - `GET /api/ai/status`: retorna `llm: "nvidia-nim"` somente quando `NVIDIA_API_KEY` está definida (não confirma que a chave é válida).
 - `POST /api/ai/opinion`: requer login Supabase e retorna resposta ou erro controlado.
 - Execute `python -m unittest tests.test_nvidia_nim_ai` para testes isolados, sem créditos de API.
-- Após publicar, teste uma chamada real com consentimento, "Ei, LulaDroid" e reprodução falada.
+- Após publicar, teste uma chamada real com consentimento, "Ei, Lula" e reprodução falada.
 
 Documentação oficial: https://build.nvidia.com/nvidia/nemotron-3-ultra-550b-a55b e https://docs.api.nvidia.com/nim/reference/nvidia-nemotron-3-ultra-550b-a55b-infer
