@@ -62,7 +62,7 @@ body:is([data-theme="blood"],[data-theme="cyber"],[data-theme="forest"],[data-th
 /* Placeholder "sem vídeo" */
 #voice-view .participant { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
 #voice-view .participant .avatar { width: 84px; height: 84px; font-size: 26px; box-shadow: none; filter: saturate(.8); }
-#voice-view .participant::before { content: "Sem vídeo"; position: absolute; left: 0; right: 0; top: calc(50% + 54px); text-align: center; color: var(--v2-mut); font-size: 14px; font-weight: 500; }
+#voice-view .participant::before { content: none; display: none; position: absolute; left: 0; right: 0; top: calc(50% + 54px); text-align: center; color: var(--v2-mut); font-size: 14px; font-weight: 500; }
 /* Chip de nome */
 #voice-view .participant .participant-name,
 #voice-view .media-tile figcaption {
@@ -544,3 +544,145 @@ body:has(#voice-view:not([hidden]) .call-footer:not([hidden])) .vb-actions{displ
 .role-badge{border:1px solid color-mix(in srgb,currentColor 55%,transparent)!important;background:color-mix(in srgb,currentColor 14%,transparent)!important}
 .member strong{display:flex!important;align-items:center;gap:0;min-width:0}
 @media (max-width:640px){:root{--fs-name:14.5px;--fs-name-sm:13.5px;--fs-body:14.5px;--fs-badge:11px}}
+
+/* Decorações animadas do perfil nos tiles da chamada (mesmas classes da galeria) */
+#voice-view .participant,#voice-view .media-tile{isolation:isolate}
+#voice-view .call-deco-fx{position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;overflow:hidden;opacity:.6;contain:paint}
+#voice-view .media-tile .call-deco-fx{opacity:.35}
+@media (prefers-reduced-motion: reduce){#voice-view .call-deco-fx,#voice-view .call-deco-fx::before,#voice-view .call-deco-fx::after,#voice-view .avatar[class*="avatar-frame-"]{animation:none!important}}
+
+/* Efeitos de perfil (catálogo novo) adaptados ao tile da chamada */
+#voice-view .call-deco-fx.profile-effect-cosmic-drift::before{
+  content: '';
+  position: absolute;
+  inset: -18px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 30%, #b58cff 0 2px, transparent 3px),
+    radial-gradient(circle at 70% 20%, #fff 0 1px, transparent 2px),
+    radial-gradient(circle at 80% 70%, #7ac7ff 0 2px, transparent 3px),
+    radial-gradient(circle at 20% 76%, #fff 0 1px, transparent 2px),
+    radial-gradient(circle at 50% 50%, rgba(124, 92, 255, .35), transparent 68%);
+  filter: blur(.2px);
+  animation: deco-drift 8s ease-in-out infinite;
+  pointer-events: none;
+}
+#voice-view .call-deco-fx.profile-effect-sakura-bloom::before{
+  content: '';
+  position: absolute;
+  inset: -17px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 0%, #ffd1e6 0 4px, transparent 5px),
+    radial-gradient(circle at 95% 35%, #ff9ecb 0 3px, transparent 4px),
+    radial-gradient(circle at 80% 92%, #ffd1e6 0 4px, transparent 5px),
+    radial-gradient(circle at 18% 84%, #ff9ecb 0 3px, transparent 4px),
+    radial-gradient(circle at 4% 30%, #ffd1e6 0 4px, transparent 5px);
+  filter: blur(.3px);
+  animation: deco-sway 7s ease-in-out infinite;
+  pointer-events: none;
+}
+#voice-view .call-deco-fx.profile-effect-frost-shards::before{
+  content: '';
+  position: absolute;
+  inset: -17px;
+  border-radius: 50%;
+  background: conic-gradient(from 20deg, transparent 0 7%, #8fe8ff 8% 9%, transparent 10% 21%, #b9f4ff 22% 23%, transparent 24% 38%, #7ad7ff 39% 40%, transparent 41% 58%, #d3f8ff 59% 60%, transparent 61% 78%, #8fe8ff 79% 80%, transparent 81%);
+  filter: drop-shadow(0 0 8px rgba(116, 226, 255, .55));
+  animation: deco-spin 12s linear infinite reverse;
+  pointer-events: none;
+}
+#voice-view .call-deco-fx.profile-effect-shadow-thorn::before{
+  content: '';
+  position: absolute;
+  inset: -18px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0 7%, #7b2cbf 8% 10%, transparent 11% 22%, #3c1361 23% 26%, transparent 27% 44%, #a855f7 45% 47%, transparent 48% 64%, #4c1d95 65% 68%, transparent 69% 84%, #7b2cbf 85% 87%, transparent 88%);
+  filter: drop-shadow(0 0 8px rgba(123, 44, 191, .65));
+  animation: deco-spin 10s linear infinite;
+  pointer-events: none;
+}
+#voice-view .call-deco-fx.profile-effect-stellar-flare::before{
+  content: '';
+  position: absolute;
+  inset: -17px;
+  border-radius: 50%;
+  background: conic-gradient(from 10deg, transparent 0 4%, #ffd27a 5% 7%, transparent 8% 17%, #ff8a3d 18% 20%, transparent 21% 36%, #fff0b3 37% 40%, transparent 41% 58%, #ffb347 59% 62%, transparent 63% 78%, #ffd27a 79% 82%, transparent 83%);
+  filter: drop-shadow(0 0 9px rgba(255, 179, 71, .7));
+  animation: deco-spin 14s linear infinite;
+  pointer-events: none;
+}
+#voice-view .call-deco-fx.profile-effect-stars::before{
+  content: '';
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 15% 20%, #fff 0 1px, transparent 2px),
+    radial-gradient(circle at 82% 30%, #fff 0 1px, transparent 2px),
+    radial-gradient(circle at 70% 82%, #b9c7ff 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 25% 72%, #fff 0 1px, transparent 2px);
+  box-shadow: 0 0 22px rgba(120, 140, 255, .25);
+  animation: deco-twinkle 4s ease-in-out infinite;
+  pointer-events: none;
+}
+#voice-view .call-deco-fx.profile-effect-aurora::before{
+  content: '';
+  position: absolute;
+  inset: -15px;
+  border-radius: 50%;
+  background: conic-gradient(from 180deg, rgba(67, 217, 138, .55), rgba(74, 124, 255, .5), rgba(164, 108, 255, .55), rgba(67, 217, 138, .55));
+  filter: blur(9px);
+  opacity: .7;
+  animation: deco-spin 9s linear infinite;
+  pointer-events: none;
+}
+#voice-view .call-deco-fx.profile-effect-sakura::before{
+  content: '';
+  position: absolute;
+  inset: -15px;
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse at 20% 10%, #ffc2dc 0 5px, transparent 6px),
+    radial-gradient(ellipse at 90% 35%, #ff9ecb 0 4px, transparent 5px),
+    radial-gradient(ellipse at 72% 92%, #ffc2dc 0 5px, transparent 6px);
+  animation: deco-sway 6s ease-in-out infinite;
+  pointer-events: none;
+}
+#voice-view .call-deco-fx.profile-effect-cosmic::before{
+  content: '';
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(164, 108, 255, .55), transparent 55%), radial-gradient(circle at 70% 75%, rgba(74, 124, 255, .4), transparent 55%);
+  filter: blur(8px);
+  animation: deco-pulse 5s ease-in-out infinite;
+  pointer-events: none;
+}
+#voice-view .call-deco-fx.profile-effect-fire::before{
+  content: '';
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent, rgba(255, 138, 61, .55), transparent, rgba(255, 79, 154, .45), transparent);
+  filter: blur(7px);
+  animation: deco-spin 5s linear infinite;
+  pointer-events: none;
+}
+#voice-view .call-deco-fx.profile-effect-snow::before{
+  content: '';
+  position: absolute;
+  inset: -15px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 20% 20%, #fff 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 80% 40%, #dff6ff 0 2px, transparent 3px),
+    radial-gradient(circle at 45% 88%, #fff 0 1.5px, transparent 2.5px);
+  animation: deco-drift 7s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes deco-twinkle { 0%, 100% { opacity: .45; transform: scale(.98); } 50% { opacity: 1; transform: scale(1.04); } }
+@keyframes deco-pulse { 0%, 100% { transform: scale(1); opacity: .9; } 50% { transform: scale(1.055); opacity: 1; } }
+@keyframes deco-sway { 0%, 100% { transform: rotate(-4deg) scale(1); } 50% { transform: rotate(5deg) scale(1.04); } }
+@keyframes deco-spin { to { transform: rotate(360deg); } }
+@keyframes deco-drift { 0%, 100% { transform: translate3d(-2px, -2px, 0) scale(1); } 50% { transform: translate3d(3px, 3px, 0) scale(1.025); } }

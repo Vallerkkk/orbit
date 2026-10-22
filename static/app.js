@@ -953,7 +953,7 @@ async function initSocial() {
   if(presenceChannel) await db.removeChannel(presenceChannel);
   if(!current())return;
   presenceChannel=db.channel('community:main',{config:{private:true,presence:{key:uid}}});
-  presenceChannel.on('presence',{event:'sync'},()=>{publicVoicePresence=Object.entries(presenceChannel.presenceState()).flatMap(([id,metas])=>metas.map(meta=>({...meta,id})));online=new Set(Object.keys(presenceChannel.presenceState()));renderMembers();renderChannels();if(home)renderFriends();});
+  presenceChannel.on('presence',{event:'sync'},()=>{publicVoicePresence=Object.entries(presenceChannel.presenceState()).flatMap(([id,metas])=>metas.map(meta=>({...meta,id})));online=new Set(Object.keys(presenceChannel.presenceState()));renderMembers();renderChannels();if(home)renderFriends();requestAnimationFrame(applyDecorations);});
   presenceChannel.subscribe(async status=>{if(status==='SUBSCRIBED')await publishVoicePresence(true);});
 }
 const memberNodes=new Map();
@@ -1492,7 +1492,7 @@ window.addEventListener('pagehide',()=>{if(extraSubscription)db?.removeChannel(e
 async function publishVoicePresence(force=false){
   if(!presenceChannel||!session||!profile)return;
   if(profile.presence_status==='invisible'){if(force)await presenceChannel.untrack();return;}
-  const value={status:enhancements?.presenceStatus()||profile.presence_status||'online',channel_id:room&&!callChannel?.private&&!callChannel?.is_private&&!communities.find(c=>c.id===callChannel?.community_id)?.invite_only?callChannel?.id:null,microphone:!!room?.localParticipant.isMicrophoneEnabled,deafened:!!room&&deafened,camera:!!room?.localParticipant.isCameraEnabled,screen:!!room?.localParticipant.isScreenShareEnabled};
+  const value={status:enhancements?.presenceStatus()||profile.presence_status||'online',channel_id:room&&!callChannel?.private&&!callChannel?.is_private&&!communities.find(c=>c.id===callChannel?.community_id)?.invite_only?callChannel?.id:null,microphone:!!room?.localParticipant.isMicrophoneEnabled,deafened:!!room&&deafened,camera:!!room?.localParticipant.isCameraEnabled,screen:!!room?.localParticipant.isScreenShareEnabled,deco:ownDeco()};
   const signature=JSON.stringify(value);if(!force&&signature===lastPresenceSignature)return;lastPresenceSignature=signature;await presenceChannel.track(value);
 }
 
@@ -1638,13 +1638,17 @@ boot();
 
 // === Profile customization (Discord-like) ===
 const PROFILE_PREFS_KEY = 'orbita-profile-prefs';
+// Decorações dos outros participantes chegam pela presença (só ids do catálogo, validados aqui).
+function ownDeco(){const p=loadProfilePrefs();return {frame:String(p.frame||''),effect:String(p.profileEffect||'')};}
+function decoFor(id){if(!id)return {};const raw=id===session?.user.id?ownDeco():publicVoicePresence.find(m=>m.id===id)?.deco||{};
+  const ok=(type,v)=>DECORATIONS.find(d=>d.type===type&&d.id===v&&d.css);return {frame:ok('frame',raw.frame),effect:ok('effect',raw.effect)};}
 function loadProfilePrefs() {
   try { return JSON.parse(localStorage.getItem(PROFILE_PREFS_KEY+':'+(session?.user.id||'guest')) || '{}') || {}; }
   catch { return {}; }
 }
 function saveProfilePrefs(prefs) {
   localStorage.setItem(PROFILE_PREFS_KEY+':'+(session?.user.id||'guest'), JSON.stringify(prefs));
-  applyProfileStyles();
+  applyProfileStyles();publishVoicePresence().catch(()=>{});
 }
 function applyProfileStyles() {
   const prefs = loadProfilePrefs();
@@ -1732,11 +1736,12 @@ function applyDecorations() {
   document.querySelectorAll('.rp-avatar, .up-avatar, .avatar, #user-avatar, .participant-avatar, .tile-avatar').forEach(av => {
     DECORATIONS.filter(d => d.type === 'frame'&&d.css).forEach(d => av.classList.remove(d.css));
     const owner=av.dataset.userId||av.querySelector('[data-user-id]')?.dataset.userId||av.closest('[data-user-id],[data-participant-id]')?.dataset.userId||av.closest('[data-participant-id]')?.dataset.participantId||messages.get(av.closest('[data-message-id]')?.dataset.messageId)?.author_id;
-    if (prefs.frame&&owner===session?.user.id) {
-      const frame = DECORATIONS.find(d => d.id === prefs.frame);
-      if (frame?.css&&frame.type==='frame') av.classList.add(frame.css);
-    }
+    const frame=decoFor(owner).frame;if(frame)av.classList.add(frame.css);
   });
+  document.querySelectorAll('#voice-view .participant[data-participant-id], #voice-view .media-tile[data-participant-id]:not(.media-screen)').forEach(tile=>{
+    const fx=decoFor(tile.dataset.participantId).effect;let layer=tile.querySelector(':scope>.call-deco-fx');
+    if(!fx){layer?.remove();return;}if(!layer){layer=document.createElement('span');layer.setAttribute('aria-hidden','true');tile.prepend(layer);}
+    const cls='call-deco-fx '+fx.css;if(layer.className!==cls)layer.className=cls;});
   document.querySelectorAll('.rich-profile').forEach(p => {
     DECORATIONS.filter(d => d.type === 'effect').forEach(d => p.classList.remove(d.css));
     if (prefs.profileEffect&&p.dataset.userId===session?.user.id) {
@@ -1917,3 +1922,4 @@ window.addEventListener('focus',checkResumedSession);window.addEventListener('on
     new MutationObserver(()=>{const now=btn.getAttribute('aria-pressed');if(now===last)return;const was=last;last=now;if(was==null)return;ripple(btn);uiSound(sounds[id][now==='true'?0:1],{gap:120,force:id==='deafen'});}).observe(btn,{attributes:true,attributeFilter:['aria-pressed']});}
   $('leave-call')?.addEventListener('click',()=>{if(room){ripple($('leave-call'));uiSound('leave');}},true);
 })();
+
