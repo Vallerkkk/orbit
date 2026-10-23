@@ -22,6 +22,7 @@ from luladroid import install_luladroid
 from diagnostics import install_diagnostics
 from community_features import install_features
 from site_admin import install_site_admin
+from media_search import install_media_search
 from upstream import client_for, new_client, read_json
 from videochamada import configured as videochamada_configured
 
@@ -214,6 +215,7 @@ def download_desktop_installer():
 
 install(app, current_user, settings, make_token)
 install_features(app, current_user, settings)
+install_media_search(app, current_user)
 install_public_pages(app, settings)
 install_luladroid(app, current_user, settings)
 install_diagnostics(app, current_user, settings)

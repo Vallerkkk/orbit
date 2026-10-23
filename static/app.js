@@ -1,4 +1,5 @@
 import {configureUiSounds,uiSoundsEnabled,setUiSoundsEnabled,uiSound} from './ui-sounds.js';
+import {chatMedia,renderChatMedia} from './chat-media.js';
 import {createAuthRecovery,isInvalidSessionError} from './auth-recovery.js';
 import './ui-polish.js';
 import {initSocialLogin} from './social-login.js';
@@ -365,7 +366,7 @@ function createMessageRow(message,grouped=false) {
     if(message.pinned)meta.append(el('small','pin-label','◆ Fixada'));
     content.append(meta);
     if(message.reply_to){const original=messages.get(message.reply_to);const quote=button(original?(original.profiles?.display_name||'Participante')+': '+original.content.slice(0,150):'↪ Resposta a uma mensagem anterior',()=>jumpToReply(message.reply_to),'reply-card');quote.setAttribute('aria-label','Ir para a mensagem respondida');content.append(quote);}
-    content.append(safeRichText(message.content));if(message.poll)content.append(renderPoll(message));
+    {const media=chatMedia(message.content);if(media){item.classList.add('message-media',media.kind==='sticker'?'message-sticker':'message-gif');content.append(renderChatMedia(media));}else content.append(safeRichText(message.content));}if(message.poll)content.append(renderPoll(message));
     if(message.attachments){const a=message.attachments;if(a.mime_type?.startsWith('image/')){const preview=el('img','attachment-preview');preview.alt=a.name;preview.loading='lazy';reserveImage(preview);content.append(preview);resolveAttachmentUrl(a).then(url=>preview.src=url).catch(()=>preview.remove());}else if(a.mime_type?.startsWith('video/')){const preview=watchUploadedVideo(el('video'));preview.setAttribute('aria-label','Vídeo: '+a.name);content.append(preview);resolveAttachmentUrl(a).then(url=>{if(preview.isConnected)preview.src=url;}).catch(()=>preview.remove());}content.append(button('↓ '+a.name+' · '+(a.size/1024/1024).toFixed(1)+' MB',()=>downloadAttachment(a),'file-card'));}
     if(message.local_state){item.classList.add('message-local');item.dataset.delivery=message.local_state;const delivery=el('div','message-delivery');delivery.append(el('span','',message.local_state==='sending'?'Enviando…':message.local_state==='checking'?'Verificando envio…':message.local_state==='uncertain'?'Envio não confirmado.':('Falha no envio: '+(message.local_error||'tente novamente.'))));if(!['sending','checking'].includes(message.local_state)){delivery.append(button(message.local_state==='uncertain'?'Verificar envio':'Tentar novamente',()=>retryMessage(message.id),'text-button'),button('Descartar',()=>{outbox.remove(message.id);renderMessages();},'text-button'));}content.append(delivery);const avatar=el('div','avatar');setAvatar(avatar,messageProfile);item.append(avatar,content);item.dataset.messageId=message.id;return item;}
     const actions=el('div','message-actions');actions.append(button('Responder',()=>replyToMessage(message),'tiny-button'));
@@ -1405,7 +1406,7 @@ $('create-poll').onclick=()=>showDialog('Criar enquete',container=>{
 });
 $('btn-attach').onclick=()=>$('attach-popover').classList.toggle('hidden');
 $('insert-code').onclick=()=>{insertComposer(' `seu código` ');$('message-input').focus();$('attach-popover').classList.add('hidden');};
-$('btn-emoji').onclick=()=>$('emoji-popover').classList.toggle('hidden');
+let mediaPickerTask;$('btn-emoji').onclick=()=>{$('emoji-popover').classList.add('hidden');if(!mediaPickerTask)mediaPickerTask=import('./media-picker.js').then(m=>m.initMediaPicker({apiFetch,insert:text=>{insertComposer(text);$('message-input').focus();},send:text=>{$('message-input').value=text;$('message-form').requestSubmit();},anchor:$('btn-emoji'),toast})).catch(e=>{mediaPickerTask=null;throw e;});mediaPickerTask.then(p=>p.toggle()).catch(e=>toast(errorText(e)));};
 for(const emoji of ['😀','😂','❤️','👍','🎉','🔥','👀','🚀','🎧','✨','💜','🙌'])$('emoji-grid').append(button(emoji,()=>{insertComposer(emoji);$('emoji-popover').classList.add('hidden');$('message-input').focus();},'emoji-button'));
 $('btn-open-add-friend').onclick=()=>{$('friend-username').focus();};
 document.querySelectorAll('[data-ftab]').forEach(t=>t.classList.toggle('active',t.dataset.ftab===friendsFilter));
