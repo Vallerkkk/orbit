@@ -2,7 +2,7 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.23+bfd4775",
+   "version": "2026.10.23+b8e634c",
    "date": "23 out 2026",
    "highlights": [
     [
@@ -23,18 +23,19 @@
     ]
    ],
    "items": {
-    "perfil": [
-     "Mensagens diretas v2: avatar com presença, nome de exibição estilizado, @handle/status,…",
-     "Insígnias v2: arte premium por categoria, nível e raridade",
-     "Editor de perfil: cards com ícones, estados de hover e ativo, prévia centralizada e maior,…"
-    ],
     "feed": [
+     "Trilho v2: ícones com mais contraste, squircle no hover/ativo, pílula animada, brilho do…",
      "Novidades automáticas: release-notes.json gerado do git no build, overrides curados e aviso…",
      "Feed v3: ações coloridas com estados, cartões e widgets mais detalhados, composer com ícones…",
      "Feed: remove a aba 'Novos membros' da barra",
      "Novos membros: título próprio e só o atalho do trilho destacado",
      "Trilho: atalho 'Novos membros' ao lado do Feed, com estado ativo e acesso por teclado",
      "Feed Novos membros: timeline por dia com cartões, hero de boas-vindas, 👋 com RLS, Realtime…"
+    ],
+    "perfil": [
+     "Mensagens diretas v2: avatar com presença, nome de exibição estilizado, @handle/status,…",
+     "Insígnias v2: arte premium por categoria, nível e raridade",
+     "Editor de perfil: cards com ícones, estados de hover e ativo, prévia centralizada e maior,…"
     ],
     "visual": [
      "Temas: o tema escolhido controla todo o sistema de destaque",
