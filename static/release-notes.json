@@ -2,7 +2,7 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.23+a93a95b",
+   "version": "2026.10.23+add9b35",
    "date": "23 out 2026",
    "highlights": [
     [
@@ -23,6 +23,10 @@
     ]
    ],
    "items": {
+    "loja": [
+     "Loja v3: Decorações unificadas na Loja, coleções clássicas refeitas com animações próprias e…",
+     "Loja v2: coleções animadas, borda de cartão e estilos de nome"
+    ],
     "perfil": [
      "Identidade: @",
      "Tooltips das insígnias: descrição curta para as 61 insígnias, tooltip próprio com cor da…",
@@ -53,9 +57,6 @@
     ],
     "adm": [
      "ADM: exclusão de servidor/canal fecha o diálogo, limpa o estado e volta ao servidor padrão"
-    ],
-    "loja": [
-     "Loja v2: coleções animadas, borda de cartão e estilos de nome"
     ]
    }
   },
