@@ -50,6 +50,25 @@ Cada participante pode precisar tocar em Reproduzir áudio aqui devido às regra
 A política Referrer-Policy envia somente a origem em solicitações externas HTTPS, permitindo ao YouTube identificar o site sem transmitir o caminho ou os parâmetros da página. A validação de inicialização usa o painel como referência porque a API substitui o elemento original por um iframe. Testes: tests/youtube-links.test.mjs e tests/youtube_watch_browser.cjs, incluindo dois participantes, PC/celular, troca de vídeo, chegada tardia, pausa, erros, nova tentativa, transferência do controle e saída da chamada.
 
 
+## YouTube no Órbita
+
+Ícone do YouTube no rail: início/Em alta, busca (vídeos, canais, playlists), página do vídeo com comentários e relacionados, canal, playlist, mini player flutuante que continua tocando enquanto você navega, Histórico e Assistir depois (tabela `youtube_library` com RLS) e "Enviar no Órbita" para canais/DMs. Links do YouTube no chat viram um card leve (thumbnail primeiro; o iframe só carrega no clique).
+
+Todas as chamadas passam pelo proxy `/api/youtube/*` (cache TTL em memória); a `YOUTUBE_API_KEY` nunca chega ao navegador. Sem a chave, a interface mostra um aviso em pt-BR.
+
+**Conta Google (opcional):** é apenas uma conexão do YouTube presa ao usuário logado do Órbita — não usa o provedor Google do Supabase Auth e não altera sessão, e-mail, @, nome, avatar ou perfil. O refresh token fica só no servidor, cifrado (AES-GCM) com `YOUTUBE_TOKEN_KEY`, em `orbita_private.youtube_tokens`, acessível apenas por RPCs do próprio dono. "Sair da conta Google" revoga o token e apaga a linha. Com a conta conectada: Inscrições, Minhas playlists e Vídeos curtidos.
+
+Variáveis no Render: `YOUTUBE_API_KEY`, `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `YOUTUBE_TOKEN_KEY`, `PUBLIC_BASE_URL`.
+
+Passos no Google Cloud Console:
+1. Crie/escolha um projeto e ative **YouTube Data API v3** (APIs e serviços → Biblioteca).
+2. Credenciais → Criar credenciais → **Chave de API**; restrinja à YouTube Data API v3 e use em `YOUTUBE_API_KEY`.
+3. Tela de consentimento OAuth: tipo Externo, escopo `https://www.googleapis.com/auth/youtube.readonly`, status **Testing** e adicione até 100 usuários de teste.
+4. Credenciais → Criar credenciais → **ID do cliente OAuth** → tipo **Aplicativo da Web**. Em "URIs de redirecionamento autorizados" adicione `<PUBLIC_BASE_URL>/api/youtube/oauth/callback` (e `http://localhost:8000/api/youtube/oauth/callback` para desenvolvimento).
+5. Copie o client id/secret para `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET`.
+
+`youtube.readonly` é um escopo sensível: para uso público (fora do modo Testing) o app precisa passar pela verificação do Google.
+
 ## Áudio separado e câmera do celular
 
 Cada participante remoto tem dois controles de volume: Microfone e Transmissão (áudio do compartilhamento de tela). Os níveis de 0 a 100% ficam salvos neste navegador/dispositivo e são reaplicados quando chega uma nova faixa ou a conexão se recupera. O botão de ensurdecer zera ambos temporariamente e restaura os níveis escolhidos. O nível anterior por usuário foi preservado como volume do microfone; a transmissão começa com 100%.

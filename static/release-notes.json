@@ -6,6 +6,10 @@
    "date": "23 out 2026",
    "highlights": [
     [
+     "feed",
+     "YouTube no Órbita: assista, busque e continue no mini player enquanto conversa"
+    ],
+    [
      "loja",
      "Loja v2: coleções animadas, bordas de cartão e estilos de nome"
     ],
@@ -16,10 +20,6 @@
     [
      "feed",
      "Novos membros: atalho no trilho e linha do tempo para dar boas-vindas"
-    ],
-    [
-     "correcoes",
-     "Correções: excluir servidor/canal e nomes estilizados nas chamadas"
     ]
    ],
    "items": {
@@ -40,6 +40,12 @@
      "Loja v2: coleções animadas, borda de cartão e estilos de nome"
     ],
     "feed": [
+     "YouTube no Órbita: Início, Em alta, busca, canais, playlists e página do vídeo com comentários",
+     "Mini player flutuante que continua tocando pelo app",
+     "Histórico e Assistir depois salvos na sua conta",
+     "Entrar com Google (somente leitura) para ver Inscrições, playlists e curtidos — sua conta do Órbita não muda",
+     "Links do YouTube no chat viram um cartão leve com Assistir aqui e Assistir depois",
+     "Novo ícone (mão acenando) para Novos membros no trilho",
      "Trilho v2: ícones com mais contraste, squircle no hover/ativo, pílula animada, brilho do…",
      "Novidades automáticas: release-notes.json gerado do git no build, overrides curados e aviso…",
      "Feed v3: ações coloridas com estados, cartões e widgets mais detalhados, composer com ícones…",

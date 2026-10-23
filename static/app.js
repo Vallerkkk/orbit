@@ -26,7 +26,7 @@ import { DraftStore, serialToggle } from './runtime-utils.js';
 import { ConversationCache, MessageOutbox, conversationKey, requestWithDeadline } from './chat-state.js';
 import { reconcileNodes, reserveImage, focusElement } from './dom-utils.js';
 import { choosePrivateCall } from './private-call-menu.js';
-let shareReceiver, enhancements, feed, callLayout, communityUX, audioTools, callReactions;
+let shareReceiver, enhancements, feed, youtube, callLayout, communityUX, audioTools, callReactions;
 const drafts = new DraftStore(), pendingSends = new Set();
 const draftKey = target => session && target ? session.user.id + ':' + (target.private ? 'dm:' : 'channel:') + target.id : '';
 function saveComposerDraft() { if (!home && selected?.kind === 'text') drafts.set(draftKey(selected), $('message-input').value); }
@@ -132,7 +132,7 @@ async function showSession(next) {
   }
   if(session?.user.id===next?.user.id&&next&&(sessionReady||sessionInitializing)){session=next;return;}
   cancelCallJoin();
-  feed?.sessionChanged();
+  feed?.sessionChanged();youtube?.sessionChanged();
   sessionInitializing=!!next;sessionReady=false;sessionRecovery.hidden=true;setEntryBusy(!!next);
   const previousUser=session?.user.id,transition=++sessionTransition;
   stopConversation();generation++;
@@ -176,7 +176,7 @@ async function showSession(next) {
     if(transition===sessionTransition){sessionReady=true;trackVisibleActivity().catch(()=>{});}
   }catch(error){if(transition===sessionTransition){toast('Não foi possível carregar a comunidade: '+errorText(error));sessionRecovery.hidden=false;}}
   finally{if(transition===sessionTransition){sessionInitializing=false;setEntryBusy(false);}}
-  if(transition===sessionTransition){await enhancements.sessionChanged();feed?.deepLink();showFirstWelcome(transition);const publicProfile=new URL(location.href).searchParams.get('profile');if(/^[0-9a-f-]{36}$/i.test(publicProfile||''))feed.open('profile',{author:publicProfile});shareReceiver?.resume();const story=new URL(location.href).searchParams.get('story');if(/^[0-9a-f-]{36}$/i.test(story||'')){const tools=await loadSocialTools();if(transition===sessionTransition)tools.stories(story);}}
+  if(transition===sessionTransition){await enhancements.sessionChanged();feed?.deepLink();showFirstWelcome(transition);const publicProfile=new URL(location.href).searchParams.get('profile');if(/^[0-9a-f-]{36}$/i.test(publicProfile||''))feed.open('profile',{author:publicProfile});if(new URL(location.href).searchParams.has('youtube'))youtube.open();shareReceiver?.resume();const story=new URL(location.href).searchParams.get('story');if(/^[0-9a-f-]{36}$/i.test(story||'')){const tools=await loadSocialTools();if(transition===sessionTransition)tools.stories(story);}}
 }
 $('logout').onclick = async () => {
   try { await enhancements?.disablePush(true); } catch {}
@@ -261,7 +261,7 @@ $('message-list').addEventListener('scroll', () => {
 $('message-list').addEventListener('load', event => { if (event.target instanceof HTMLImageElement && !home && selected?.kind === 'text') restorePosition(lastViewport); }, true);
 
 async function selectChannel(channel) {
-  feed?.hide();
+  feed?.hide();youtube?.hide();
   saveComposerDraft(); saveConversation(); stopConversation(); home = false; pinsOnly = false;
   $('friends-view').hidden = true; $('search-messages').value = ''; $('pins-toggle').setAttribute('aria-pressed', 'false');
   selected = channel; const version = ++generation; channelAbort = new AbortController();
@@ -979,7 +979,7 @@ function membersWanted(){const saved=localStorage.getItem(membersKey());if(saved
 function membersContext(){if(!session||home||!selected)return '';{const fv=document.getElementById('feed-view');if(fv&&!fv.hidden)return '';}if(selected.private)return 'dm';return selected.kind==='voice'?'':'channel';}
 function syncMembersPanel(){const ctx=membersContext(),open=!!ctx&&membersWanted(),btn=$('btn-members-toggle'),side=$('members-sidebar');
   btn.hidden=!ctx;btn.classList.toggle('active',open);btn.setAttribute('aria-pressed',String(open));const label=open?'Ocultar membros':'Mostrar membros';btn.title=label+' (Ctrl+Shift+M)';btn.setAttribute('aria-label',label);
-  const hideBtn=$('mv2-hide'),showBtn=$('mv2-show');if(hideBtn)hideBtn.hidden=!open;if(showBtn)showBtn.hidden=!ctx||open;document.body.classList.toggle('mv2-feed',!!document.getElementById('feed-view')&&!document.getElementById('feed-view').hidden);
+  const hideBtn=$('mv2-hide'),showBtn=$('mv2-show');if(hideBtn)hideBtn.hidden=!open;if(showBtn)showBtn.hidden=!ctx||open;document.body.classList.toggle('mv2-feed',!!document.getElementById('feed-view')&&!document.getElementById('feed-view').hidden||!!document.getElementById('youtube-view')&&!document.getElementById('youtube-view').hidden);
   side.hidden=!open;side.classList.add('mv2');side.dataset.ctx=ctx;document.body.classList.add('members-hidden');document.body.classList.toggle('mv2-open',open);document.body.classList.remove('members-open');return open;}
 function toggleMembers(force){const next=typeof force==='boolean'?force:!$('btn-members-toggle').classList.contains('active');localStorage.setItem(membersKey(),next?'1':'0');renderMembers();if(next)requestAnimationFrame(()=>$('member-list').querySelector('.member')?.focus({preventScroll:true}));}
 $('btn-members-toggle').onclick=()=>toggleMembers();
@@ -1044,7 +1044,7 @@ function renderSocial() {
   enhancements?.decorateNavigation();
 }
 function showFriends() {
-  feed?.hide();
+  feed?.hide();youtube?.hide();
   navigationEpoch++;saveComposerDraft();saveConversation();stopConversation();home=true;generation++;
   $('friends-view').hidden=false;$('text-view').hidden=true;$('voice-view').hidden=true;
   $('channel-title').textContent='Amigos';$('channel-description').textContent='Sua galera, sempre por perto.';
@@ -1689,7 +1689,7 @@ const feedContext={
   state:()=>({db,session,profile,moderator:siteRoles.some(role=>role.user_id===session?.user.id&&['creator','admin'].includes(role.role))}),
   el,toast,checked,showDialog,tools:async action=>{const tools=await loadSocialTools();if(session)tools[action]();},sharePost:post=>sharePostToConversation(post),questions:async id=>{const tools=await loadSocialTools();if(session)tools.questions(id);},
   profile:p=>p.id===session?.user.id?openSettingsHub('perfil'):showProfile(person(p.id)||p),
-  open:()=>{navigationEpoch++;saveComposerDraft();saveConversation();stopConversation();generation++;home=true;selected=null;
+  open:()=>{youtube?.hide();navigationEpoch++;saveComposerDraft();saveConversation();stopConversation();generation++;home=true;selected=null;
     for(const id of ['text-view','voice-view','friends-view'])$(id).hidden=true;
     renderChannels();renderSocial();$('rail-servers-list').querySelectorAll('.server-icon.active').forEach(n=>n.classList.remove('active'));updateCallUI();enhancements.channelChanged().catch(()=>{});},
   menu:()=>{document.body.classList.add('mobile-menu-open');document.querySelectorAll('.mobile-nav-btn').forEach(node=>node.setAttribute('aria-expanded','true'));},
@@ -1707,8 +1707,25 @@ feed={open:async(...args)=>{const uid=session?.user.id,epoch=++feedNavigation;tr
 feedNav.onclick=()=>feed.open();
 // Atalho de 'Novos membros' no trilho, ao lado do Feed, como se fosse outro servidor.
 const membersNav=el('button','server-icon action-rail members-rail');membersNav.id='members-nav';membersNav.title='Novos membros';membersNav.setAttribute('aria-label','Novos membros');
-membersNav.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><circle cx="12" cy="7" r="3.2"/><path d="M5.5 20c.7-3.8 3.3-6 6.5-6s5.8 2.2 6.5 6"/><path d="M19 3v4M17 5h4"/></svg>';
+membersNav.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M7.5 12V6.6a1.4 1.4 0 0 1 2.8 0V11M10.3 10.6V4.9a1.4 1.4 0 0 1 2.8 0v5.7M13.1 10.6V6a1.4 1.4 0 0 1 2.8 0v6.2M15.9 12.4V9.3a1.4 1.4 0 0 1 2.8 0v4.4a7.3 7.3 0 0 1-7.3 7.3h-.5a6 6 0 0 1-4.7-2.3l-2.8-3.6a1.5 1.5 0 0 1 2.2-2L7.5 15"/><path d="M19.6 3.2a5 5 0 0 1 1.9 2.6M3.3 7a4.5 4.5 0 0 1 1.6-2.4"/></svg>';
 feedNav.after(membersNav);membersNav.onclick=()=>feed.open('members');
+// YouTube no Órbita: atalho no trilho (como o Feed); módulo e CSS carregam só no primeiro uso.
+const ytNav=el('button','server-icon action-rail yt-rail');ytNav.id='youtube-nav';ytNav.title='YouTube no Órbita';ytNav.setAttribute('aria-label',ytNav.title);
+ytNav.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" width="22" height="22"><rect x="2.5" y="5" width="19" height="14" rx="4"/><path d="M10 9.2v5.6l4.8-2.8z" fill="currentColor"/></svg><i class="yt-rail-dot" aria-hidden="true"></i>';membersNav.after(ytNav);
+let ytInstance,ytTask,ytNavigation=0;
+function shareVideoToConversation(video){const user=session?.user.id;if(!user)return;showDialog('Enviar no Órbita',box=>{
+ const select=el('select');select.setAttribute('aria-label','Destino do vídeo');for(const c of channels.filter(c=>c.kind==='text'))select.append(new Option('#'+c.name,'channel:'+c.id));for(const c of conversations)select.append(new Option('@'+person(otherUser(c)).display_name,'dm:'+c.id));
+ box.append(el('p','muted','O link do vídeo vai para o rascunho da conversa escolhida. Revise e envie quando quiser.'),el('strong','',video.title||'Vídeo do YouTube'),select,button('Colocar na conversa',async()=>{if(session?.user.id!==user)return;const [kind,id]=select.value.split(':');const target=(kind==='dm'?conversations:channels).find(c=>c.id===id);if(!target)throw Error('Escolha uma conversa.');if(kind==='dm')await openConversation(target);else await selectChannel(target);if(session?.user.id===user){insertComposer('https://youtu.be/'+video.id);$('app-dialog').close();}}));});}
+const ytContext={state:()=>({db,session,profile}),el,toast,apiFetch,nav:ytNav,menu:()=>feedContext.menu(),shareVideo:shareVideoToConversation,
+ open:()=>{feed?.hide();navigationEpoch++;saveComposerDraft();saveConversation();stopConversation();generation++;home=true;selected=null;for(const id of ['text-view','voice-view','friends-view'])$(id).hidden=true;renderChannels();renderSocial();$('rail-servers-list').querySelectorAll('.server-icon.active').forEach(n=>n.classList.remove('active'));closeMobileMenu();updateCallUI();enhancements.channelChanged().catch(()=>{});requestAnimationFrame(()=>renderMembers());}};
+async function loadYouTube(){if(ytInstance)return ytInstance;if(!ytTask)ytTask=Promise.all([import('./youtube.js'),loadStyle('/static/youtube.css')]).then(([m])=>ytInstance=m.initYouTube(ytContext)).catch(error=>{ytTask=null;throw error;});return ytTask;}
+youtube={open:async r=>{const uid=session?.user.id,epoch=++ytNavigation;try{const i=await loadYouTube();if(uid===session?.user.id&&epoch===ytNavigation)return i.open(r);}catch(error){toast(errorText(error));}},
+ hide:()=>{ytNavigation++;if(ytInstance){ytInstance.hide();requestAnimationFrame(()=>renderMembers());}},sessionChanged:()=>ytInstance?.sessionChanged(),
+ play:async v=>{try{(await loadYouTube()).play(v);}catch(error){toast(errorText(error));}},later:async v=>{try{await (await loadYouTube()).later(v);}catch(error){toast(errorText(error));}}};
+ytNav.onclick=()=>youtube.open();
+// Cartões de YouTube no chat: 'Assistir aqui' abre o mini player; 'Assistir depois' salva na biblioteca.
+document.addEventListener('orbita:youtube',e=>{const {action,video}=e.detail||{};if(!video)return;if(action==='later')youtube.later(video);else if(action==='open')youtube.open({name:'watch',video});else youtube.play(video);});
+{const pending=new Map();let timer=0;document.addEventListener('orbita:youtube-meta',e=>{const {id,done}=e.detail||{};if(!session||!/^[A-Za-z0-9_-]{11}$/.test(id||''))return;(pending.get(id)||pending.set(id,[]).get(id)).push(done);clearTimeout(timer);timer=setTimeout(async()=>{const batch=new Map(pending);pending.clear();try{const r=await apiFetch('/api/youtube/videos?id='+[...batch.keys()].slice(0,50).join(','));if(!r.ok)return;const {items}=await r.json();for(const v of items||[])for(const f of batch.get(v.id)||[])f(v);}catch{}},120);});}
 
 boot();
 

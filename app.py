@@ -24,6 +24,7 @@ from community_features import install_features
 from site_admin import install_site_admin
 from media_search import install_media_search
 from badges import install_badges
+from youtube import install_youtube
 from upstream import client_for, new_client, read_json
 from videochamada import configured as videochamada_configured
 
@@ -234,6 +235,7 @@ def android_asset_links():
 install(app, current_user, settings, make_token)
 install_features(app, current_user, settings)
 install_media_search(app, current_user)
+install_youtube(app, current_user, settings)
 install_badges(app, current_user, settings)
 install_public_pages(app, settings)
 install_luladroid(app, current_user, settings)

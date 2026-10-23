@@ -1,27 +1,86 @@
 {
  "2026.10.23": {
   "highlights": [
-   ["loja", "Loja v2: coleções animadas, bordas de cartão e estilos de nome"],
-   ["visual", "Configurações unificadas: tudo num só lugar, com o Perfil e prévia ao vivo"],
-   ["feed", "Novos membros: atalho no trilho e linha do tempo para dar boas-vindas"],
-   ["correcoes", "Correções: excluir servidor/canal e nomes estilizados nas chamadas"]
-  ]
+   [
+    "feed",
+    "YouTube no Órbita: assista, busque e continue no mini player enquanto conversa"
+   ],
+   [
+    "loja",
+    "Loja v2: coleções animadas, bordas de cartão e estilos de nome"
+   ],
+   [
+    "visual",
+    "Configurações unificadas: tudo num só lugar, com o Perfil e prévia ao vivo"
+   ],
+   [
+    "feed",
+    "Novos membros: atalho no trilho e linha do tempo para dar boas-vindas"
+   ]
+  ],
+  "items": {
+   "feed": [
+    "YouTube no Órbita: Início, Em alta, busca, canais, playlists e página do vídeo com comentários",
+    "Mini player flutuante que continua tocando pelo app",
+    "Histórico e Assistir depois salvos na sua conta",
+    "Entrar com Google (somente leitura) para ver Inscrições, playlists e curtidos — sua conta do Órbita não muda",
+    "Links do YouTube no chat viram um cartão leve com Assistir aqui e Assistir depois",
+    "Novo ícone (mão acenando) para Novos membros no trilho"
+   ]
+  }
  },
  "2026.10.22": {
   "highlights": [
-   ["chamadas", "Vídeo nítido nas chamadas: câmera e tela sem borrão"],
-   ["chamadas", "Ouvir juntos com player grande e controles próprios"],
-   ["feed", "Feed com nova barra de publicação e Novidades"],
-   ["visual", "Visual novo em todo o app, com configurações em abas"]
+   [
+    "chamadas",
+    "Vídeo nítido nas chamadas: câmera e tela sem borrão"
+   ],
+   [
+    "chamadas",
+    "Ouvir juntos com player grande e controles próprios"
+   ],
+   [
+    "feed",
+    "Feed com nova barra de publicação e Novidades"
+   ],
+   [
+    "visual",
+    "Visual novo em todo o app, com configurações em abas"
+   ]
   ],
   "items": {
-   "visual": ["Redesign geral do app: chat, canais, barra lateral e janelas", "Configurações organizadas em abas", "Ícones de \"ao vivo\" na lista de salas de voz"],
-   "chamadas": ["Barra de controles flutuante na chamada (microfone, câmera, tela, Ouvir juntos, Mais, Sair)", "Decorações do seu perfil aparecem no seu cartão da chamada", "Ouvir juntos repaginado: player grande 16:9, fila com capa e quem adicionou, controles próprios e qualidade"],
-   "chat": ["O envio de mensagens voltou a funcionar de forma confiável"],
-   "feed": ["Feed novo, com abas Para você, Seguindo, Em alta e Salvos", "Painel \"Ao vivo agora\" com as salas abertas", "Barra de publicação mais limpa, com ícones", "Esta área de Novidades"],
-   "perfil": ["Decorações de perfil com quadros e efeitos animados", "Fotos de perfil exibidas corretamente"],
-   "audio": ["Filtro de ruído e medidor do microfone nas configurações de voz", "Sons sutis e animações nos controles da chamada"],
-   "correcoes": ["Vídeo da câmera e da tela não fica mais borrado ou escurecido", "\"Sobre você\" atualizado aparece para todo mundo", "Decorações não cobrem mais o vídeo das chamadas"]
+   "visual": [
+    "Redesign geral do app: chat, canais, barra lateral e janelas",
+    "Configurações organizadas em abas",
+    "Ícones de \"ao vivo\" na lista de salas de voz"
+   ],
+   "chamadas": [
+    "Barra de controles flutuante na chamada (microfone, câmera, tela, Ouvir juntos, Mais, Sair)",
+    "Decorações do seu perfil aparecem no seu cartão da chamada",
+    "Ouvir juntos repaginado: player grande 16:9, fila com capa e quem adicionou, controles próprios e qualidade"
+   ],
+   "chat": [
+    "O envio de mensagens voltou a funcionar de forma confiável"
+   ],
+   "feed": [
+    "Feed novo, com abas Para você, Seguindo, Em alta e Salvos",
+    "Painel \"Ao vivo agora\" com as salas abertas",
+    "Barra de publicação mais limpa, com ícones",
+    "Esta área de Novidades"
+   ],
+   "perfil": [
+    "Decorações de perfil com quadros e efeitos animados",
+    "Fotos de perfil exibidas corretamente"
+   ],
+   "audio": [
+    "Filtro de ruído e medidor do microfone nas configurações de voz",
+    "Sons sutis e animações nos controles da chamada"
+   ],
+   "correcoes": [
+    "Vídeo da câmera e da tela não fica mais borrado ou escurecido",
+    "\"Sobre você\" atualizado aparece para todo mundo",
+    "Decorações não cobrem mais o vídeo das chamadas"
+   ]
   }
  }
 }
