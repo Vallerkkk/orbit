@@ -1627,7 +1627,7 @@ const feedContext={
   profile:p=>p.id===session?.user.id?$('settings').click():showProfile(person(p.id)||p),
   open:()=>{navigationEpoch++;saveComposerDraft();saveConversation();stopConversation();generation++;home=true;selected=null;
     for(const id of ['text-view','voice-view','friends-view'])$(id).hidden=true;
-    renderChannels();renderSocial();updateCallUI();enhancements.channelChanged().catch(()=>{});},
+    renderChannels();renderSocial();$('rail-servers-list').querySelectorAll('.server-icon.active').forEach(n=>n.classList.remove('active'));updateCallUI();enhancements.channelChanged().catch(()=>{});},
   menu:()=>{document.body.classList.add('mobile-menu-open');document.querySelectorAll('.mobile-nav-btn').forEach(node=>node.setAttribute('aria-expanded','true'));},
   closeMenu:closeMobileMenu,
   rooms:()=>channels.filter(c=>c.kind==='voice'&&!c.is_private).map(c=>({...c,participants:publicVoicePresence.filter(p=>p.channel_id===c.id).length})),
