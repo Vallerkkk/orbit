@@ -2,7 +2,7 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.23+49fd08d",
+   "version": "2026.10.23+33a3929",
    "date": "23 out 2026",
    "highlights": [
     [
@@ -24,6 +24,7 @@
    ],
    "items": {
     "feed": [
+     "Novidades automáticas: release-notes.json gerado do git no build, overrides curados e aviso…",
      "Feed v3: ações coloridas com estados, cartões e widgets mais detalhados, composer com ícones…",
      "Feed: remove a aba 'Novos membros' da barra",
      "Novos membros: título próprio e só o atalho do trilho destacado",

@@ -267,6 +267,7 @@ async function selectChannel(channel) {
   renderChannels(); renderSocial(); renderMembers(); $('channel-title').textContent = channel.name;
   $('text-view').hidden = channel.kind !== 'text'; $('voice-view').hidden = channel.kind !== 'voice'; requestAnimationFrame(resizeComposer);
   $('channel-description').textContent = channel.private ? 'Conversa privada · só vocês dois' : channel.kind === 'text' ? 'O começo de boas conversas.' : 'Voz, vídeo e boas companhias.';
+  {const title=$('channel-title'),head=title.parentElement;head.querySelector('.dm-head-av')?.remove();title.classList.toggle('dm-head-name',!!channel.private);head.classList.toggle('dm-head',!!channel.private);if(channel.private&&channel.friend){const f=channel.friend;title.dataset.userId=f.id;const w=el('span','dm-av-wrap dm-head-av'),av=el('span','avatar dm-av');setAvatar(av,f);const dot=el('span','dm-presence');dot.dataset.status=online.has(f.id)?(f.presence_status==='invisible'?'offline':f.presence_status||'online'):'offline';w.append(av,dot);title.before(w);$('channel-description').textContent='@'+f.username+' · Conversa privada';applyAppearanceEverywhere(head,appearanceOwner,appearanceOf);}else{delete title.dataset.userId;title.className='';}}
   $('private-call').hidden = !channel.private || channel.kind !== 'text';
   if (channel.kind === 'voice') { $('voice-title').textContent = channel.name; updateCallUI(); return; }
   const cached = conversationCache.get(conversationKey(session.user.id, channel));
@@ -988,7 +989,18 @@ function renderSocial() {
   const pending=friendships.filter(f=>f.status==='pending'&&f.recipient_id===session.user.id).length;
   $('friends-badge').textContent=pending||'';
   const pinned=readPinnedDMs();
-  for(const c of [...conversations].sort((a,b)=>Number(pinned.includes(b.id))-Number(pinned.includes(a.id)))){const p=person(otherUser(c));const b=button('',()=>openConversation(c),'channel'+(selected?.private&&selected.id===c.id?' active':''));const name=el('span','channel-name','@ '+p.display_name);name.dir='auto';b.append(name);b.title='@'+p.username;b.dataset.channelId=c.id;const wrap=el('div','dm-pinned-row'),pin=button(pinned.includes(c.id)?'★':'☆',()=>{const next=readPinnedDMs().filter(id=>id!==c.id);if(!pinned.includes(c.id))next.unshift(c.id);localStorage.setItem('orbita-pinned-dms:'+session.user.id,JSON.stringify(next.slice(0,30)));renderSocial();},'dm-pin');pin.setAttribute('aria-label',(pinned.includes(c.id)?'Desafixar':'Fixar')+' conversa com '+p.display_name);pin.setAttribute('aria-pressed',String(pinned.includes(c.id)));wrap.append(b,pin);$('dm-channels').append(wrap);}
+  const hiddenKey='orbita-hidden-dms:'+session.user.id;let hidden=[];try{hidden=JSON.parse(localStorage.getItem(hiddenKey)||'[]');}catch{}if(selected?.private)hidden=hidden.filter(id=>id!==selected.id);
+  const ago=v=>{const t=Date.parse(v||'');if(!t)return '';const m=Math.max(0,Math.round((Date.now()-t)/60000));return m<1?'agora':m<60?m+' min':m<1440?Math.round(m/60)+' h':m<10080?Math.round(m/1440)+' d':new Date(t).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}).replace('.','');};
+  for(const c of [...conversations].filter(c=>!hidden.includes(c.id)).sort((a,b)=>Number(pinned.includes(b.id))-Number(pinned.includes(a.id)))){const p=person(otherUser(c));const isPinned=pinned.includes(c.id);
+    const b=button('',()=>openConversation(c),'channel dm-item'+(selected?.private&&selected.id===c.id?' active':''));b.dataset.channelId=c.id;b.title=(p.display_name||p.username)+' · @'+p.username;
+    const avWrap=el('span','dm-av-wrap'),av=el('span','avatar dm-av');setAvatar(av,p);const status=online.has(p.id)?(p.presence_status==='invisible'?'offline':p.presence_status||'online'):'offline';const dot=el('span','dm-presence');dot.dataset.status=status;dot.setAttribute('aria-label',{online:'Disponível',idle:'Ausente',dnd:'Não perturbe',offline:'Offline'}[status]||'Offline');avWrap.append(av,dot);
+    const text=el('span','dm-text'),name=el('span','channel-name dm-name',p.display_name||p.username);name.dir='auto';name.dataset.userId=p.id;const sub=el('span','dm-sub',p.custom_status||p.presence_activity||'@'+p.username);sub.dir='auto';text.append(name,sub);
+    const when=el('span','dm-time',ago(c.last_message_at||c.updated_at||c.created_at));b.append(avWrap,text,when);
+    const wrap=el('div','dm-pinned-row dm-row'+(isPinned?' pinned':'')),pin=button(isPinned?'★':'☆',()=>{const next=readPinnedDMs().filter(id=>id!==c.id);if(!isPinned)next.unshift(c.id);localStorage.setItem('orbita-pinned-dms:'+session.user.id,JSON.stringify(next.slice(0,30)));renderSocial();},'dm-pin');pin.setAttribute('aria-label',(isPinned?'Desafixar':'Fixar')+' conversa com '+p.display_name);pin.setAttribute('aria-pressed',String(isPinned));
+    const close=button('×',()=>{const next=[...new Set([...hidden,c.id])];localStorage.setItem(hiddenKey,JSON.stringify(next.slice(-200)));if(selected?.private&&selected.id===c.id)showFriends();else renderSocial();},'dm-close');close.setAttribute('aria-label','Fechar conversa com '+(p.display_name||p.username));
+    wrap.append(b,pin,close);$('dm-channels').append(wrap);}
+  try{localStorage.setItem(hiddenKey,JSON.stringify(hidden));}catch{}
+  applyAppearanceEverywhere($('dm-channels'),appearanceOwner,appearanceOf);
   enhancements?.decorateNavigation();
 }
 function showFriends() {
