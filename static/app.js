@@ -1641,6 +1641,10 @@ const feedNav=el('button','server-icon action-rail','◈');feedNav.id='feed-nav'
 async function loadFeed(){if(feedInstance)return feedInstance;if(!feedTask)feedTask=Promise.all([import('./social-feed.js'),loadStyle('/static/social-feed.css')]).then(([module])=>feedInstance=module.initSocialFeed(feedContext)).catch(error=>{feedTask=null;throw error;});return feedTask;}
 feed={open:async(...args)=>{const uid=session?.user.id,epoch=++feedNavigation;try{const instance=await loadFeed();if(uid===session?.user.id&&epoch===feedNavigation)return instance.open(...args);}catch(error){toast(errorText(error));}},hide:()=>{feedNavigation++;feedInstance?.hide();},sessionChanged:()=>{feedNavigation++;feedInstance?.sessionChanged();},deepLink:()=>{if(new URL(location.href).searchParams.has('post'))loadFeed().then(instance=>instance.deepLink()).catch(error=>toast(errorText(error)));}};
 feedNav.onclick=()=>feed.open();
+// Atalho de 'Novos membros' no trilho, ao lado do Feed, como se fosse outro servidor.
+const membersNav=el('button','server-icon action-rail members-rail');membersNav.id='members-nav';membersNav.title='Novos membros';membersNav.setAttribute('aria-label','Novos membros');
+membersNav.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><circle cx="12" cy="7" r="3.2"/><path d="M5.5 20c.7-3.8 3.3-6 6.5-6s5.8 2.2 6.5 6"/><path d="M19 3v4M17 5h4"/></svg>';
+feedNav.after(membersNav);membersNav.onclick=()=>feed.open('members');
 
 boot();
 
