@@ -10,6 +10,7 @@ import {compactAppearance,stripAdminOnly} from './cosmetics.js';
 import {initShareReceiver} from './share-target.js';
 import {initThemeAccessibility,foreground} from './theme-accessibility.js';
 import {initAppUpdates} from './app-updates.js';
+import {installGrafiteUi} from './grafite-ui.js';
 import {loadStyle} from './lazy-assets.js';
 import {initSettingsLayout} from './settings-layout.js';
 import {initAudioControls} from './audio-controls.js';
@@ -1985,3 +1986,4 @@ initSettingsLayout();
 
 // Insígnias: batimento a cada minuto. O servidor confirma no LiveKit se a pessoa está na sala e com tela/câmera.
 setInterval(()=>{if(!session||document.hidden)return;const channel=room&&callChannel?.id;apiFetch('/api/badges/heartbeat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channel_id:channel||null,watch_party:!!(channel&&document.querySelector('.wp-ibtn'))})}).catch(()=>{});},60000);
+if(document.body)installGrafiteUi();else addEventListener('DOMContentLoaded',()=>installGrafiteUi(),{once:true});
