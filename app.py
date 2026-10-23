@@ -10,7 +10,7 @@ from uuid import UUID
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, HTMLResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
@@ -259,7 +259,47 @@ def ai_call_id(value):
 
 @app.get("/api/ai/status")
 async def ai_status():
-    return {"enabled": ai_enabled(), "stt": "browser-speech-recognition", "llm": "nvidia-nim" if os.getenv("NVIDIA_API_KEY", "").strip() else "not-configured"}
+    return {"enabled": ai_enabled(), "stt": "server-audio" if os.getenv("STT_API_KEY", "").strip() else "browser-speech-recognition", "llm": "flatkey" if os.getenv("FLATKEY_API_KEY", "").strip() else "not-configured"}
+
+@app.post("/api/ai/transcribe-audio")
+async def ai_transcribe_audio(request: Request, identity=Depends(current_user)):
+    """Desktop fallback: transcribe audio via a separately configured STT service."""
+    if not ai_enabled():
+        raise HTTPException(503, "IA de chamadas desativada.")
+    key = os.getenv("STT_API_KEY", "").strip()
+    if not key:
+        raise HTTPException(503, "Configure STT_API_KEY no servidor para transcrição no desktop.")
+    if request.headers.get("content-type", "").split(";")[0] not in ("audio/webm", "audio/ogg", "audio/mp4"):
+        raise HTTPException(415, "Formato de áudio não suportado.")
+    if request.headers.get("content-length", "").isdigit() and int(request.headers["content-length"]) > 4_000_000:
+        raise HTTPException(413, "Áudio grande demais.")
+    audio = await request.body()
+    if not audio or len(audio) > 4_000_000:
+        raise HTTPException(413, "Áudio vazio ou grande demais.")
+    media = request.headers["content-type"].split(";")[0]
+    suffix = {"audio/webm": "webm", "audio/ogg": "ogg", "audio/mp4": "mp4"}[media]
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(40.0, connect=8.0)) as client:
+            response = await client.post(
+                "https://api.groq.com/openai/v1/audio/transcriptions",
+                headers={"Authorization": "Bearer " + key},
+                files={"file": ("speech." + suffix, audio, media)},
+                data={"model": os.getenv("STT_MODEL", "whisper-large-v3-turbo"), "language": "pt", "response_format": "json"},
+            )
+    except httpx.HTTPError:
+        raise HTTPException(503, "Serviço de transcrição indisponível.") from None
+    if response.status_code in (401, 403):
+        raise HTTPException(503, "Credencial STT inválida ou sem acesso.")
+    if response.status_code == 429:
+        raise HTTPException(429, "Limite de transcrição atingido.")
+    if response.status_code != 200:
+        raise HTTPException(502, "Não foi possível transcrever o áudio.")
+    try:
+        text = str(response.json().get("text") or "").strip()[:2000]
+    except (ValueError, AttributeError):
+        raise HTTPException(502, "Resposta de transcrição inválida.") from None
+    return {"text": text}
+
 
 @app.post("/api/ai/transcript")
 async def ai_transcript(payload: dict, identity=Depends(current_user)):
