@@ -2,7 +2,7 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.23+1c05768",
+   "version": "2026.10.23+164b019",
    "date": "23 out 2026",
    "highlights": [
     [
@@ -23,6 +23,12 @@
     ]
    ],
    "items": {
+    "perfil": [
+     "Tooltips das insígnias: descrição curta para as 61 insígnias, tooltip próprio com cor da…",
+     "Mensagens diretas v2: avatar com presença, nome de exibição estilizado, @handle/status,…",
+     "Insígnias v2: arte premium por categoria, nível e raridade",
+     "Editor de perfil: cards com ícones, estados de hover e ativo, prévia centralizada e maior,…"
+    ],
     "chat": [
      "Chat v2: texto e nomes maiores, avatares 40px, barra de ações com destaque do tema, reações,…"
     ],
@@ -34,11 +40,6 @@
      "Novos membros: título próprio e só o atalho do trilho destacado",
      "Trilho: atalho 'Novos membros' ao lado do Feed, com estado ativo e acesso por teclado",
      "Feed Novos membros: timeline por dia com cartões, hero de boas-vindas, 👋 com RLS, Realtime…"
-    ],
-    "perfil": [
-     "Mensagens diretas v2: avatar com presença, nome de exibição estilizado, @handle/status,…",
-     "Insígnias v2: arte premium por categoria, nível e raridade",
-     "Editor de perfil: cards com ícones, estados de hover e ativo, prévia centralizada e maior,…"
     ],
     "visual": [
      "Temas: o tema escolhido controla todo o sistema de destaque",

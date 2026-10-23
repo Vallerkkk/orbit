@@ -2,6 +2,7 @@ import {configureUiSounds,uiSoundsEnabled,setUiSoundsEnabled,uiSound} from './ui
 import {chatMedia,renderChatMedia} from './chat-media.js';
 import {createAuthRecovery,isInvalidSessionError} from './auth-recovery.js';
 import './ui-polish.js';
+import {nicknameProblem} from './identity-rules.js';
 import {initSocialLogin} from './social-login.js';
 import {initNavigationMotion} from './navigation-motion.js';
 import {DECORATIONS} from './profile-decoration-catalog.js';
@@ -1141,8 +1142,8 @@ $('settings').onclick=()=>showDialog('Configurações',container=>{
   wrap.append(av);
   card.append(wrap);
   const form=el('form');
-  const name=inputField(form,'Nickname (também será seu @)',/^[A-Za-z0-9_]{3,24}$/.test(profile.display_name)?profile.display_name:profile.username,24),bio=inputField(form,'Sobre você',profile.bio,160),pronouns=inputField(form,'Pronomes',profile.pronouns,32),activity=inputField(form,'Atividade (ex.: Jogando Minecraft / Ouvindo música)',profile.presence_activity,80),color=inputField(form,'Cor do perfil',profile.avatar_color,7);color.type='color';
-  name.pattern='[A-Za-z0-9_]{3,24}';name.minLength=3;name.required=true;const nicknameHint=el('p','muted');name.closest('label').after(nicknameHint);const hint=()=>nicknameHint.textContent='Para adicionar você: @'+name.value.trim().toLowerCase()+' · 3–24 letras, números ou _';name.addEventListener('input',hint);hint();
+  const handle=inputField(form,'@ (nome de usuário)',profile.username||'',24),name=inputField(form,'Nickname (nome de exibição)',profile.display_name||'',32),bio=inputField(form,'Sobre você',profile.bio,160),pronouns=inputField(form,'Pronomes',profile.pronouns,32),activity=inputField(form,'Atividade (ex.: Jogando Minecraft / Ouvindo música)',profile.presence_activity,80),color=inputField(form,'Cor do perfil',profile.avatar_color,7);color.type='color';
+  setupHandleFields(handle,name,profile);
   const avatarFile=profileFileField(form,'Foto do perfil',profile.avatar_src),bannerFile=profileFileField(form,'Banner (pode ser GIF animado)',profile.banner_src);
   // Cor da capa (antes em 'Personalizar nome e capa'): usada quando não há banner.
   const coverColor=inputField(form,'Cor da capa (sem banner)',/^#[0-9a-f]{6}$/i.test(loadProfilePrefs().bannerColor||'')?loadProfilePrefs().bannerColor:'#ff4f9a',7);coverColor.type='color';coverColor.oninput=()=>{if(!profile.banner_src&&!bannerFile.files[0])bannerPrev.style.background=coverColor.value;};
@@ -1157,7 +1158,7 @@ $('settings').onclick=()=>showDialog('Configurações',container=>{
     const avatarUrl=avatarFile.files[0]?await uploadProfileAsset(avatarFile.files[0],'avatar'):prior.avatar_url||'';if(avatarUrl!==prior.avatar_url)created.push(avatarUrl);
     const bannerUrl=bannerFile.files[0]?await uploadProfileAsset(bannerFile.files[0],'banner'):prior.banner_url||'';if(bannerUrl!==prior.banner_url)created.push(bannerUrl);
     if(session?.user.id!==uid)throw Error('Sua conta mudou; salve o perfil novamente.');
-    const updated=await checked(db.from('profiles').update({display_name:name.value.trim(),username:name.value.trim().toLowerCase(),bio:bio.value.trim(),pronouns:pronouns.value.trim(),presence_activity:activity.value.trim(),avatar_color:color.value,avatar_url:avatarUrl,banner_url:bannerUrl}).eq('id',uid).select('id'));
+    const updated=await checked(db.from('profiles').update({display_name:name.value.trim(),...(handle.value.trim().toLowerCase()!==String(prior.username||'').toLowerCase()?{username:handle.value.trim().toLowerCase()}:{}),bio:bio.value.trim(),pronouns:pronouns.value.trim(),presence_activity:activity.value.trim(),avatar_color:color.value,avatar_url:avatarUrl,banner_url:bannerUrl}).eq('id',uid).select('id'));
     if(!updated.length)throw Error('O perfil não pôde ser atualizado. Entre novamente.');saved=true;
     const retired=[prior.avatar_url,prior.banner_url].filter(path=>path?.startsWith('profiles/'+uid+'/')&&!new Set([avatarUrl,bannerUrl]).has(path));if(retired.length){const removed=await db.storage.from('orbita-files').remove([...new Set(retired)]);if(removed.error)toast('Perfil salvo. Não foi possível liberar o espaço das imagens antigas agora.');}
     saveProfilePrefs({...loadProfilePrefs(),bannerColor:coverColor.value});
@@ -1968,9 +1969,21 @@ function sharePostToConversation(post){
 async function trackVisibleActivity(){if(session&&!document.hidden&&profile?.presence_status!=='invisible')await db.rpc('touch_activity');}
 setInterval(()=>trackVisibleActivity().catch(()=>{}),300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)trackVisibleActivity().catch(()=>{});});
 
+// @ e nickname separados: checagem ao vivo do @ (debounce) e validação do nickname.
+const HANDLE_REASONS={invalid:'Use 3 a 24 letras minúsculas, números ou _.',taken:'Este @ já está em uso.',reserved:'Este @ é reservado.',rate_limit:'Você só pode trocar o @ uma vez a cada 24 horas.',auth:'Entre para escolher um @.'};
+function setupHandleFields(handle,name,profile){handle.pattern='[a-z0-9_]{3,24}';handle.minLength=3;handle.required=true;handle.autocomplete='off';handle.spellcheck=false;handle.setAttribute('autocapitalize','none');name.required=true;name.removeAttribute('pattern');
+  const hHint=el('p','muted handle-hint'),nHint=el('p','muted nick-hint');hHint.setAttribute('aria-live','polite');handle.closest('label').after(hHint);name.closest('label').after(nHint);handle.closest('label')?.classList.add('handle-field');
+  let timer,seq=0;const set=(state,text)=>{hHint.dataset.state=state;hHint.textContent=text;handle.setCustomValidity(state==='bad'?text:'');};
+  const check=()=>{clearTimeout(timer);const v=handle.value.trim().toLowerCase();if(handle.value!==v)handle.value=v;
+    if(v===String(profile.username||'').toLowerCase())return set('ok','Este é o seu @ atual.');
+    if(!/^[a-z0-9_]{3,24}$/.test(v))return set('bad',HANDLE_REASONS.invalid);set('wait','Verificando @'+v+'…');const my=++seq;
+    timer=setTimeout(async()=>{try{const {data,error}=await db.rpc('username_available',{candidate:v});if(my!==seq)return;if(error)throw error;
+      if(data?.ok)set('ok','@'+v+' está disponível.');else set('bad',HANDLE_REASONS[data?.reason]||'Este @ não pode ser usado.');}catch{if(my===seq)set('wait','Não deu para verificar agora; validamos ao salvar.');}},400);};
+  const nick=()=>{const p=nicknameProblem(name.value);name.setCustomValidity(p);nHint.dataset.state=p?'bad':'ok';nHint.textContent=p||`Aparece como ${name.value.trim()} · @${handle.value.trim().toLowerCase()}`;};
+  handle.addEventListener('input',()=>{check();nick();});name.addEventListener('input',nick);check();nick();}
 function chooseOAuthNickname(next){
  if(!['google','discord'].includes(next.user.app_metadata?.provider)||!/^orbiter_[a-f0-9]{12}$/.test(profile?.username||''))return Promise.resolve();
- return new Promise(resolve=>{const user=next.user.id;showDialog('Escolha seu nickname',box=>{box.append(el('p','muted','Este será seu nome na Órbita e seu @ para adicionar amigos. Você pode mudar depois.'));const form=el('form'),name=inputField(form,'Seu nickname','',24);name.pattern='[A-Za-z0-9_]{3,24}';name.minLength=3;name.required=true;const save=el('button','primary','Continuar');save.type='submit';form.append(save);form.onsubmit=async event=>{event.preventDefault();save.disabled=true;try{await checked(db.from('profiles').update({display_name:name.value.trim()}).eq('id',user));if(session?.user.id!==user)return;await loadSocial();$('app-dialog').close();}catch(error){toast(error.code==='23505'?'Esse nickname já está em uso. Escolha outro.':errorText(error));}finally{save.disabled=false;}};box.append(form);});$('app-dialog').addEventListener('close',resolve,{once:true});});
+ return new Promise(resolve=>{const user=next.user.id;showDialog('Escolha seu nickname',box=>{box.append(el('p','muted','Este será seu nome na Órbita e seu @ para adicionar amigos. Você pode mudar depois.'));const form=el('form'),name=inputField(form,'Seu nickname','',24);name.pattern='[A-Za-z0-9_]{3,24}';name.minLength=3;name.required=true;const save=el('button','primary','Continuar');save.type='submit';form.append(save);form.onsubmit=async event=>{event.preventDefault();save.disabled=true;try{await checked(db.from('profiles').update({display_name:name.value.trim(),username:name.value.trim().toLowerCase()}).eq('id',user));if(session?.user.id!==user)return;await loadSocial();$('app-dialog').close();}catch(error){toast(error.code==='23505'?'Esse nickname já está em uso. Escolha outro.':errorText(error));}finally{save.disabled=false;}};box.append(form);});$('app-dialog').addEventListener('close',resolve,{once:true});});
 }
 
 async function jumpToReply(id){

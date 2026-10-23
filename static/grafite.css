@@ -340,3 +340,10 @@ body[data-density=compact]{--chat-fs:14px;--chat-lh:1.4;--chat-av:32px;--chat-na
 .badge-tip .bt-desc{font-size:12.5px;line-height:1.35;color:var(--t2)}
 [data-badge-tip]:focus-visible{outline:2px solid var(--ac);outline-offset:2px;border-radius:8px}
 @media(prefers-reduced-motion:reduce){.badge-tip,.badge-tip.on{transition:none;transform:none}}
+
+/* ===== @ e nickname ===== */
+.handle-hint,.nick-hint{margin:-4px 0 10px!important;font-size:12.5px!important}
+.handle-hint[data-state=ok]{color:var(--ok,#3ecf8e)!important}
+.handle-hint[data-state=bad],.nick-hint[data-state=bad]{color:var(--err,#ff5a6a)!important}
+.handle-hint[data-state=wait]{color:var(--t3)!important}
+.handle-field input{font-family:var(--mono,ui-monospace,monospace);letter-spacing:.01em}
