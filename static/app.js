@@ -1740,7 +1740,8 @@ function applyDecorations() {
     // Quadros só no cartão de perfil e nos tiles da chamada; listas laterais e chat ficam com avatar simples.
     const roomy=av.matches('.rp-avatar, #voice-view .participant .avatar');const frame=roomy&&decoFor(owner).frame;if(frame)av.classList.add(frame.css);
   });
-  document.querySelectorAll('#voice-view .participant[data-participant-id], #voice-view .media-tile[data-participant-id]:not(.media-screen)').forEach(tile=>{
+  document.querySelectorAll('#voice-view .participant[data-participant-id]').forEach(tile=>{
+    // Tiles com vídeo ativo nunca recebem camada de decoração (o vídeo precisa ficar nítido).
     const fx=decoFor(tile.dataset.participantId).effect;let layer=tile.querySelector(':scope>.call-deco-fx');
     if(!fx){layer?.remove();return;}if(!layer){layer=document.createElement('span');layer.setAttribute('aria-hidden','true');tile.prepend(layer);}
     const cls='call-deco-fx '+fx.css;if(layer.className!==cls)layer.className=cls;});

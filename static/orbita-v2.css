@@ -65,7 +65,7 @@ body:is([data-theme="blood"],[data-theme="cyber"],[data-theme="forest"],[data-th
 #voice-view .participant::before { content: none; display: none; position: absolute; left: 0; right: 0; top: calc(50% + 54px); text-align: center; color: var(--v2-mut); font-size: 14px; font-weight: 500; }
 /* Chip de nome */
 #voice-view .participant .participant-name,
-#voice-view .media-tile figcaption {
+#voice-view .media-tile figcaption > span:first-child {
   position: absolute; left: 12px; bottom: 12px; display: inline-flex; align-items: center; gap: 8px;
   padding: 7px 12px; border-radius: 10px; background: rgba(12, 14, 24, .78); backdrop-filter: blur(8px);
   color: #fff; font-size: 14px; font-weight: 600; max-width: calc(100% - 70px); border: 0;
@@ -873,3 +873,9 @@ body[data-color-mode=light] .st-seg>button[aria-checked=true]{background:#fff;co
 #app-view .user-panel :is(.avatar,#user-avatar)::before,#app-view .user-panel :is(.avatar,#user-avatar)::after{display:none!important}
 @media(prefers-reduced-motion:reduce){#app-view .user-panel *{transition:none!important}#app-view .user-panel .up-controls button:hover{transform:none}}
 #app-view .user-panel .up-avatar,#app-view .user-panel .up-avatar #user-avatar{border-radius:50%!important;border:0!important;outline:0!important}
+
+/* Fix vídeo borrado: a figcaption do tile é só um contêiner transparente (inset:0)
+   para o chip de nome e os botões. Nunca pode ter fundo, blur ou filtro sobre o vídeo. */
+#voice-view .media-tile figcaption{position:absolute!important;inset:0!important;max-width:none!important;padding:0!important;border:0!important;border-radius:0!important;background:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;filter:none!important;box-shadow:none!important;pointer-events:none}
+#voice-view .media-tile video,#voice-view .media-tile .media-frame{filter:none!important;opacity:1!important;backdrop-filter:none!important}
+#voice-view .media-tile .call-deco-fx{display:none!important}
