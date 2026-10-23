@@ -2,7 +2,7 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.23+b8e634c",
+   "version": "2026.10.23+1c05768",
    "date": "23 out 2026",
    "highlights": [
     [
@@ -23,6 +23,9 @@
     ]
    ],
    "items": {
+    "chat": [
+     "Chat v2: texto e nomes maiores, avatares 40px, barra de ações com destaque do tema, reações,…"
+    ],
     "feed": [
      "Trilho v2: ícones com mais contraste, squircle no hover/ativo, pílula animada, brilho do…",
      "Novidades automáticas: release-notes.json gerado do git no build, overrides curados e aviso…",

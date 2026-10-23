@@ -2,6 +2,8 @@
 // Tudo que é público fica em profiles.appearance; o banco valida itens exclusivos de ADM e calcula insígnias.
 import {PACKS,ITEMS,ITEM_KINDS,NAME_FONTS,NAME_EFFECTS,cleanAppearance,packOf,loadNameFont,itemById} from './cosmetics.js';
 import {BADGES,LEVELS,RARITIES,CATEGORIES,badgeById,badgeSvg} from './badges-catalog.js';
+import {installBadgeTooltips,markBadge} from './badge-tooltip.js';
+installBadgeTooltips();
 import {packVars,fxLayer,styleName,frameAvatar,dressCard} from './appearance-runtime.js';
 import {createStoreV2} from './store-v2.js';
 
@@ -70,7 +72,7 @@ export function initProfileStudio(ctx){
     let state;try{state=await (await ctx.apiFetch('/api/badges/'+id)).json();}catch(error){state={error:errorText(error),badges:[],showcase:[]};}
     const byId=new Map((state.badges||[]).map(b=>[b.id,b]));state.map=byId;if(!state.error)badgeCache.set(id,state);return state;}
   const levelOf=(state,b)=>state.map.get(b.id)?.level||0;
-  function badgeButton(b,level,opts={}){const btn=button('',opts.onClick,'');btn.innerHTML=badgeSvg(b,Math.max(1,level),{locked:!level,size:opts.size||44});btn.setAttribute('aria-label',(level||!b.secret?b.name:'Insígnia secreta')+(level?` — nível ${LEVELS[level-1].name}`:' — bloqueada'));const tip=level?`${b.name} · ${b.t.length>1?'Nível '+LEVELS[level-1].name:'Desbloqueada'} · ${RARITIES[b.rarity].name}`:(b.secret?'Insígnia secreta':b.name+' · bloqueada');btn.dataset.tip=tip;btn.removeAttribute('title');
+  function badgeButton(b,level,opts={}){const btn=button('',opts.onClick,'');btn.innerHTML=badgeSvg(b,Math.max(1,level),{locked:!level,size:opts.size||44});btn.setAttribute('aria-label',(level||!b.secret?b.name:'Insígnia secreta')+(level?` — nível ${LEVELS[level-1].name}`:' — bloqueada'));const tip=level?`${b.name} · ${b.t.length>1?'Nível '+LEVELS[level-1].name:'Desbloqueada'} · ${RARITIES[b.rarity].name}`:(b.secret?'Insígnia secreta':b.name+' · bloqueada');void tip;markBadge(btn,b.id,{level,locked:!level});
     if(level&&b.t.length>1)btn.append(el('span','lv',String(level)));btn.dataset.badge=b.id;return btn;}
   function detail(panel,b,state){const level=levelOf(state,b),row=state.map.get(b.id)||{},rar=RARITIES[b.rarity],secret=b.secret&&!level;panel.style.setProperty('--rc',level?(b.t.length>1?LEVELS[level-1].color:rar.color):'#6b6f80');panel.replaceChildren();
     const big=el('div','ps-badge-big');big.innerHTML=badgeSvg(b,Math.max(1,level),{locked:!level,size:150});
@@ -105,8 +107,8 @@ export function initProfileStudio(ctx){
     for(const id of pinnedOf(state,extra)){const b=badgeById.get(id);const btn=badgeButton(b,levelOf(state,b),{size:22,onClick:()=>openBadges(userId,id)});if(id==='dono')btn.classList.add('is-owner');pill.append(btn);}
     if(!pill.children.length){pill.remove();if(userId===me().session?.user.id)container.append(button('Escolher insígnias',()=>openBadges(userId),'rp-link'));}}
   // Mini insígnia principal ao lado do nome nas mensagens (não altera a altura da linha).
-  async function pinnedBadges(node,userId,max=4){if(!node||!userId)return;try{const state=await badgeState(userId);node.replaceChildren();for(const id of pinnedOf(state).slice(0,max)){const b=badgeById.get(id),lv=levelOf(state,b);const s=el('span','nm-badge');s.innerHTML=badgeSvg(b,lv,{size:26});s.dataset.tip=`${b.name} · ${RARITIES[b.rarity].name}`;s.setAttribute('role','img');s.setAttribute('aria-label','Insígnia: '+b.name);node.append(s);}}catch{}}
-  async function miniBadge(node,userId){if(!node||!userId)return;try{const state=await badgeState(userId);const id=pinnedOf(state)[0];node.replaceChildren();if(!id)return;const b=badgeById.get(id),lv=levelOf(state,b);node.innerHTML=badgeSvg(b,lv,{size:16});node.dataset.tip=`${b.name} · ${RARITIES[b.rarity].name}`;node.setAttribute('aria-label','Insígnia: '+b.name);node.setAttribute('role','img');}catch{}}
+  async function pinnedBadges(node,userId,max=4){if(!node||!userId)return;try{const state=await badgeState(userId);node.replaceChildren();for(const id of pinnedOf(state).slice(0,max)){const b=badgeById.get(id),lv=levelOf(state,b);const s=el('span','nm-badge');s.innerHTML=badgeSvg(b,lv,{size:26});markBadge(s,b.id,{level:lv});s.setAttribute('role','img');s.setAttribute('aria-label','Insígnia: '+b.name);node.append(s);}}catch{}}
+  async function miniBadge(node,userId){if(!node||!userId)return;try{const state=await badgeState(userId);const id=pinnedOf(state)[0];node.replaceChildren();if(!id)return;const b=badgeById.get(id),lv=levelOf(state,b);node.innerHTML=badgeSvg(b,lv,{size:16});markBadge(node,b.id,{level:lv});node.setAttribute('aria-label','Insígnia: '+b.name);node.setAttribute('role','img');}catch{}}
 
   // ===== Cartão compartilhado =====
   function decorateCard(panel,p){const a=cleanAppearance(ctx.appearanceOf(p.id));dressCard(panel,a);panel.dataset.dressed='1';styleName(panel.querySelector('.rp-name'),a);frameAvatar(panel.querySelector('.rp-avatar'),a);

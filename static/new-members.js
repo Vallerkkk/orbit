@@ -3,6 +3,7 @@
 import {cleanAppearance} from './cosmetics.js';
 import {styleName,frameAvatar,cardBorder} from './appearance-runtime.js';
 import {badgeSvg} from './badges-catalog.js';
+import {installBadgeTooltips,markBadge} from './badge-tooltip.js';
 
 const DAY=86400000;
 const tz='America/Sao_Paulo';
@@ -69,7 +70,7 @@ export async function maybeWelcome(api){
   if(!api.force&&(!stats?.me_joined||Date.now()-new Date(stats.me_joined).getTime()>3*DAY)){localStorage.setItem(key,'1');return false;}
   localStorage.setItem(key,'1');api.db.rpc('sync_my_badges').then(()=>{},()=>{});
   api.showDialog('Bem-vindo(a) à Órbita',box=>{box.classList.add('nm-welcome');
-    const top=el('div','nm-welcome-top');const art=el('div','nm-welcome-badge');art.innerHTML=badgeSvg('boas-vindas',1,{size:96});art.setAttribute('role','img');art.setAttribute('aria-label','Insígnia Boas-vindas');
+    const top=el('div','nm-welcome-top');const art=el('div','nm-welcome-badge');art.innerHTML=badgeSvg('boas-vindas',1,{size:96});installBadgeTooltips();markBadge(art,'boas-vindas');art.setAttribute('role','img');art.setAttribute('aria-label','Insígnia Boas-vindas');
     const copy=el('div');copy.append(el('p','nm-eyebrow','Insígnia desbloqueada · Boas-vindas'),el('h3','',stats?.me_number?'Você é o membro #'+stats.me_number+'!':'Que bom ter você aqui!'),el('p','nm-sub','Sua chegada já aparece em Novos membros. Quatro passos para começar com o pé direito:'));top.append(art,copy);
     const ol=el('ol','nm-tour');const steps=[['user','Complete seu perfil','Foto, banner, pronomes e “Sobre você”.',api.editProfile],['compass','Entre em um servidor','Encontre comunidades com a sua cara.',api.explore],['home','Explore o feed','Publique, siga pessoas e reaja.',api.feed],['sparkle','Conheça as insígnias','Veja o que dá para desbloquear.',api.badges]];
     steps.forEach(([ic,t,d,go],i)=>{const li=el('li','nm-step');const n=el('span','nm-step-n',String(i+1));const c=el('div');c.append(el('strong','',t),el('small','',d));const btn=el('button','sf-button nm-step-go','Ir');btn.type='button';btn.onclick=()=>{document.querySelector('#app-dialog')?.close();go?.();};li.append(n,c,btn);ol.append(li);});
