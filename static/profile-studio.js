@@ -61,14 +61,16 @@ export function initProfileStudio(ctx){
     body.append(el('p','muted','Fontes do Google carregadas sob demanda. O estilo aparece para todos no chat, membros, chamadas e perfil.'),preview,el('h4','','Efeito'),effects,el('h4','','Fonte'),grid);}
 
   // ===== Insígnias =====
-  async function badgeState(id,force){if(!force&&badgeCache.has(id))return badgeCache.get(id);
+  const badgeFlight=new Map();
+  function badgeState(id,force){if(!force&&badgeCache.has(id))return Promise.resolve(badgeCache.get(id));if(!force&&badgeFlight.has(id))return badgeFlight.get(id);const task=loadBadgeState(id).finally(()=>badgeFlight.delete(id));badgeFlight.set(id,task);return task;}
+  async function loadBadgeState(id){
     let state;try{state=await (await ctx.apiFetch('/api/badges/'+id)).json();}catch(error){state={error:errorText(error),badges:[],showcase:[]};}
-    const byId=new Map((state.badges||[]).map(b=>[b.id,b]));state.map=byId;badgeCache.set(id,state);return state;}
+    const byId=new Map((state.badges||[]).map(b=>[b.id,b]));state.map=byId;if(!state.error)badgeCache.set(id,state);return state;}
   const levelOf=(state,b)=>state.map.get(b.id)?.level||0;
-  function badgeButton(b,level,opts={}){const btn=button('',opts.onClick,'');btn.innerHTML=badgeSvg(b,Math.max(1,level),{locked:!level,size:opts.size||44});btn.setAttribute('aria-label',(level||!b.secret?b.name:'Insígnia secreta')+(level?` — nível ${LEVELS[level-1].name}`:' — bloqueada'));btn.title=level||!b.secret?b.name:'???';
+  function badgeButton(b,level,opts={}){const btn=button('',opts.onClick,'');btn.innerHTML=badgeSvg(b,Math.max(1,level),{locked:!level,size:opts.size||44});btn.setAttribute('aria-label',(level||!b.secret?b.name:'Insígnia secreta')+(level?` — nível ${LEVELS[level-1].name}`:' — bloqueada'));const tip=level?`${b.name} · ${b.t.length>1?'Nível '+LEVELS[level-1].name:'Desbloqueada'} · ${RARITIES[b.rarity].name}`:(b.secret?'Insígnia secreta':b.name+' · bloqueada');btn.dataset.tip=tip;btn.removeAttribute('title');
     if(level&&b.t.length>1)btn.append(el('span','lv',String(level)));btn.dataset.badge=b.id;return btn;}
   function detail(panel,b,state){const level=levelOf(state,b),row=state.map.get(b.id)||{},rar=RARITIES[b.rarity],secret=b.secret&&!level;panel.style.setProperty('--rc',level?(b.t.length>1?LEVELS[level-1].color:rar.color):'#6b6f80');panel.replaceChildren();
-    const big=el('div','ps-badge-big');big.innerHTML=badgeSvg(b,Math.max(1,level),{locked:!level,size:130});
+    const big=el('div','ps-badge-big');big.innerHTML=badgeSvg(b,Math.max(1,level),{locked:!level,size:150});
     const tags=el('div','ps-badge-tags'),pill=el('span','ps-pill',rar.name);pill.style.background=rar.color+'33';pill.style.color=rar.color;tags.append(pill,el('span','ps-pill',CATEGORIES[b.cat]));if(row.permanent)tags.append(el('span','ps-owner-mark','Fixada para sempre'));
     panel.append(big,el('h3','ps-badge-name',secret?'???':b.name),el('p','ps-badge-sub',secret?'Insígnia secreta: descubra usando a Órbita.':b.t.length>1?`Alcance ${b.t[0].toLocaleString('pt-BR')} ${b.unit} para começar.`:b.unit),tags);
     if(row.unlocked_at||level)panel.append(el('p','ps-badge-sub',level?(row.unlocked_at?'Desbloqueada em '+new Date(row.unlocked_at).toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'}):'Desbloqueada'):''));
@@ -93,15 +95,20 @@ export function initProfileStudio(ctx){
       if(own||locked.length){left.append(el('h4','','Disponível para desbloquear'),grid(locked,true));}
       detail(right,selected||unlocked[0]||BADGES[0],state);};
     selected=focus?badgeById.get(focus):BADGES.find(b=>(state.showcase||[])[0]===b.id);draw();return s;}
-  async function badgeRow(userId,container){const state=await badgeState(userId);container.replaceChildren();if(state.map.get('dono')?.permanent){const mark=el('span','ps-owner-mark','♛ Dono da Órbita');mark.title='Insígnia permanente concedida pelo servidor';container.append(mark);}
-    for(const id of state.showcase||[]){const b=badgeById.get(id);if(!b||!levelOf(state,b))continue;const btn=badgeButton(b,levelOf(state,b),{size:22,onClick:()=>openBadges(userId,id)});container.append(btn);}
-    if(!container.children.length&&userId===me().session?.user.id)container.append(button('Escolher insígnias',()=>openBadges(userId),'rp-link'));}
+  // Vitrine fixada: Dono sempre primeiro (concedida pelo servidor), depois até 3 escolhidas.
+  function pinnedOf(state,extra=[]){const own=[...(state.showcase||[]),...extra].filter(id=>{const b=badgeById.get(id);return b&&levelOf(state,b)>0;});const perm=(state.badges||[]).filter(x=>x.permanent).map(x=>x.id);
+    return [...new Set([...perm.filter(id=>id==='dono'),...perm,...own])].slice(0,perm.includes('dono')?4:3);}
+  async function badgeRow(userId,container,extra=[]){const state=await badgeState(userId);container.querySelectorAll('[data-badge],.rp-link').forEach(n=>n.remove());const pill=container.querySelector('.ps-badge-pill')||container.appendChild(el('div','ps-badge-pill'));pill.replaceChildren();
+    for(const id of pinnedOf(state,extra)){const b=badgeById.get(id);const btn=badgeButton(b,levelOf(state,b),{size:22,onClick:()=>openBadges(userId,id)});if(id==='dono')btn.classList.add('is-owner');pill.append(btn);}
+    if(!pill.children.length){pill.remove();if(userId===me().session?.user.id)container.append(button('Escolher insígnias',()=>openBadges(userId),'rp-link'));}}
+  // Mini insígnia principal ao lado do nome nas mensagens (não altera a altura da linha).
+  async function miniBadge(node,userId){if(!node||!userId)return;try{const state=await badgeState(userId);const id=pinnedOf(state)[0];node.replaceChildren();if(!id)return;const b=badgeById.get(id),lv=levelOf(state,b);node.innerHTML=badgeSvg(b,lv,{size:16});node.dataset.tip=`${b.name} · ${RARITIES[b.rarity].name}`;node.setAttribute('aria-label','Insígnia: '+b.name);node.setAttribute('role','img');}catch{}}
 
   // ===== Cartão compartilhado =====
   function decorateCard(panel,p){const a=cleanAppearance(ctx.appearanceOf(p.id));dressCard(panel,a);panel.dataset.dressed='1';styleName(panel.querySelector('.rp-name'),a);frameAvatar(panel.querySelector('.rp-avatar'),a);
     const nameRow=panel.querySelector('.rp-name-row');if(nameRow&&!panel.querySelector('.ps-badge-row')){const row=el('div','ps-badge-row');row.setAttribute('aria-label','Insígnias fixadas');nameRow.after(row);badgeRow(p.id,row).catch(()=>{});
-      if(a.plate){const plate=el('span','ps-plate',packOf(a.plate).name);packVars(plate,packOf(a.plate));plate.prepend(fxLayer(a.plate));row.before(plate);}
-      if(p.pronouns){const pr=el('div','rp-username',p.pronouns);row.before(pr);}const role=ctx.roleOf?.(p.id);if(role){const tag=el('span','ps-pill',role.name);tag.style.background=role.color+'33';tag.style.color=role.color;row.prepend(tag);}}
+      if(p.pronouns){const pr=el('div','rp-username',p.pronouns);row.after(pr);}
+      if(a.plate){const plate=el('span','ps-plate',packOf(a.plate).name);packVars(plate,packOf(a.plate));plate.prepend(fxLayer(a.plate));row.after(plate);}const role=ctx.roleOf?.(p.id);if(role){const tag=el('span','ps-pill',role.name);tag.style.background=role.color+'33';tag.style.color=role.color;row.prepend(tag);}}
     if(p.id!==me().session?.user.id&&!panel.querySelector('.ps-note'))noteBox(p.id,panel.querySelector('.rp-actions'));}
   function noteBox(target,before){if(!before)return;const label=el('div','ps-note-label');label.append(el('span','','Nota pessoal'),el('span','','só você vê'));const area=el('textarea','ps-note');area.maxLength=256;area.placeholder='Clique para adicionar uma nota';area.setAttribute('aria-label','Nota pessoal (só você vê)');before.before(label,area);
     const {db,session}=me();const localKey='orbita-note:'+session.user.id+':'+target;
@@ -112,9 +119,10 @@ export function initProfileStudio(ctx){
     const wrap=el('div','rp-avatar-wrap'),av=el('div','rp-avatar');ctx.setAvatar(av,p);const st=el('span','rp-status');st.dataset.status=p.presence_status||'online';wrap.append(av,st);
     const actions=el('div','ps-card-actions');actions.append(button('Mensagem',()=>{},''),button('⋯',()=>{},''));if(preview)for(const b of actions.children)b.disabled=true;
     const body=el('div','rp-body'),row=el('div','rp-name-row');row.append(el('h3','rp-name',p.display_name||'Participante'),el('span','rp-tag','@'+(p.username||'user')));body.append(row);
+    const role=ctx.roleOf?.(p.id);const badges=el('div','ps-badge-row');badges.setAttribute('aria-label','Insígnias fixadas');if(role){const tag=el('span','ps-pill',role.name);tag.style.background=role.color+'33';tag.style.color=role.color;badges.append(tag);}body.append(badges);
     if(a.plate){const plate=el('span','ps-plate',packOf(a.plate).name);packVars(plate,packOf(a.plate));plate.prepend(fxLayer(a.plate));body.append(plate);}
-    if(p.pronouns)body.append(el('div','rp-username',p.pronouns));const role=ctx.roleOf?.(p.id);const badges=el('div','ps-badge-row');if(role){const tag=el('span','ps-pill',role.name);tag.style.background=role.color+'33';tag.style.color=role.color;badges.append(tag);}body.append(badges);
-    const showcase=(a.badges||[]);badgeState(p.id).then(state=>{const ids=[...new Set([...(state.showcase||[]).filter(id=>state.map.get(id)?.permanent),...showcase.filter(id=>levelOf(state,badgeById.get(id)||{})>0)])].slice(0,3);for(const id of ids){const b=badgeById.get(id);if(b)badges.append(badgeButton(b,levelOf(state,b),{size:22,onClick:()=>openBadges(p.id,id)}));}}).catch(()=>{});
+    if(p.pronouns)body.append(el('div','rp-username',p.pronouns));
+    badgeRow(p.id,badges,preview?(a.badges||[]):[]).catch(()=>{});
     body.append(el('h5','','Sobre você'),el('p','rp-bio',p.bio||'Explorando a Órbita.'));if(p.created_at)body.append(el('h5','','Membro desde'),el('p','rp-username',new Date(p.created_at).toLocaleDateString('pt-BR',{day:'numeric',month:'short',year:'numeric'})));
     if(preview){body.append(el('h5','','Nota pessoal'),el('p','muted','Só você vê as notas que escreve nos perfis dos outros.'));}
     banner.append(actions);card.append(banner,wrap,body);dressCard(card,a);styleName(row.firstChild,a);frameAvatar(av,a);return card;}
@@ -147,8 +155,13 @@ export function initProfileStudio(ctx){
     const tabFns={Mural:async()=>{pane.replaceChildren();const act=profile.custom_status||profile.presence_activity;if(act)pane.append(Object.assign(el('div','ps-mural-item'),{textContent:act}));
         try{const {data}=await me().db.from('social_posts').select('id,content,created_at').eq('author_id',session.user.id).eq('is_reply',false).order('created_at',{ascending:false}).limit(3);for(const post of data||[]){const item=el('div','ps-mural-item',post.content.slice(0,180));item.append(el('small','',new Date(post.created_at).toLocaleDateString('pt-BR')));pane.append(item);}if(!(data||[]).length&&!act)pane.append(el('p','muted','Nada no mural ainda. Publique no Feed!'));}catch{pane.append(el('p','muted','Não foi possível carregar o Feed agora.'));}},
       Atividade:()=>{pane.replaceChildren();const inCall=ctx.inCall?.();pane.append(Object.assign(el('div','ps-mural-item'),{textContent:inCall?'Em chamada: '+inCall:'Fora de chamadas no momento'}));if(profile.presence_activity)pane.append(Object.assign(el('div','ps-mural-item'),{textContent:profile.presence_activity}));},
-      Insígnias:async()=>{pane.replaceChildren(el('p','muted','Carregando…'));const state=await badgeState(session.user.id);const g=el('div','ps-badge-grid');for(const b of BADGES.filter(b=>levelOf(state,b)>0).slice(0,24))g.append(badgeButton(b,levelOf(state,b),{onClick:()=>openBadges(session.user.id,b.id)}));pane.replaceChildren(el('p','muted',`${BADGES.filter(b=>levelOf(state,b)>0).length} de ${BADGES.length} desbloqueadas`),g,button('Ver coleção completa',()=>openBadges(session.user.id),'ps-btn'));}};
+      Insígnias:async()=>{pane.replaceChildren(el('p','muted','Carregando…'));const uid=session.user.id,state=await badgeState(uid),got=BADGES.filter(b=>levelOf(state,b)>0),pct=Math.round(got.length/BADGES.length*100);
+        const head=el('div','ps-vitrine-head'),bar=el('div','ps-bar'),fill=el('i');fill.style.width=Math.max(3,pct)+'%';bar.append(fill);head.append(el('b','',`${got.length} de ${BADGES.length} desbloqueadas`),el('span','ps-pill',pct+'%'),bar);
+        const vit=el('div','ps-vitrine');for(const id of pinnedOf(state)){const b=badgeById.get(id),cell=el('div','ps-vitrine-slot');const btn=badgeButton(b,levelOf(state,b),{size:64,onClick:()=>openBadges(uid,id)});cell.append(btn,el('small','',b.name));vit.append(cell);}
+        for(let k=vit.children.length;k<3;k++){const c=el('div','ps-vitrine-slot empty');c.append(button('+',()=>openBadges(uid),''),el('small','','Fixar'));vit.append(c);}
+        const cats=el('div','ps-vitrine-cats');for(const [cat,name] of Object.entries(CATEGORIES)){const list=BADGES.filter(b=>b.cat===cat&&!(b.exclusive&&b.exclusive!=='admin'&&!levelOf(state,b)));if(!list.length)continue;const n=list.filter(b=>levelOf(state,b)>0).length;const sec=el('section','ps-vitrine-cat');sec.append(el('h6','',`${name} · ${n}/${list.length}`));const g=el('div','ps-badge-grid mini');for(const b of list){const lv=levelOf(state,b),btn=badgeButton(b,lv,{size:34,onClick:()=>openBadges(uid,b.id)});if(!lv)btn.classList.add('locked');g.append(btn);}sec.append(g);cats.append(sec);}
+        pane.replaceChildren(head,el('h5','','Vitrine fixada'),vit,cats,button('Abrir coleção completa',()=>openBadges(uid),'ps-btn'));}};
     for(const name of Object.keys(tabFns)){const b=button(name,()=>{for(const x of tabs.children)x.setAttribute('aria-selected',String(x===b));tabFns[name]();},'');b.setAttribute('role','tab');tabs.append(b);}tabs.firstChild.click();
     renderPreview();return s;}
-  return {openStore,openBadges,openEditor,decorateCard,buildCard,badgeState,invalidate:id=>badgeCache.delete(id)};
+  return {openStore,openBadges,openEditor,decorateCard,buildCard,badgeState,miniBadge,invalidate:id=>badgeCache.delete(id)};
 }

@@ -71,9 +71,23 @@
 
 /* Insígnias */
 .badge-art{display:block;overflow:visible}
-.badge-anim-pulse{animation:bd-pulse 2.4s ease-in-out infinite}.badge-anim-orbit,.badge-anim-spin{animation:bd-spin 9s linear infinite}.badge-anim-bubble,.badge-anim-bounce{animation:bd-bounce 2s ease-in-out infinite}.badge-anim-flame,.badge-anim-flicker{animation:bd-flame 1.2s ease-in-out infinite alternate}.badge-anim-glitch{animation:bd-glitch 2.6s steps(1) infinite}.badge-anim-wave{animation:bd-wave 2.2s ease-in-out infinite}.badge-anim-scan,.badge-anim-shine,.badge-anim-sparkle{animation:bd-shine 2.6s ease-in-out infinite}.badge-anim-eq{animation:bd-pulse 1s ease-in-out infinite}.badge-anim-burst{animation:bd-burst 3s ease-in-out infinite}
-.ps-badge-grid .badge-art{animation-play-state:paused}.ps-badge-grid button:hover .badge-art,.ps-badge-grid button.selected .badge-art{animation-play-state:running}
-@keyframes bd-pulse{50%{transform:scale(1.07)}}@keyframes bd-spin{to{transform:rotate(360deg)}}@keyframes bd-bounce{50%{transform:translateY(-6%)}}@keyframes bd-flame{to{filter:drop-shadow(0 0 6px #ff9f43) brightness(1.15)}}@keyframes bd-glitch{0%,100%{transform:none}40%{transform:translate(1px,-1px) skewX(4deg)}70%{transform:translate(-1px,1px)}}@keyframes bd-wave{50%{transform:rotate(-8deg)}}@keyframes bd-shine{50%{filter:brightness(1.35) drop-shadow(0 0 6px #fff8)}}@keyframes bd-burst{0%,100%{transform:scale(1)}20%{transform:scale(1.12) rotate(6deg)}30%{transform:scale(1)}}
+/* Insígnias v2: acabamento por raridade, brilho que passa, flutuação e inclinação 3D */
+.badge-art{display:block;overflow:visible;transition:transform .35s cubic-bezier(.2,.8,.2,1),filter .35s}
+.bx-shine{animation:bx-shine 4.8s ease-in-out infinite}.bx-comum .bx-shine{display:none}
+.bx-spark{transform-box:fill-box;transform-origin:center;animation:bx-twinkle 2.4s ease-in-out infinite;opacity:0}
+.bx-aura{transform-box:fill-box;transform-origin:center;animation:bx-aura 3.2s ease-in-out infinite}
+.bx-holo .bx-holo-layer{animation:bx-holo 5s linear infinite}
+.ps-badge-grid button,.ps-badge-pill button,.ps-vitrine-slot button{perspective:300px}
+.ps-badge-grid button:hover .badge-art,.ps-badge-pill button:hover .badge-art,.ps-vitrine-slot button:hover .badge-art{transform:rotateX(12deg) rotateY(-14deg) scale(1.08);filter:drop-shadow(0 6px 10px #0008) drop-shadow(0 0 8px var(--bx-glow))}
+.ps-badge-grid .badge-art .bx-shine,.ps-badge-grid .badge-art .bx-spark{animation-play-state:paused}.ps-badge-grid button:hover .badge-art *,.ps-badge-grid button.selected .badge-art *{animation-play-state:running}
+.ps-badge-big .badge-art{animation:bx-float 4s ease-in-out infinite;filter:drop-shadow(0 14px 18px #0009)}
+.badge-locked{opacity:.85}
+@keyframes bx-shine{0%,55%{transform:rotate(25deg) translateX(0)}85%,100%{transform:rotate(25deg) translateX(120px)}}
+@keyframes bx-twinkle{0%,100%{opacity:0;transform:scale(.4)}50%{opacity:.95;transform:scale(1)}}
+@keyframes bx-aura{0%,100%{opacity:.55;transform:scale(.94)}50%{opacity:1;transform:scale(1.04)}}
+@keyframes bx-holo{to{filter:hue-rotate(360deg)}}
+@keyframes bx-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){.badge-art,.badge-art *{animation:none!important;transition:none!important}.bx-spark{opacity:.7}}
 
 /* Overlay do estúdio (loja, insígnias, editor) */
 .ps-overlay{position:fixed;inset:0;z-index:1200;background:#07060ccc;backdrop-filter:blur(6px);display:grid;place-items:center;padding:24px}
@@ -193,3 +207,29 @@
 @media (max-width:860px){.ps-ed-center{padding:14px!important}.ps-ed-center .ps-card .rp-banner{height:120px!important}}
 .ps-ed-center .ps-card.rich-profile:not(.ps-themed){background:linear-gradient(180deg,#1d1830,#151221)!important}.ps-ed-center .ps-card.rich-profile{border:1px solid #ffffff1a!important;box-shadow:0 30px 70px #000a,0 0 0 1px #ffffff08!important}.ps-ed-center .ps-card .rp-body{padding-bottom:20px!important}
 @media (max-width:860px){.ps-editor{grid-template-columns:1fr!important;height:auto}.ps-ed-center{display:block!important}.ps-ed-stage{margin:0}.ps-ed-left,.ps-ed-right{border:0!important}}
+
+/* Vitrine de insígnias no perfil (pílula translúcida) */
+.ps-badge-row{gap:6px}
+.ps-badge-pill{display:inline-flex;align-items:center;gap:2px;padding:3px 6px;border-radius:999px;background:#ffffff10;border:1px solid #ffffff1c;backdrop-filter:blur(8px);box-shadow:inset 0 1px 0 #ffffff14}
+.ps-badge-pill button{background:none!important;border:0!important;padding:1px!important;border-radius:50%;display:grid;cursor:pointer;position:relative}
+.ps-badge-pill .badge-art{width:22px;height:22px}
+[data-tip]{position:relative}
+.ps-badge-pill button[data-tip]:hover::after,.ps-badge-pill button[data-tip]:focus-visible::after,.msg-badge[data-tip]:hover::after,.ps-vitrine-slot button[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);white-space:nowrap;background:#0d0b16f2;color:#fff;font:600 .72rem/1.2 inherit;padding:6px 9px;border-radius:8px;border:1px solid #ffffff1f;box-shadow:0 8px 20px #0008;z-index:50;pointer-events:none}
+.msg-badge{display:inline-flex;vertical-align:middle;width:16px;height:16px;margin:-4px 2px -2px 4px;line-height:0}.msg-badge:empty{display:none}.msg-badge .badge-art{width:16px;height:16px}
+/* Aba Insígnias como vitrine */
+.ps-vitrine-head{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-bottom:12px}.ps-vitrine-head .ps-bar{grid-column:1/-1}.ps-vitrine-head .ps-bar i{background:linear-gradient(90deg,#8b6cff,#ff4f9a)}
+.ps-vitrine{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px;margin-bottom:14px}
+.ps-vitrine-slot{display:grid;justify-items:center;gap:6px;padding:12px 6px;border-radius:14px;background:radial-gradient(circle at 50% 35%,#8b6cff22,#ffffff06 70%);border:1px solid #ffffff14;text-align:center}
+.ps-vitrine-slot button{background:none;border:0;cursor:pointer;display:grid}.ps-vitrine-slot small{font-size:.72rem;color:#d6d0ea;font-weight:700}
+.ps-vitrine-slot.empty{border-style:dashed;background:none}.ps-vitrine-slot.empty button{width:64px;height:64px;border-radius:50%;border:1px dashed #ffffff33;color:#a9a3c2;font-size:1.4rem}
+.ps-vitrine-cat h6{margin:12px 0 6px;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#a9a3c2}
+.ps-badge-grid.mini{grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:6px}.ps-badge-grid.mini button{padding:4px;border-radius:10px}
+.ps-badge-grid button.locked{filter:none}
+/* Detalhe: arte grande com brilho na cor do nível */
+.ps-badge-big{width:190px;height:190px;background:radial-gradient(circle,color-mix(in srgb,var(--rc) 45%,transparent) 0,color-mix(in srgb,var(--rc) 14%,transparent) 45%,transparent 70%)}
+.ps-badge-big .badge-art{width:150px;height:150px}
+.ps-level.locked{filter:none;opacity:.75}.ps-level.locked::after{content:none}
+.rich-profile .ps-badge-pill,.ps-card .ps-badge-pill{display:inline-flex!important;flex-direction:row!important;width:auto!important;height:auto!important;background:#ffffff12!important;border:1px solid #ffffff22!important;border-radius:999px!important;padding:3px 7px!important;gap:3px!important}
+.rich-profile .ps-badge-pill button{width:26px!important;height:26px!important;min-width:0!important;min-height:0!important;padding:1px!important;margin:0!important;background:none!important;border:0!important;box-shadow:none!important;place-items:center}
+.rich-profile .ps-badge-pill .badge-art{width:24px;height:24px}
+.ps-badge-pill button.is-owner .badge-art{filter:drop-shadow(0 0 4px #ff4f9a88)}
