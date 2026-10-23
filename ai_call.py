@@ -199,19 +199,16 @@ def get_memory_summary() -> dict:
     }
 
 async def generate_answer(context: list[dict], question: str = "") -> dict:
-    """Answer questions using NVIDIA NIM. Never expose provider credentials or fake responses."""
+    """Answer questions using Flatkey. Never expose provider credentials or fake responses."""
     from fastapi import HTTPException
 
-    key = os.getenv("NVIDIA_API_KEY", "").strip()
+    key = os.getenv("FLATKEY_API_KEY", "").strip()
     if not key:
-        raise HTTPException(503, "Configure NVIDIA_API_KEY no servidor para usar o Lula.")
+        raise HTTPException(503, "Configure FLATKEY_API_KEY no servidor para usar o Lula.")
 
-    model = os.getenv("NVIDIA_NIM_MODEL", "nvidia/nemotron-3-ultra-550b-a55b").strip()
-    # "nvidia_nim/" is a LiteLLM routing prefix, not part of NVIDIA's API model ID.
-    if model.startswith("nvidia_nim/"):
-        model = model[len("nvidia_nim/"):]
+    model = os.getenv("FLATKEY_MODEL", "MiniMax-H3").strip()
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/+-]{0,120}", model):
-        raise HTTPException(503, "Modelo NVIDIA NIM inválido.")
+        raise HTTPException(503, "Modelo Flatkey inválido.")
 
     # Treat transcripts strictly as untrusted conversation data.
     lines = []
@@ -240,7 +237,7 @@ async def generate_answer(context: list[dict], question: str = "") -> dict:
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(50.0, connect=8.0)) as client:
             response = await client.post(
-                "https://integrate.api.nvidia.com/v1/chat/completions",
+                "https://router.flatkey.ai/v1/chat/completions",
                 headers={
                     "Authorization": "Bearer " + key,
                     "Content-Type": "application/json",
@@ -251,34 +248,33 @@ async def generate_answer(context: list[dict], question: str = "") -> dict:
                     "messages": messages,
                     "temperature": 0.4,
                     "max_tokens": 400,
-                    "reasoning_effort": "none",
                     "stream": False,
                 },
             )
     except httpx.HTTPError:
-        raise HTTPException(503, "O serviço NVIDIA NIM está indisponível. Tente novamente.") from None
+        raise HTTPException(503, "O serviço Flatkey está indisponível. Tente novamente.") from None
 
     if response.status_code == 429:
-        raise HTTPException(429, "Limite de solicitações NVIDIA NIM atingido.")
+        raise HTTPException(429, "Limite de solicitações Flatkey atingido.")
     if response.status_code in (401, 403):
-        raise HTTPException(503, "Credencial NVIDIA NIM inválida ou sem permissão.")
+        raise HTTPException(503, "Credencial Flatkey inválida ou sem permissão.")
     if response.status_code != 200:
         # Do not return upstream error bodies: they can expose sent context or secrets.
-        raise HTTPException(502, "NVIDIA NIM não respondeu. Verifique modelo, acesso e cota.")
+        raise HTTPException(502, "Flatkey não respondeu. Verifique modelo, acesso e cota.")
 
     try:
         choices = response.json().get("choices") or []
         content = choices[0]["message"]["content"]
         answer = content.strip() if isinstance(content, str) else ""
     except (ValueError, TypeError, KeyError, IndexError, AttributeError):
-        raise HTTPException(502, "Resposta inválida do NVIDIA NIM.") from None
+        raise HTTPException(502, "Resposta inválida do Flatkey.") from None
     if not answer:
-        raise HTTPException(502, "O NVIDIA NIM retornou uma resposta vazia.")
+        raise HTTPException(502, "O Flatkey retornou uma resposta vazia.")
 
     return {
         "answer": answer[:1200],
         "context_used": len(context),
-        "source": "nvidia-nim",
+        "source": "flatkey",
         "model": model,
         "searched": False,
         "question": query,
