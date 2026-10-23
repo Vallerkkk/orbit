@@ -21,6 +21,9 @@ from public_pages import install_public_pages
 from luladroid import install_luladroid
 from diagnostics import install_diagnostics
 from community_features import install_features
+from site_admin import install_site_admin
+from media_search import install_media_search
+from badges import install_badges
 from upstream import client_for, new_client, read_json
 from videochamada import configured as videochamada_configured
 
@@ -213,6 +216,8 @@ def download_desktop_installer():
 
 install(app, current_user, settings, make_token)
 install_features(app, current_user, settings)
+install_media_search(app, current_user)
+install_badges(app, current_user, settings)
 install_public_pages(app, settings)
 install_luladroid(app, current_user, settings)
 install_diagnostics(app, current_user, settings)
@@ -245,6 +250,8 @@ async def is_site_admin(identity):
         raise HTTPException(503, 'Não foi possível verificar a administração.')
     roles = read_json(response, list)
     return any(isinstance(r, dict) and r.get('role') in ('admin', 'creator') for r in roles)
+
+install_site_admin(app, current_user, settings, is_site_admin)
 
 async def require_site_admin(identity):
     if not await is_site_admin(identity):

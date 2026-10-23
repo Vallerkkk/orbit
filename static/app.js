@@ -1,9 +1,12 @@
 import {configureUiSounds,uiSoundsEnabled,setUiSoundsEnabled,uiSound} from './ui-sounds.js';
+import {chatMedia,renderChatMedia} from './chat-media.js';
 import {createAuthRecovery,isInvalidSessionError} from './auth-recovery.js';
 import './ui-polish.js';
 import {initSocialLogin} from './social-login.js';
 import {initNavigationMotion} from './navigation-motion.js';
 import {DECORATIONS} from './profile-decoration-catalog.js';
+import {applyAppearanceEverywhere} from './appearance-runtime.js';
+import {compactAppearance,stripAdminOnly} from './cosmetics.js';
 import {initShareReceiver} from './share-target.js';
 import {initThemeAccessibility,foreground} from './theme-accessibility.js';
 import {initAppUpdates} from './app-updates.js';
@@ -365,7 +368,7 @@ function createMessageRow(message,grouped=false) {
     if(message.pinned)meta.append(el('small','pin-label','◆ Fixada'));
     content.append(meta);
     if(message.reply_to){const original=messages.get(message.reply_to);const quote=button(original?(original.profiles?.display_name||'Participante')+': '+original.content.slice(0,150):'↪ Resposta a uma mensagem anterior',()=>jumpToReply(message.reply_to),'reply-card');quote.setAttribute('aria-label','Ir para a mensagem respondida');content.append(quote);}
-    content.append(safeRichText(message.content));if(message.poll)content.append(renderPoll(message));
+    {const media=chatMedia(message.content);if(media){item.classList.add('message-media',media.kind==='sticker'?'message-sticker':'message-gif');content.append(renderChatMedia(media));}else content.append(safeRichText(message.content));}if(message.poll)content.append(renderPoll(message));
     if(message.attachments){const a=message.attachments;if(a.mime_type?.startsWith('image/')){const preview=el('img','attachment-preview');preview.alt=a.name;preview.loading='lazy';reserveImage(preview);content.append(preview);resolveAttachmentUrl(a).then(url=>preview.src=url).catch(()=>preview.remove());}else if(a.mime_type?.startsWith('video/')){const preview=watchUploadedVideo(el('video'));preview.setAttribute('aria-label','Vídeo: '+a.name);content.append(preview);resolveAttachmentUrl(a).then(url=>{if(preview.isConnected)preview.src=url;}).catch(()=>preview.remove());}content.append(button('↓ '+a.name+' · '+(a.size/1024/1024).toFixed(1)+' MB',()=>downloadAttachment(a),'file-card'));}
     if(message.local_state){item.classList.add('message-local');item.dataset.delivery=message.local_state;const delivery=el('div','message-delivery');delivery.append(el('span','',message.local_state==='sending'?'Enviando…':message.local_state==='checking'?'Verificando envio…':message.local_state==='uncertain'?'Envio não confirmado.':('Falha no envio: '+(message.local_error||'tente novamente.'))));if(!['sending','checking'].includes(message.local_state)){delivery.append(button(message.local_state==='uncertain'?'Verificar envio':'Tentar novamente',()=>retryMessage(message.id),'text-button'),button('Descartar',()=>{outbox.remove(message.id);renderMessages();},'text-button'));}content.append(delivery);const avatar=el('div','avatar');setAvatar(avatar,messageProfile);item.append(avatar,content);item.dataset.messageId=message.id;return item;}
     const actions=el('div','message-actions');actions.append(button('Responder',()=>replyToMessage(message),'tiny-button'));
@@ -973,7 +976,7 @@ function renderMembers() {
     const content=el('div'),name=el('strong','',p.display_name),assigned=memberRoles.filter(r=>r.user_id===p.id).map(m=>communityRoleList.find(r=>r.id===m.role_id)).filter(Boolean).sort((x,y)=>y.position-x.position);
     if(assigned[0]){name.style.color=assigned[0].color;name.append(el('span','role-badge',assigned[0].name));}
     content.append(name,el('small','',p.custom_status||p.presence_activity|| (online.has(p.id)?'● Disponível':'Offline')));
-    row.append(a,content);row.onclick=()=>showProfile(p);row.tabIndex=0;row.setAttribute('role','button');row.setAttribute('aria-label','Abrir perfil de '+p.display_name);row.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();showProfile(p);}};nodes.push(row);memberNodes.set(p.id,{signature,node:row});
+    row.append(a,content);row.onclick=()=>showProfile(person(p.id));row.tabIndex=0;row.setAttribute('role','button');row.setAttribute('aria-label','Abrir perfil de '+p.display_name);row.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();showProfile(person(p.id));}};nodes.push(row);memberNodes.set(p.id,{signature,node:row});
   }
   for(const id of memberNodes.keys())if(!keep.has(id))memberNodes.delete(id);reconcileNodes($('member-list'),nodes);
   $('online-count').textContent=visible.filter(p=>online.has(p.id)).length+' online';
@@ -1032,8 +1035,11 @@ function showProfile(p) {
     const body = el('div', 'rp-body');
     const nameRow = el('div', 'rp-name-row'), nameEl = el('h3', 'rp-name', p.display_name || 'Participante');
     const tag=el('span', 'rp-tag', '@' + (p.username || 'user'));nameRow.append(nameEl, tag);body.append(nameRow);
-    const bioText=[p.custom_status,p.bio].filter(Boolean).join(' · ')||p.presence_activity||(p.pronouns?p.pronouns:'Explorando a Órbita.');
-    body.append(el('p', 'rp-bio', bioText),el('hr','rp-divider'));
+    // "Sobre você" (profiles.bio) sempre lido do banco: o cartão busca a linha atual ao abrir,
+    // para não depender da lista em memória nem do realtime ter chegado.
+    const bioFor=x=>[x.custom_status,x.bio].filter(Boolean).join(' · ')||x.presence_activity||(x.pronouns?x.pronouns:'Explorando a Órbita.');
+    const bioEl=el('p', 'rp-bio', bioFor(p));body.append(bioEl,el('hr','rp-divider'));
+    if(!own&&p.id&&db)db.from('profiles').select('id,bio,custom_status,presence_activity,pronouns,display_name').eq('id',p.id).maybeSingle().then(({data})=>{if(!data||data.id!==p.id)return;const cur=peopleById.get(p.id);if(cur)Object.assign(cur,data);Object.assign(p,data);if(bioEl.isConnected)bioEl.textContent=bioFor(p);}).catch(()=>{});
     const voiceSec = el('div', 'rp-voice');
     const inCall=!!(room&&(p.id===room.localParticipant.identity||room.remoteParticipants.has(p.id)));
     const voiceHead=el('div','rp-voice-head');voiceHead.append(el('span','rp-section-title','Status de Voz'),el('span','rp-voice-state'+(inCall?' on':''),inCall?'Conectado':'Desconectado'));
@@ -1402,7 +1408,7 @@ $('create-poll').onclick=()=>showDialog('Criar enquete',container=>{
 });
 $('btn-attach').onclick=()=>$('attach-popover').classList.toggle('hidden');
 $('insert-code').onclick=()=>{insertComposer(' `seu código` ');$('message-input').focus();$('attach-popover').classList.add('hidden');};
-$('btn-emoji').onclick=()=>$('emoji-popover').classList.toggle('hidden');
+let mediaPickerTask;$('btn-emoji').onclick=()=>{$('emoji-popover').classList.add('hidden');if(!mediaPickerTask)mediaPickerTask=import('./media-picker.js').then(m=>m.initMediaPicker({apiFetch,insert:text=>{insertComposer(text);$('message-input').focus();},send:text=>{$('message-input').value=text;$('message-form').requestSubmit();},anchor:$('btn-emoji'),toast})).catch(e=>{mediaPickerTask=null;throw e;});mediaPickerTask.then(p=>p.toggle()).catch(e=>toast(errorText(e)));};
 for(const emoji of ['😀','😂','❤️','👍','🎉','🔥','👀','🚀','🎧','✨','💜','🙌'])$('emoji-grid').append(button(emoji,()=>{insertComposer(emoji);$('emoji-popover').classList.add('hidden');$('message-input').focus();},'emoji-button'));
 $('btn-open-add-friend').onclick=()=>{$('friend-username').focus();};
 document.querySelectorAll('[data-ftab]').forEach(t=>t.classList.toggle('active',t.dataset.ftab===friendsFilter));
@@ -1493,7 +1499,7 @@ window.addEventListener('pagehide',()=>{if(extraSubscription)db?.removeChannel(e
 async function publishVoicePresence(force=false){
   if(!presenceChannel||!session||!profile)return;
   if(profile.presence_status==='invisible'){if(force)await presenceChannel.untrack();return;}
-  const value={status:enhancements?.presenceStatus()||profile.presence_status||'online',channel_id:room&&!callChannel?.private&&!callChannel?.is_private&&!communities.find(c=>c.id===callChannel?.community_id)?.invite_only?callChannel?.id:null,microphone:!!room?.localParticipant.isMicrophoneEnabled,deafened:!!room&&deafened,camera:!!room?.localParticipant.isCameraEnabled,screen:!!room?.localParticipant.isScreenShareEnabled,deco:ownDeco()};
+  const value={status:enhancements?.presenceStatus()||profile.presence_status||'online',channel_id:room&&!callChannel?.private&&!callChannel?.is_private&&!communities.find(c=>c.id===callChannel?.community_id)?.invite_only?callChannel?.id:null,microphone:!!room?.localParticipant.isMicrophoneEnabled,deafened:!!room&&deafened,camera:!!room?.localParticipant.isCameraEnabled,screen:!!room?.localParticipant.isScreenShareEnabled,deco:{...ownDeco(),ap:compactAppearance(appearanceOf(session.user.id))}};
   const signature=JSON.stringify(value);if(!force&&signature===lastPresenceSignature)return;lastPresenceSignature=signature;await presenceChannel.track(value);
 }
 
@@ -1641,7 +1647,7 @@ boot();
 const PROFILE_PREFS_KEY = 'orbita-profile-prefs';
 // Decorações dos outros participantes chegam pela presença (só ids do catálogo, validados aqui).
 function ownDeco(){const p=loadProfilePrefs();return {frame:String(p.frame||''),effect:String(p.profileEffect||'')};}
-function decoFor(id){if(!id)return {};const raw=id===session?.user.id?ownDeco():publicVoicePresence.find(m=>m.id===id)?.deco||{};
+function decoFor(id){if(!id)return {};const ap=id===session?.user.id?null:appearanceOf(id);const raw=id===session?.user.id?ownDeco():ap?.legacy_frame||ap?.legacy_effect?{frame:ap.legacy_frame,effect:ap.legacy_effect}:publicVoicePresence.find(m=>m.id===id)?.deco||{};
   const ok=(type,v)=>DECORATIONS.find(d=>d.type===type&&d.id===v&&d.css);return {frame:ok('frame',raw.frame),effect:ok('effect',raw.effect)};}
 function loadProfilePrefs() {
   try { return JSON.parse(localStorage.getItem(PROFILE_PREFS_KEY+':'+(session?.user.id||'guest')) || '{}') || {}; }
@@ -1649,17 +1655,31 @@ function loadProfilePrefs() {
 }
 function saveProfilePrefs(prefs) {
   localStorage.setItem(PROFILE_PREFS_KEY+':'+(session?.user.id||'guest'), JSON.stringify(prefs));
+  // As decorações antigas também vão para profiles.appearance (públicas e persistentes).
+  const legacyFont={display:'orbitron',mono:'spacemono',serif:'cinzel'}[prefs.font],legacyEffect={glow:'neon',shimmer:'shine',rainbow:'rainbow'}[prefs.effect],current=appearanceOf(session?.user.id);
+  if(session)saveAppearance({...current,legacy_frame:prefs.frame&&prefs.frame!=='none'?prefs.frame:'',legacy_effect:prefs.profileEffect||'',banner_style:prefs.bannerStyle||'',name_font:current.name_font||legacyFont||'',name_effect:current.name_effect||legacyEffect||''}).catch(()=>{});
   applyProfileStyles();publishVoicePresence().catch(()=>{});
 }
+// ===== Aparência pública (profiles.appearance) =====
+// Fonte da verdade é o banco; se a migration ainda não foi aplicada, cai para localStorage + presença.
+let appearanceLocal=false;
+const appearanceKey=()=>'orbita-appearance:'+(session?.user.id||'guest');
+function appearanceOf(id){if(!id)return {};
+  if(id===session?.user.id){const fromDb=profile?.appearance;if(!appearanceLocal&&fromDb&&Object.keys(fromDb).length)return fromDb;try{return JSON.parse(localStorage.getItem(appearanceKey())||'null')||fromDb||{};}catch{return fromDb||{};}}
+  const p=peopleById.get(id);if(p?.appearance&&Object.keys(p.appearance).length)return p.appearance;
+  // Via presença (sem banco): itens de ADM só valem se a pessoa for ADM global segundo site_roles.
+  const ap=publicVoicePresence.find(m=>m.id===id)?.deco?.ap||{};return siteRoles.some(r=>r.user_id===id)?ap:stripAdminOnly(ap);}
+async function saveAppearance(next){const uid=session?.user.id;if(!uid)throw Error('Entre novamente na sua conta.');const value=compactAppearance(next);
+  const {error}=await db.from('profiles').update({appearance:value}).eq('id',uid);
+  if(error){if(error.code==='42501'||/exclusiv/i.test(error.message||''))throw Error(error.message||'Este item é exclusivo dos administradores do app.');
+    if(error.code==='PGRST204'||error.code==='42703'||/appearance/i.test(error.message||'')){appearanceLocal=true;localStorage.setItem(appearanceKey(),JSON.stringify(value));}else throw Error(errorText(error));}
+  else{appearanceLocal=false;localStorage.removeItem(appearanceKey());}
+  if(session?.user.id!==uid)return;if(profile)profile.appearance=value;const cur=peopleById.get(uid);if(cur)cur.appearance=value;
+  document.querySelectorAll('.rich-profile[data-dressed]').forEach(c=>delete c.dataset.dressed);applyProfileStyles();applyDecorations();publishVoicePresence().catch(()=>{});}
+function appearanceOwner(node){if(node.id==='user-avatar'||node.classList.contains('up-name'))return session?.user.id;const card=node.closest('[data-user-id],[data-participant-id],[data-message-id]');if(!card)return null;
+  return card.dataset.userId||card.dataset.participantId||messages.get(card.dataset.messageId)?.author_id||null;}
 function applyProfileStyles() {
-  const prefs = loadProfilePrefs();
-  document.querySelectorAll('.message-meta strong, .up-name, .participant-name, .member-name, .member strong, .rp-name').forEach(el => {
-    el.classList.remove('name-font-inter','name-font-mono','name-font-serif','name-font-display','name-effect-glow','name-effect-shimmer','name-effect-rainbow');
-    const card=el.closest('[data-user-id],[data-participant-id],[data-message-id]');
-    const owner=el.classList.contains('up-name') || card?.dataset.userId===session?.user.id || card?.dataset.participantId===session?.user.id || messages.get(card?.dataset.messageId)?.author_id===session?.user.id;
-    if(owner && ['inter','mono','serif','display'].includes(prefs.font)) el.classList.add('name-font-'+prefs.font);
-    if(owner && ['glow','shimmer','rainbow'].includes(prefs.effect)) el.classList.add('name-effect-'+prefs.effect);
-  });
+  if(!session)return;applyAppearanceEverywhere(document,appearanceOwner,appearanceOf);
 }
 function openProfileCustomizer(){return openProfileAppearance('openProfileCustomizer');}
 // Hook into settings if available
@@ -1740,7 +1760,8 @@ function applyDecorations() {
     // Quadros só no cartão de perfil e nos tiles da chamada; listas laterais e chat ficam com avatar simples.
     const roomy=av.matches('.rp-avatar, #voice-view .participant .avatar');const frame=roomy&&decoFor(owner).frame;if(frame)av.classList.add(frame.css);
   });
-  document.querySelectorAll('#voice-view .participant[data-participant-id], #voice-view .media-tile[data-participant-id]:not(.media-screen)').forEach(tile=>{
+  document.querySelectorAll('#voice-view .participant[data-participant-id]').forEach(tile=>{
+    // Tiles com vídeo ativo nunca recebem camada de decoração (o vídeo precisa ficar nítido).
     const fx=decoFor(tile.dataset.participantId).effect;let layer=tile.querySelector(':scope>.call-deco-fx');
     if(!fx){layer?.remove();return;}if(!layer){layer=document.createElement('span');layer.setAttribute('aria-hidden','true');tile.prepend(layer);}
     const cls='call-deco-fx '+fx.css;if(layer.className!==cls)layer.className=cls;});
@@ -1759,8 +1780,21 @@ function openDecorationGallery(){return openProfileAppearance('openDecorationGal
 const baseShowProfile = showProfile;
 showProfile = function(p) {
   baseShowProfile(p);
-  applyDecorations();
+  applyDecorations();applyProfileStyles();
+  const panel=document.querySelector('#app-dialog .rich-profile[data-user-id]');
+  if(panel){const own=p.id===session?.user.id,actions=panel.querySelector('.rp-actions');
+    if(own){const edit=[...actions.querySelectorAll('button')].find(b=>b.textContent==='Editar perfil');if(edit)edit.onclick=()=>{$('app-dialog').close();studio('openEditor');};
+      actions.append(button('Loja',()=>{$('app-dialog').close();studio('openStore');},'rp-action rp-outline'),button('Insígnias',()=>{$('app-dialog').close();studio('openBadges',session.user.id);},'rp-action rp-outline'));}
+    const uid=session?.user.id;loadStudio().then(s=>{if(session?.user.id===uid&&panel.isConnected)s.decorateCard(panel,p);}).catch(()=>{});}
 };
+let studioTask;
+function loadStudio(){if(!studioTask)studioTask=import('./profile-studio.js').then(m=>m.initProfileStudio({el,button,toast,errorText,apiFetch,setAvatar,person,appearanceOf,saveAppearance,
+  state:()=>({db,session,profile,isAdmin:siteRoles.some(r=>r.user_id===session?.user.id&&['admin','creator'].includes(r.role))}),
+  saveProfile:async fields=>{const uid=session.user.id;await checked(db.from('profiles').update(fields).eq('id',uid).select('id'));if(session?.user.id===uid){Object.assign(profile,fields);const cur=peopleById.get(uid);if(cur)Object.assign(cur,fields);}},
+  roleOf:id=>{if(home||!activeCommunity)return null;const link=memberRoles.find(r=>r.user_id===id);return link?communityRoleList.find(r=>r.id===link.role_id)||null:null;},
+  inCall:()=>room&&callChannel?callChannel.name:null,openSettings:()=>$('settings').click()})).catch(error=>{studioTask=null;throw error;});return studioTask;}
+async function studio(method,...args){const uid=session?.user.id;try{const s=await loadStudio();if(session?.user.id===uid)return s[method](...args);}catch(error){toast(errorText(error));}}
+window.orbitaStudio=studio;
 setTimeout(applyDecorations, 1000);
 // Reaplica quadros/efeitos quando chat, membros, perfil ou chamada renderizam novos avatares.
 {let decoFrame=0;new MutationObserver(records=>{if(decoFrame||!records.some(r=>r.addedNodes.length))return;decoFrame=requestAnimationFrame(()=>{decoFrame=0;applyDecorations();applyProfileStyles();});}).observe(document.body,{childList:true,subtree:true});}
@@ -1827,7 +1861,7 @@ const settingsBeforeAudioDevices=$('settings').onclick;
 $('settings').onclick=()=>{settingsBeforeAudioDevices();audioTools.fields($('dialog-content'));};
 
 const adminContext={el,button,toast,checked,showDialog,inputField,errorText,apiFetch,
- state:()=>({db,session,people,siteRoles,activeCommunity,selected}),hasPermission:permission=>hasCommunityPermission(permission),
+ state:()=>({db,session,people,siteRoles,activeCommunity,selected,communities,channels,callChannel,messages}),hasPermission:permission=>hasCommunityPermission(permission),
  refreshRoles:async()=>{siteRoles=await checked(db.from('site_roles').select('*'));renderMembers();},
  diagnostics:async()=>{const module=await import('./admin-diagnostics.js');if(session)module.showDiagnostics(adminContext);},
  reports:async()=>{const tools=await loadSocialTools();if(session)tools.moderation();},moderation:()=>enhancements.showModeration(),audit:()=>enhancements.showAudit(),clearDraft:()=>{drafts.set(draftKey(selected),'');resizeComposer();}
@@ -1835,8 +1869,13 @@ const adminContext={el,button,toast,checked,showDialog,inputField,errorText,apiF
 
 let adminTask;
 function loadAdmin(){if(!adminTask)adminTask=import('./admin-controls.js').then(module=>module.initAdminControls(adminContext)).catch(error=>{adminTask=null;throw error;});return adminTask;}
+// Menu de contexto ADM: só aparece para ADM global (dica visual); toda ação é revalidada no servidor.
+document.addEventListener('contextmenu',event=>{if(!session||!siteRoles.some(r=>r.user_id===session.user.id)||event.defaultPrevented&&!document.querySelector('.ux-context-menu'))return;const t=event.target;if(t.closest('input,textarea,[contenteditable=true]'))return;
+ const target=t.closest('.server-icon[data-community-id]')||t.closest('.channel[data-channel-id]')||t.closest('#message-list .message[data-message-id]')||t.closest('#member-list .member[data-user-id]')||t.closest('#voice-view [data-participant-id]');if(!target)return;
+ const info={communityId:target.dataset.communityId,channelId:target.dataset.channelId,messageId:target.dataset.messageId,userId:target.dataset.userId||target.dataset.participantId,voice:!!target.dataset.participantId,x:event.clientX,y:event.clientY};
+ if(!document.querySelector('.ux-context-menu'))event.preventDefault();loadAdmin().then(m=>m.adminContextMenu(info)).catch(error=>toast(errorText(error)));});
 const settingsBeforeLazyAdmin=$('settings').onclick;
-$('settings').onclick=()=>{settingsBeforeLazyAdmin();if(siteRoles.some(r=>r.user_id===session?.user.id)){const box=$('dialog-content').querySelector('.dialog-body')||$('dialog-content');box.append(button('Administração da Órbita',async()=>{const admin=await loadAdmin();admin.management();}));}};
+$('settings').onclick=()=>{settingsBeforeLazyAdmin();if(siteRoles.some(r=>r.user_id===session?.user.id)){const box=$('dialog-content').querySelector('.dialog-body')||$('dialog-content');box.append(button('Administração',async()=>{const admin=await loadAdmin();admin.panel();}),button('Administração da Órbita',async()=>{const admin=await loadAdmin();admin.management();}));}};
 $('message-form').addEventListener('submit',event=>{const value=$('message-input').value.trim();if(!/^\/(admin|adm|removeradm|silenciar|liberar|banir|desbanir|auditoria|ajuda)(?:\s|$)/i.test(value))return;if(window.orbitaAdminReady)return;event.preventDefault();event.stopImmediatePropagation();const uid=session?.user.id;loadAdmin().then(admin=>{if(session?.user.id===uid&&$('message-input').value.trim()===value)admin.command(value);}).catch(error=>toast(errorText(error)));},true);
 
 initAppUpdates({room:()=>room,dirty:()=>!!$('message-input').value.trim()||!!document.querySelector('.sf-composer textarea')?.value.trim(),beforeReload:()=>saveComposerDraft()});
@@ -1943,3 +1982,6 @@ window.addEventListener('focus',checkResumedSession);window.addEventListener('on
 // 'Estado da conexão' não tinha ação: abre os detalhes de conexão (mesma janela do botão da chamada).
 $('btn-free-setup')?.addEventListener('click',()=>$('connection-info')?.click());
 initSettingsLayout();
+
+// Insígnias: batimento a cada minuto. O servidor confirma no LiveKit se a pessoa está na sala e com tela/câmera.
+setInterval(()=>{if(!session||document.hidden)return;const channel=room&&callChannel?.id;apiFetch('/api/badges/heartbeat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channel_id:channel||null,watch_party:!!(channel&&document.querySelector('.wp-ibtn'))})}).catch(()=>{});},60000);
