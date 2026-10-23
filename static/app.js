@@ -363,7 +363,7 @@ async function validateCachedMessages(version,target){
 // Reuse unchanged rows so live updates preserve images, focus and open controls.
 const messageRows=new Map(),dayDividers=new Map();
 const RENDER_WINDOW=150,renderWindows=new Map();let renderWindow=RENDER_WINDOW;
-function hiddenRenderRows(){return Math.max(0,messages.size+outbox.rows(session.user.id,selected).length-renderWindow);}
+function hiddenRenderRows(){if(!session||!selected)return 0;return Math.max(0,messages.size+outbox.rows(session.user.id,selected).length-renderWindow);}
 function expandRenderWindow(){if(!selected||hiddenRenderRows()<=0)return false;renderWindow+=100;renderMessages(false,capturePosition());return true;}
 {let windowTick=0;$('message-list').addEventListener('scroll',()=>{if(windowTick)return;windowTick=requestAnimationFrame(()=>{windowTick=0;const list=$('message-list');if(list.scrollTop<400&&hiddenRenderRows()>0)expandRenderWindow();});},{passive:true});}
 let renderedScope='',rowStyleKey='',rowStyleRevision=0;
@@ -972,25 +972,50 @@ async function initSocial() {
   presenceChannel.on('presence',{event:'sync'},()=>{publicVoicePresence=Object.entries(presenceChannel.presenceState()).flatMap(([id,metas])=>metas.map(meta=>({...meta,id})));window.dispatchEvent(new Event('orbita:presence'));online=new Set(Object.keys(presenceChannel.presenceState()));renderMembers();renderChannels();if(home)renderFriends();requestAnimationFrame(applyDecorations);});
   presenceChannel.subscribe(async status=>{if(status==='SUBSCRIBED')await publishVoicePresence(true);});
 }
-const memberNodes=new Map();
+// ===== Membros v2: coluna direita dos canais de texto (painel sobreposto em telas estreitas) e perfil compacto nas DMs =====
+const memberNodes=new Map(),memberHeads=new Map(),MEMBER_CAP=200;let memberExpand=new Set();
+const membersKey=()=>'orbita-members-panel:'+(session?.user.id||'guest');
+function membersWanted(){const saved=localStorage.getItem(membersKey());if(saved==='1')return true;if(saved==='0')return false;return matchMedia('(min-width:1100px)').matches;}
+function membersContext(){if(!session||home||!selected)return '';if(selected.private)return 'dm';return selected.kind==='voice'?'':'channel';}
+function syncMembersPanel(){const ctx=membersContext(),open=!!ctx&&membersWanted(),btn=$('btn-members-toggle'),side=$('members-sidebar');
+  btn.hidden=!ctx;btn.classList.toggle('active',open);btn.setAttribute('aria-pressed',String(open));const label=open?'Ocultar membros':'Mostrar membros';btn.title=label+' (Ctrl+Shift+M)';btn.setAttribute('aria-label',label);
+  side.hidden=!open;side.classList.add('mv2');side.dataset.ctx=ctx;document.body.classList.add('members-hidden');document.body.classList.toggle('mv2-open',open);document.body.classList.remove('members-open');return open;}
+function toggleMembers(force){const next=typeof force==='boolean'?force:!$('btn-members-toggle').classList.contains('active');localStorage.setItem(membersKey(),next?'1':'0');renderMembers();if(next)requestAnimationFrame(()=>$('member-list').querySelector('.member')?.focus({preventScroll:true}));}
+$('btn-members-toggle').onclick=()=>toggleMembers();
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key.toLowerCase()==='m'&&membersContext()){e.preventDefault();toggleMembers();}if(e.key==='Escape'&&document.body.classList.contains('mv2-open')&&!matchMedia('(min-width:1100px)').matches&&!$('app-dialog').open)toggleMembers(false);});
+document.addEventListener('pointerdown',e=>{if(!document.body.classList.contains('mv2-open')||matchMedia('(min-width:1100px)').matches)return;if(e.target.closest('#members-sidebar,#btn-members-toggle,dialog'))return;toggleMembers(false);},true);
+function memberActivity(p,isOnline,voice){if(voice)return voice.screen?'Ao vivo · compartilhando a tela':'Em voz · '+(channels.find(c=>c.id===voice.channel_id)?.name||'chamada');return p.custom_status||p.presence_activity||(isOnline?({idle:'Ausente',dnd:'Não perturbe'}[p.presence_status]||'Disponível'):'Offline');}
+function memberRow(p,isOnline,voice){const signature=JSON.stringify([p.display_name,p.avatar_src,p.avatar_color,p.custom_status,p.presence_activity,p.presence_status,isOnline,voice?.channel_id,!!voice?.screen,memberRoles.filter(r=>r.user_id===p.id),communityRoleList.length,roleFor(p.id),JSON.stringify(p.appearance||{})]);
+  const cached=memberNodes.get(p.id);if(cached?.signature===signature)return cached.node;
+  const row=cached?.node||el('div','member');row.replaceChildren();row.className='member mv2-row'+(isOnline?'':' is-offline');row.dataset.userId=p.id;
+  const av=el('span','avatar mv2-av');setAvatar(av,p);const dot=el('i','mv2-dot '+(isOnline?(p.presence_status==='dnd'?'dnd':p.presence_status==='idle'?'idle':'on'):'off'));dot.setAttribute('aria-hidden','true');const wrap=el('span','mv2-avwrap');wrap.append(av,dot);
+  const body=el('div','mv2-body'),name=el('strong','member-name',p.display_name||'Participante'),assigned=memberRoles.filter(r=>r.user_id===p.id).map(m=>communityRoleList.find(r=>r.id===m.role_id)).filter(Boolean).sort((x,y)=>y.position-x.position);
+  if(assigned[0])name.style.color=assigned[0].color;body.append(name,el('small','mv2-sub',memberActivity(p,isOnline,voice)));row.append(wrap,body);
+  if(voice){const v=el('span','mv2-voice'+(voice.screen?' live':''),voice.screen?'AO VIVO':'');v.title=voice.screen?'Ao vivo':'Em chamada de voz';if(!voice.screen)v.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>';row.append(v);}
+  row.tabIndex=0;row.setAttribute('role','button');row.setAttribute('aria-label','Abrir perfil de '+(p.display_name||'Participante')+' · '+memberActivity(p,isOnline,voice));row.onclick=()=>showProfile(person(p.id));row.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showProfile(person(p.id));}};
+  memberNodes.set(p.id,{signature,node:row});return row;}
+function memberHead(key,label,count){let h=memberHeads.get(key);if(!h){h=el('div','mv2-head');h.setAttribute('role','heading');h.setAttribute('aria-level','3');memberHeads.set(key,h);}const text=label+' — '+count;if(h.textContent!==text)h.textContent=text;return h;}
+function renderDmProfile(){const f=person(selected.friend?.id)||selected.friend||{};const card=el('div','mv2-dm');const av=el('span','avatar mv2-dm-av');setAvatar(av,f);const isOn=online.has(f.id);const dot=el('i','mv2-dot '+(isOn?'on':'off'));const w=el('span','mv2-avwrap big');w.append(av,dot);
+  card.append(el('div','mv2-dm-banner'),w,el('strong','mv2-dm-name member-name',f.display_name||'Participante'),el('small','mv2-dm-user',f.username?'@'+f.username:''),el('small','mv2-sub',memberActivity(f,isOn,null)));if(f.bio){card.append(el('div','mv2-dm-label','Sobre mim'),el('p','mv2-dm-bio',f.bio));}card.append(button('Ver perfil completo',()=>showProfile(person(f.id)),'mv2-dm-btn'));card.querySelector('.mv2-dm-name').dataset.userId=f.id;card.dataset.userId=f.id;
+  $('member-list').replaceChildren(card);$('member-count').textContent='';$('online-count').textContent='';$('members-sidebar').querySelector('.member-heading').firstChild.textContent='PERFIL ';memberNodes.clear();}
 function renderMembers() {
-  if($('members-sidebar').hidden){memberNodes.clear();if($('member-list').childElementCount)$('member-list').replaceChildren();return;}
+  const open=syncMembersPanel();
+  if(!open){memberNodes.clear();memberHeads.clear();if($('member-list').childElementCount)$('member-list').replaceChildren();return;}
+  if(selected.private)return renderDmProfile();
+  $('members-sidebar').querySelector('.member-heading').firstChild.textContent='MEMBROS ';
   const memberIds=new Set(communityMemberList.map(member=>member.user_id));
-  if(selected?.private){memberIds.clear();memberIds.add(session.user.id);memberIds.add(selected.friend?.id);}
-  const visible=people.filter(p=>memberIds.has(p.id));
-  $('member-count').textContent=String(visible.length);const nodes=[],keep=new Set();
-  const ordered=[...visible].sort((a,b)=>Number(online.has(b.id))-Number(online.has(a.id)));
-  for(const p of ordered){
-    keep.add(p.id);const signature=JSON.stringify([p,online.has(p.id),memberRoles.filter(r=>r.user_id===p.id),communityRoleList,roleFor(p.id)]);let cached=memberNodes.get(p.id);if(cached?.signature===signature){nodes.push(cached.node);continue;}
-    const row=el('div','member');row.dataset.userId=p.id;const a=el('span','avatar');setAvatar(a,p);
-    const content=el('div'),name=el('strong','',p.display_name),assigned=memberRoles.filter(r=>r.user_id===p.id).map(m=>communityRoleList.find(r=>r.id===m.role_id)).filter(Boolean).sort((x,y)=>y.position-x.position);
-    if(assigned[0]){name.style.color=assigned[0].color;name.append(el('span','role-badge',assigned[0].name));}
-    content.append(name,el('small','',p.custom_status||p.presence_activity|| (online.has(p.id)?'● Disponível':'Offline')));
-    row.append(a,content);row.onclick=()=>showProfile(person(p.id));row.tabIndex=0;row.setAttribute('role','button');row.setAttribute('aria-label','Abrir perfil de '+p.display_name);row.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();showProfile(person(p.id));}};nodes.push(row);memberNodes.set(p.id,{signature,node:row});
-  }
+  const visible=people.filter(p=>memberIds.has(p.id)),voiceBy=new Map(publicVoicePresence.filter(v=>v.channel_id).map(v=>[v.id,v]));
+  const byName=(a,b)=>(a.display_name||'').localeCompare(b.display_name||'','pt-BR');
+  const staff=visible.filter(p=>['creator','admin'].includes(roleFor(p.id))).sort(byName),rest=visible.filter(p=>!staff.includes(p));
+  const on=rest.filter(p=>online.has(p.id)).sort(byName),off=rest.filter(p=>!online.has(p.id)).sort(byName);
+  const nodes=[],keep=new Set();
+  const section=(key,label,list)=>{if(!list.length)return;nodes.push(memberHead(key,label,list.length));const limit=memberExpand.has(key)?list.length:MEMBER_CAP;for(const p of list.slice(0,limit)){keep.add(p.id);nodes.push(memberRow(p,online.has(p.id),voiceBy.get(p.id)));}
+    if(list.length>limit){const more=button('Mostrar mais '+(list.length-limit),()=>{memberExpand.add(key);renderMembers();},'mv2-more');nodes.push(more);}};
+  section('staff','Equipe da Órbita',staff);section('on','Online',on);section('off','Offline',off);
   for(const id of memberNodes.keys())if(!keep.has(id))memberNodes.delete(id);reconcileNodes($('member-list'),nodes);
-  $('online-count').textContent=visible.filter(p=>online.has(p.id)).length+' online';
+  $('member-count').textContent=String(visible.length);$('online-count').textContent=visible.filter(p=>online.has(p.id)).length+' online';
 }
+{let t=0;matchMedia('(min-width:1100px)').addEventListener('change',()=>{clearTimeout(t);t=setTimeout(()=>{if(session)syncMembersPanel();},50);});}
 function readPinnedDMs(){try{const list=JSON.parse(localStorage.getItem('orbita-pinned-dms:'+session?.user.id)||'[]');return Array.isArray(list)?list:[];}catch{return [];}}
 function renderSocial() {
   $('dm-channels').replaceChildren();
@@ -1406,8 +1431,8 @@ function updateFounders(){
   $('sidebar-boost-pill').textContent='COMUNIDADE';$('creators-credit').textContent='Criadores · '+(names.join(' & ')||'Órbita');
 }
 const baseRenderMembers=renderMembers;
-renderMembers=()=>{baseRenderMembers();for(const row of [...$('member-list').children]){const name=row.querySelector('strong'),p=people.find(p=>p.id===row.dataset.userId);if(!p)continue;const assigned=memberRoles.filter(r=>r.user_id===p.id).map(m=>communityRoleList.find(role=>role.id===m.role_id)).filter(Boolean).sort((a,b)=>b.position-a.position);if(assigned[0]){name.style.color=assigned[0].color;const badge=el('span','role-badge',assigned[0].name);badge.style.color=assigned[0].color;if(!name.querySelector('.role-badge'))name.append(badge);else name.querySelector('.role-badge').style.color=assigned[0].color;}else if(roleFor(p.id)&&!name.querySelector('.role-badge'))name.append(el('span','role-badge',roleFor(p.id)==='creator'?'CRIADOR':'ADMIN'));setAvatar(row.querySelector('.avatar'),p);}
-  const rows=[...$('member-list').children].sort((a,b)=>{const ar=memberRoles.filter(x=>x.user_id===a.dataset.userId).map(x=>communityRoleList.find(r=>r.id===x.role_id)?.position||0),br=memberRoles.filter(x=>x.user_id===b.dataset.userId).map(x=>communityRoleList.find(r=>r.id===x.role_id)?.position||0);return Math.max(0,...br)-Math.max(0,...ar)||Number(online.has(b.dataset.userId))-Number(online.has(a.dataset.userId));});reconcileNodes($('member-list'),rows);updateFounders();};
+renderMembers=()=>{baseRenderMembers();for(const row of [...$('member-list').children]){const name=row.querySelector('strong'),p=people.find(p=>p.id===row.dataset.userId);if(!p)continue;const assigned=memberRoles.filter(r=>r.user_id===p.id).map(m=>communityRoleList.find(role=>role.id===m.role_id)).filter(Boolean).sort((a,b)=>b.position-a.position);if(assigned[0]){name.style.color=assigned[0].color;const badge=el('span','role-badge',assigned[0].name);badge.style.color=assigned[0].color;if(!name.querySelector('.role-badge'))name.append(badge);else name.querySelector('.role-badge').style.color=assigned[0].color;}else if(roleFor(p.id)&&!name.querySelector('.role-badge'))name.append(el('span','role-badge',roleFor(p.id)==='creator'?'CRIADOR':'ADMIN'));}
+  updateFounders();}; // Membros v2 já ordena por seção (Equipe/Online/Offline) e nome.
 function safeRichText(text){
   const p=el('p');let last=0;
   const pattern=/(`[^`\n]+`|\*\*[^*\n]+\*\*|\[\[sticker:[a-z]+\]\]|:[a-z0-9_]{2,32}:|@[A-Za-z0-9_]{3,24}|https:\/\/[^\s<>]+)/g;
@@ -1465,8 +1490,7 @@ $('dd-invite-btn').onclick=()=>copyInvitation().catch(e=>toast(errorText(e)));
 $('dm-quick-find').onclick=()=>showDialog('Busca rápida',container=>{const form=el('form'),input=inputField(form,'Canal ou @ de um amigo','',60),go=el('button','primary','Abrir');go.type='submit';form.append(go);container.append(form);form.onsubmit=async e=>{e.preventDefault();try{const text=input.value.trim().replace(/^[@#]/,'').toLowerCase(),ch=channels.find(c=>c.name.toLowerCase()===text),p=people.find(p=>p.username===text||p.display_name.toLowerCase()===text);if(ch){$('app-dialog').close();await selectChannel(ch);}else if(p){$('app-dialog').close();await startConversation(p);}else toast('Nenhum canal ou usuário encontrado.');}catch(error){toast(errorText(error));}};});
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('dm-quick-find').click();}});
 $('btn-search-toggle').onclick=()=>$('search-messages').focus();
-// The right member column has been removed; profiles remain available in chat and calls.
-document.body.classList.add('members-hidden');document.body.classList.remove('members-open');$('members-sidebar').hidden=true;$('btn-members-toggle').hidden=true;$('btn-members-toggle').onclick=null;
+// Coluna de membros v2: estado em renderMembers()/syncMembersPanel().
   $('mobile-menu-btn').onclick=()=>{const open=document.body.classList.toggle('mobile-menu-open');$('mobile-menu-btn').setAttribute('aria-expanded',String(open));};
 document.addEventListener('click',event=>{if(!document.body.classList.contains('mobile-menu-open'))return;const target=event.target;if(!(target instanceof Element)||!target.closest('.sidebar,.rail,#mobile-menu-btn,.mobile-nav-btn'))closeMobileMenu();});
 for(const view of ['friends-view','voice-view']){const target=$(view).querySelector('.chat-title');const menu=button('☰',()=>{const open=document.body.classList.toggle('mobile-menu-open');menu.setAttribute('aria-expanded',String(open));},'mobile-nav-btn');menu.setAttribute('aria-label','Menu de canais');menu.setAttribute('aria-expanded','false');target.prepend(menu);}

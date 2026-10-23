@@ -22,7 +22,7 @@ let browser;
   if(await page.locator('body').evaluate(el=>el.scrollWidth)> (mobile?391:1441))throw Error('Horizontal overflow '+mobile);
   const title=await page.locator('#channel-title').boundingBox();if(!title||title.width<35)throw Error('Channel title hidden');
   async function navigateChannel(id){if(mobile){const visible=page.locator('.main>div:not([hidden]) .mobile-nav-btn').first();await visible.click();}await page.locator(`[data-channel-id="${id}"]`).first().click();await page.waitForTimeout(80);}
-  if(!await page.locator('#members-sidebar').evaluate(n=>n.hidden))throw Error('Removed member sidebar returned');
+  if(await page.locator('#btn-members-toggle').isHidden())throw Error('Botão de membros ausente no canal de texto');
   if(await page.locator('#member-list').getByText('Pessoa de outro servidor',{exact:true}).count())throw Error('Unrelated server member leaked into list');
   await page.locator('#message-input').fill('rascunho preservado');await navigateChannel(TEXT2);await page.locator('#message-input').fill('outro rascunho');await navigateChannel(TEXT);if(await page.locator('#message-input').inputValue()!=='rascunho preservado')throw Error('Draft lost after navigation');
   await page.locator('#message-input').fill('envio demorado');await page.locator('#message-form').evaluate(form=>form.requestSubmit());await page.waitForFunction(()=>typeof window.__qaReleaseSend==='function');await navigateChannel(TEXT2);await page.locator('#message-input').fill('envio demorado');await page.evaluate(()=>window.__qaReleaseSend());await page.waitForTimeout(200);if(await page.locator('#message-input').inputValue()!=='envio demorado')throw Error('A slow send cleared the other channel draft');await navigateChannel(TEXT);
