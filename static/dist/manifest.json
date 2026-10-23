@@ -1,10 +1,10 @@
 {
-  "version": "43939525c05cdd4e",
-  "entry": "/static/dist/app-GH3M7N2G.js",
+  "version": "69c3e93499d30e11",
+  "entry": "/static/dist/app-OAMPIY7Y.js",
   "files": [
-    "/static/dist/app-GH3M7N2G.js",
+    "/static/dist/app-OAMPIY7Y.js",
     "/static/dist/call-layout-41217c9121da3858.css",
-    "/static/dist/chunk-admin-controls-KSDGB43R.js",
+    "/static/dist/chunk-admin-controls-GQTGOWXU.js",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js",
     "/static/dist/chunk-app-diagnostics-2QD3IM5Z.js",
     "/static/dist/chunk-chunk-5DRSPI2W.js",
@@ -65,9 +65,9 @@
     "/static/grafite.css": "/static/dist/grafite-98f93b9ce9d8d9d9.css"
   },
   "integrity": {
-    "/static/dist/app-GH3M7N2G.js": "b68b013bc76f6efabe685ad1193662378a1aea5369148c1b5b08ab7910677623",
+    "/static/dist/app-OAMPIY7Y.js": "5023d3de035cf1da546099894fd1a425f4ec2ed833f1324c03d5631bd58b21b5",
     "/static/dist/call-layout-41217c9121da3858.css": "41217c9121da385886b24e21b88d59a06c04e575277db89d6c1901b1a99d41da",
-    "/static/dist/chunk-admin-controls-KSDGB43R.js": "9a81ab9338346f7b239c336491caefacf7f860899c42501f4454a46b95faee66",
+    "/static/dist/chunk-admin-controls-GQTGOWXU.js": "5319426849b564d55b883205e9bf2346539b5cbf0d28a74c5df453e03ddf63d4",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js": "db2508c2c9152fbe631806e53dd148bd67a8b3695a0094caa6145d906b978027",
     "/static/dist/chunk-app-diagnostics-2QD3IM5Z.js": "0163a63d4a8d77ec1df314bf7902c62baf6148cef02c8f7770e9f9b7d45cef20",
     "/static/dist/chunk-chunk-5DRSPI2W.js": "0bbd9ba58547ccfaa015547b8edfd41644afff5ad9d85a56757b1d92b1d114ff",

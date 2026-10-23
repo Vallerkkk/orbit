@@ -1309,7 +1309,7 @@ initSocial=async()=>{
   if(extraSubscription)await db.removeChannel(extraSubscription);
   if(!current())return;
   extraSubscription=db.channel('orbita-ui-'+session.user.id)
-    .on('postgres_changes',{event:'*',schema:'public',table:'communities'},async()=>{try{const loaded=await checked(db.from('communities').select('*').order('created_at'));if(!current())return;communities=loaded;renderCommunityRail();}catch(error){if(current())toast(errorText(error));}})
+    .on('postgres_changes',{event:'*',schema:'public',table:'communities'},async()=>{try{const loaded=await checked(db.from('communities').select('*').order('created_at'));if(!current())return;const missing=activeCommunity&&!loaded.some(c=>c.id===activeCommunity)?activeCommunity:null;if(missing){communities=loaded;await forgetCommunity(missing);}else{communities=loaded;renderCommunityRail();}}catch(error){if(current())toast(errorText(error));}})
     .on('postgres_changes',{event:'*',schema:'public',table:'community_welcome'},payload=>{const id=payload.new?.community_id||payload.old?.community_id;welcomeAccess.delete(id);communityViews.delete(id);if(current()&&id===activeCommunity)ensureCommunityWelcome(id).then(accepted=>{if(!current())return;if(!accepted){if(callChannel?.community_id===id)leaveCall();showFriends();}else scheduleAccessRefresh();}).catch(error=>toast(errorText(error)));})
     .on('postgres_changes',{event:'*',schema:'public',table:'site_roles'},async()=>{try{const loaded=await checked(db.from('site_roles').select('*'));if(!current())return;siteRoles=loaded;renderMembers();updateFounders();}catch(error){if(current())toast(errorText(error));}})
     .on('postgres_changes',{event:'*',schema:'public',table:'poll_votes'},()=>{if(!home&&selected?.kind==='text')refreshMessages();}).subscribe();
@@ -1866,7 +1866,28 @@ callReactions=initCallReactions({el,button,toast,dialog:showDialog,room:()=>room
 const settingsBeforeAudioDevices=$('settings').onclick;
 $('settings').onclick=()=>{settingsBeforeAudioDevices();audioTools.fields($('dialog-content'));};
 
-const adminContext={el,button,toast,checked,showDialog,inputField,errorText,apiFetch,
+// Remove do estado local um servidor/canal já excluído no banco, sem depender do Realtime.
+// Se era o servidor/canal aberto, volta ao servidor padrão (ou ao primeiro disponível).
+async function forgetCommunity(id){
+  const wasActive=activeCommunity===id;communities=communities.filter(c=>c.id!==id);communityViews.delete(id);welcomeAccess.delete(id);
+  const gone=new Set(channels.filter(c=>c.community_id===id).map(c=>c.id));channels=channels.filter(c=>c.community_id!==id);
+  conversationCache.retain(key=>!key.includes(':channel:')||![...gone].some(ch=>key.endsWith(':'+ch)));
+  if(callChannel&&!callChannel.private&&(callChannel.community_id===id||gone.has(callChannel.id)))await leaveCall().catch(()=>{});
+  renderCommunityRail();
+  if(!wasActive)return;
+  const fallback=communities.find(c=>c.is_default)||communities.find(c=>c.id==='00000000-0000-4000-8000-000000000001')||communities[0];
+  if(selected&&!selected.private)showFriends();
+  if(fallback){try{await openCommunity(fallback);}catch(error){toast(errorText(error));}}
+  else{activeCommunity=null;renderChannels();renderMembers();navigation(true);}
+}
+async function forgetChannel(id){
+  const channel=channels.find(c=>c.id===id);channels=channels.filter(c=>c.id!==id);if(channel)communityViews.delete(channel.community_id);
+  conversationCache.retain(key=>!key.includes(':channel:')||!key.endsWith(':'+id));
+  if(callChannel&&!callChannel.private&&callChannel.id===id)await leaveCall().catch(()=>{});
+  if(selected&&!selected.private&&selected.id===id){const fallback=channels.find(c=>c.community_id===activeCommunity&&c.kind==='text')||channels.find(c=>c.community_id===activeCommunity);if(fallback){try{await selectChannel(fallback);}catch(error){toast(errorText(error));showFriends();}}else showFriends();}
+  renderChannels();renderMembers();
+}
+const adminContext={el,button,toast,checked,showDialog,inputField,errorText,apiFetch,forgetCommunity,forgetChannel,
  state:()=>({db,session,people,siteRoles,activeCommunity,selected,communities,channels,callChannel,messages}),hasPermission:permission=>hasCommunityPermission(permission),
  refreshRoles:async()=>{siteRoles=await checked(db.from('site_roles').select('*'));renderMembers();},
  diagnostics:async()=>{const module=await import('./admin-diagnostics.js');if(session)module.showDiagnostics(adminContext);},
