@@ -1,5 +1,5 @@
 {
-  "version": "e10661e58ea77e70",
+  "version": "e816137aa6e83585",
   "entry": "/static/dist/app-BXQE3INX.js",
   "files": [
     "/static/dist/app-BXQE3INX.js",
@@ -39,7 +39,7 @@
     "/static/dist/identity-fd4b34a93e86c63c.css",
     "/static/dist/interface-6924e0bf452e76e0.css",
     "/static/dist/modern-dfbf9772c6bc459c.css",
-    "/static/dist/orbita-v2-efbb6a99cbba8b66.css",
+    "/static/dist/orbita-v2-ba729d48ede63e42.css",
     "/static/dist/polish-c22544408f48b409.css",
     "/static/dist/profile-studio-0bdba4c3523b0181.css",
     "/static/dist/social-feed-db5be836f065552c.css",
@@ -59,7 +59,7 @@
     "/static/themes.css": "/static/dist/themes-798ce3001de508c9.css",
     "/static/polish.css": "/static/dist/polish-c22544408f48b409.css",
     "/static/modern.css": "/static/dist/modern-dfbf9772c6bc459c.css",
-    "/static/orbita-v2.css": "/static/dist/orbita-v2-efbb6a99cbba8b66.css",
+    "/static/orbita-v2.css": "/static/dist/orbita-v2-ba729d48ede63e42.css",
     "/static/profile-studio.css": "/static/dist/profile-studio-0bdba4c3523b0181.css",
     "/static/store-v2.css": "/static/dist/store-v2-4b284961e3da793c.css",
     "/static/grafite.css": "/static/dist/grafite-98f93b9ce9d8d9d9.css"
@@ -102,7 +102,7 @@
     "/static/dist/identity-fd4b34a93e86c63c.css": "fd4b34a93e86c63c15775b8c4f65b026abbb2f5cfebf3d9f837c71554049638d",
     "/static/dist/interface-6924e0bf452e76e0.css": "6924e0bf452e76e0125c9243e711243c4705ef3eb700fbaa54bb205d54a5b081",
     "/static/dist/modern-dfbf9772c6bc459c.css": "dfbf9772c6bc459cf02777db2a4552b159ad6db43b2be1f7969b7d686c52a25a",
-    "/static/dist/orbita-v2-efbb6a99cbba8b66.css": "efbb6a99cbba8b6685292be7e4bd9bae586bb2a67bc636beae99ff5983aef21e",
+    "/static/dist/orbita-v2-ba729d48ede63e42.css": "ba729d48ede63e42f7d06534bbeb1c103f4f89007891351cead9a3e1404d6417",
     "/static/dist/polish-c22544408f48b409.css": "c22544408f48b40928a25568a009674a120aa1fab172c7f89de9caddfaea38d1",
     "/static/dist/profile-studio-0bdba4c3523b0181.css": "0bdba4c3523b0181ac23da11fa7a7d0c7822b097157e51e52ab3cdff74c354a4",
     "/static/dist/social-feed-db5be836f065552c.css": "db5be836f065552c817829a13a806b531ff74bc52ee6c642a31d8b1cf02d0bd9",

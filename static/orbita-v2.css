@@ -967,3 +967,15 @@ body[data-color-mode=light] .st-seg>button[aria-checked=true]{background:#fff;co
 .chat-media-sticker{background:none}.chat-media-sticker img{max-height:160px;border-radius:0}
 .chat-media-via{font-size:10px;color:var(--text-muted,#999);margin-top:2px}.chat-media-broken{font-size:13px;color:var(--text-muted,#999)}
 @media(max-width:600px){.media-picker{right:4px;left:4px;width:auto;height:60dvh}}
+/* Nomes com estilo (Loja v2 .ns e efeitos .ne-*) em contextos compactos: chips da chamada, compartilhamento de tela,
+   lista de voz e painel do usuário. O chip tem fundo próprio, então o gradiente recortado no texto ficava invisível.
+   Versão simplificada e segura: texto sólido na cor do estilo + leve brilho, sem recorte, filtro ou animação. */
+#voice-view .participant .participant-name:is(.ns,[class*="ne-"]),
+#voice-view .media-tile figcaption>span:is(.ns,[class*="ne-"]),
+.voice-tree-person .vt-name:is(.ns,[class*="ne-"]),
+#app-view .user-panel .up-name:is(.ns,[class*="ne-"]){
+  background-image:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;
+  -webkit-text-fill-color:currentColor!important;color:color-mix(in srgb,var(--nc1,#fff) 75%,#fff)!important;
+  animation:none!important;filter:none!important;text-shadow:0 0 8px color-mix(in srgb,var(--nc2,var(--nc1,#c9a7ff)) 70%,transparent),0 1px 2px #000a!important}
+#voice-view .participant .participant-name:is(.ns,[class*="ne-"]),#voice-view .media-tile figcaption>span:is(.ns,[class*="ne-"]){background-color:rgba(12,14,24,.82)!important}
+.voice-tree-person .vt-name:is(.ns,[class*="ne-"]),#app-view .user-panel .up-name:is(.ns,[class*="ne-"]){background-color:transparent!important}
