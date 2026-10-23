@@ -9,13 +9,15 @@ const TABS=[
   ['conta','Conta e ajuda','M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z'],
 ];
 const RULES=[
-  ['perfil',n=>n.matches('.profile-edit-card,#profile-custom-btn')],
+  ['perfil',n=>n.matches('.profile-edit-card')],
+  ['voz',n=>n.matches('.settings-audio-link')],
   ['voz',n=>/Entrada e saída de áudio|A redução de ruído|Manter a tela acesa|Big Picture/.test(n.textContent)],
   ['sons',n=>/Sons do aplicativo|Sons de avisos|Testar som/.test(n.textContent)],
   ['avisos',n=>/notificações|push|Instalar Órbita/i.test(n.textContent)],
   ['aparencia',n=>/^(Tema|Densidade|Aparência|Tamanho das mensagens|Reduzir animações|Conforto e acessibilidade)/.test(n.textContent.trim())],
 ];
 const svgIcon=d=>{const s=document.createElementNS('http://www.w3.org/2000/svg','svg');s.setAttribute('viewBox','0 0 24 24');s.setAttribute('aria-hidden','true');s.classList.add('st-ico');const p=document.createElementNS('http://www.w3.org/2000/svg','path');p.setAttribute('d',d);s.append(p);return s;};
+const DESC={perfil:'Como as pessoas veem você: identidade, foto, capa, cosméticos e insígnias. Tudo num só lugar.',aparencia:'Tema, densidade e conforto visual do aplicativo neste dispositivo.',voz:'Microfone, alto-falante, câmera e processamento de áudio das chamadas.',sons:'Sons do aplicativo e dos avisos.',avisos:'Notificações no navegador e instalação do app.',conta:'Sua conta, privacidade, atalhos e ajuda.'};
 const tabFor=n=>{for(const [k,f] of RULES)try{if(f(n))return k;}catch{}return 'conta';};
 
 function segment(select){
@@ -53,9 +55,9 @@ function arrange(dialog){
   try{
     let nav=body.querySelector(':scope > .st-nav'),wrap=body.querySelector(':scope > .st-panels');
     if(!nav){dialog.classList.add('st-dialog');body.classList.add('st-body');nav=document.createElement('nav');nav.className='st-nav';nav.setAttribute('role','tablist');nav.setAttribute('aria-label','Categorias');nav.setAttribute('aria-orientation','vertical');wrap=document.createElement('div');wrap.className='st-panels';
-      const current='perfil';
+      const current=dialog.dataset.stStart||'perfil';delete dialog.dataset.stStart;
       for(const [key,label,icon] of TABS){const t=document.createElement('button');t.type='button';t.className='st-tab';t.id='st-tab-'+key;t.setAttribute('role','tab');t.setAttribute('aria-controls','st-panel-'+key);t.dataset.tab=key;t.append(svgIcon(icon),Object.assign(document.createElement('span'),{textContent:label}));nav.append(t);
-        const p=document.createElement('section');p.className='st-panel';p.id='st-panel-'+key;p.setAttribute('role','tabpanel');p.setAttribute('aria-labelledby',t.id);const h=document.createElement('h3');h.className='st-panel-title';h.textContent=label;p.append(h);wrap.append(p);}
+        const p=document.createElement('section');p.className='st-panel';p.id='st-panel-'+key;p.setAttribute('role','tabpanel');p.setAttribute('aria-labelledby',t.id);const h=document.createElement('header');h.className='st-panel-title';const hi=document.createElement('span');hi.className='st-panel-ico';hi.append(svgIcon(icon));const ht=document.createElement('div');ht.append(Object.assign(document.createElement('h3'),{textContent:label}),Object.assign(document.createElement('p'),{textContent:DESC[key]||''}));h.append(hi,ht);p.append(h);wrap.append(p);}
       const select=key=>{for(const t of nav.children){const on=t.dataset.tab===key;t.setAttribute('aria-selected',String(on));t.tabIndex=on?0:-1;wrap.querySelector('#st-panel-'+t.dataset.tab).hidden=!on;}wrap.scrollTop=0;};
       nav.addEventListener('click',e=>{const t=e.target.closest('.st-tab');if(t)select(t.dataset.tab);});
       nav.addEventListener('keydown',e=>{if(!/Arrow(Up|Down|Left|Right)/.test(e.key))return;const list=[...nav.children],i=list.indexOf(document.activeElement);if(i<0)return;const n=list[(i+(/Down|Right/.test(e.key)?1:-1)+list.length)%list.length];n.focus();n.click();e.preventDefault();});

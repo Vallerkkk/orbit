@@ -2876,7 +2876,7 @@ body.big-picture .bp-bar .mobile-nav-btn{display:inline-flex!important}
 
 
 /* Profile menu dialogs – match rich-profile aesthetic */
-#app-dialog:has(.rich-profile) {
+#app-dialog:not(.st-dialog):has(.rich-profile) {
   width: min(420px, calc(100vw - 24px));
   padding: 0;
   overflow-y: auto;
@@ -2885,7 +2885,7 @@ body.big-picture .bp-bar .mobile-nav-btn{display:inline-flex!important}
   border: none;
   box-shadow: 0 18px 60px #000c;
 }
-#app-dialog:has(.rich-profile) .dialog-header {
+#app-dialog:not(.st-dialog):has(.rich-profile) .dialog-header {
   position: absolute;
   top: 8px;
   right: 8px;
@@ -2894,10 +2894,10 @@ body.big-picture .bp-bar .mobile-nav-btn{display:inline-flex!important}
   border: none;
   padding: 0;
 }
-#app-dialog:has(.rich-profile) .dialog-header h2 {
+#app-dialog:not(.st-dialog):has(.rich-profile) .dialog-header h2 {
   display: none;
 }
-#app-dialog:has(.rich-profile) #dialog-close {
+#app-dialog:not(.st-dialog):has(.rich-profile) #dialog-close {
   background: rgba(0,0,0,0.55);
   color: #fff;
   border-radius: 50%;
@@ -2908,7 +2908,7 @@ body.big-picture .bp-bar .mobile-nav-btn{display:inline-flex!important}
   border: none;
   font-size: 18px;
 }
-#app-dialog:has(.rich-profile) .dialog-body {
+#app-dialog:not(.st-dialog):has(.rich-profile) .dialog-body {
   padding: 0;
   margin: 0;
 }

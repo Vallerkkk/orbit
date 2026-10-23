@@ -1111,14 +1111,14 @@ dialog input[type=file]::file-selector-button:hover{background:rgba(139,108,255,
   transition:background var(--dur-1),color var(--dur-1);
 }
 .rich-profile .rp-action:hover{background:rgba(139,108,255,.16);color:#fff}
-#app-dialog:has(.rich-profile){border:0;background:transparent;box-shadow:none}
-#app-dialog:has(.rich-profile) #dialog-close{
+#app-dialog:not(.st-dialog):has(.rich-profile){border:0;background:transparent;box-shadow:none}
+#app-dialog:not(.st-dialog):has(.rich-profile) #dialog-close{
   background:rgba(8,9,15,.55);
   border:1px solid rgba(255,255,255,.2);
   backdrop-filter:blur(10px);
   width:44px;height:44px;font-size:17px;
 }
-#app-dialog:has(.rich-profile) #dialog-close:hover{background:rgba(255,93,107,.85);transform:rotate(90deg)}
+#app-dialog:not(.st-dialog):has(.rich-profile) #dialog-close:hover{background:rgba(255,93,107,.85);transform:rotate(90deg)}
 
 .profile-banner{
   border-radius:16px;

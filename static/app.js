@@ -1051,7 +1051,7 @@ function showProfile(p) {
     const actions = el('div', 'rp-actions');
     if (own) {
       actions.classList.add('rp-own-actions');
-      actions.append(button('Editar perfil', () => { $('app-dialog').close(); $('settings').click(); }, 'rp-action rp-primary'));
+      actions.append(button('Editar perfil', () => { $('app-dialog').close(); openSettingsHub('perfil'); }, 'rp-action rp-primary'));
       actions.append(button('Decorações', () => { $('app-dialog').close(); openDecorationGallery(); }, 'rp-action rp-outline'));
     } else {
       const f = friendships.find(f => [f.requester_id, f.recipient_id].includes(p.id));
@@ -1113,7 +1113,10 @@ $('decline-call').onclick=()=>{$('incoming-call').hidden=true;};
 // Toque de chamada recebida: repete o chime até atender, recusar ou expirar (30 s).
 let ringTimer=0;function ringIncoming(){clearInterval(ringTimer);const started=Date.now();const ring=()=>{if($('incoming-call').hidden||Date.now()-started>30000){clearInterval(ringTimer);return;}uiSound('chime',{gap:1500});};ring();ringTimer=setInterval(ring,2500);}
 $('friends-nav').onclick=showFriends;
-$('settings').onclick=()=>showDialog('Seu perfil e áudio',container=>{
+// Central única de configurações: toda entrada (engrenagem, 'Editar perfil', painel do usuário, chamada, boas-vindas) cai aqui.
+function openSettingsHub(section='perfil'){$('app-dialog').dataset.stStart=section;$('settings').click();}
+window.orbitaOpenSettings=openSettingsHub;
+$('settings').onclick=()=>showDialog('Configurações',container=>{
   const card = el('div', 'profile-edit-card');
   const bannerPrev = el('div', 'rp-banner-preview');
   if (profile.banner_src) bannerPrev.style.backgroundImage = `url("${profile.banner_src.replaceAll('"','%22')}")`;
@@ -1129,8 +1132,15 @@ $('settings').onclick=()=>showDialog('Seu perfil e áudio',container=>{
   const name=inputField(form,'Nickname (também será seu @)',/^[A-Za-z0-9_]{3,24}$/.test(profile.display_name)?profile.display_name:profile.username,24),bio=inputField(form,'Sobre você',profile.bio,160),pronouns=inputField(form,'Pronomes',profile.pronouns,32),activity=inputField(form,'Atividade (ex.: Jogando Minecraft / Ouvindo música)',profile.presence_activity,80),color=inputField(form,'Cor do perfil',profile.avatar_color,7);color.type='color';
   name.pattern='[A-Za-z0-9_]{3,24}';name.minLength=3;name.required=true;const nicknameHint=el('p','muted');name.closest('label').after(nicknameHint);const hint=()=>nicknameHint.textContent='Para adicionar você: @'+name.value.trim().toLowerCase()+' · 3–24 letras, números ou _';name.addEventListener('input',hint);hint();
   const avatarFile=profileFileField(form,'Foto do perfil',profile.avatar_src),bannerFile=profileFileField(form,'Banner (pode ser GIF animado)',profile.banner_src);
-  const audioOpen=el('button','soft-button settings-audio-link','Configurações de Áudio');audioOpen.type='button';audioOpen.onclick=()=>openAudioPanel();form.append(audioOpen);
-  const save=el('button','primary','Salvar alterações');save.type='submit';form.append(save);card.append(form); container.append(card);
+  // Cor da capa (antes em 'Personalizar nome e capa'): usada quando não há banner.
+  const coverColor=inputField(form,'Cor da capa (sem banner)',/^#[0-9a-f]{6}$/i.test(loadProfilePrefs().bannerColor||'')?loadProfilePrefs().bannerColor:'#ff4f9a',7);coverColor.type='color';coverColor.oninput=()=>{if(!profile.banner_src&&!bannerFile.files[0])bannerPrev.style.background=coverColor.value;};
+  // Áudio avançado mora em Voz e vídeo.
+  const audioOpen=el('button','soft-button settings-audio-link','Processamento de áudio avançado');audioOpen.type='button';audioOpen.onclick=()=>openAudioPanel();container.append(audioOpen);
+  // Estúdio do perfil (pré-visualização ao vivo + cosméticos) embutido na mesma seção.
+  const studioMount=el('div','st-studio');let studioHub=null;const uidAtOpen=session.user.id;
+  loadStudio().then(st=>{if(!studioMount.isConnected&&!card.isConnected)return;if(session?.user.id!==uidAtOpen)return;studioHub=st.openEditor({mount:studioMount,info:{bio:bio.value,pronouns:pronouns.value},focusFile:kind=>{const f=kind==='banner'?bannerFile:avatarFile;f.closest('label')?.scrollIntoView({block:'center',behavior:'smooth'});f.focus();}});}).catch(()=>studioMount.remove());
+  const live=()=>studioHub?.setInfo({bio:bio.value,pronouns:pronouns.value,presence_activity:activity.value,avatar_color:color.value});bio.addEventListener('input',live);pronouns.addEventListener('input',live);activity.addEventListener('input',live);color.addEventListener('input',live);
+  const save=el('button','primary','Salvar alterações');save.type='submit';form.append(save);card.prepend(studioMount);card.append(form); container.append(card);
   form.onsubmit=async event=>{event.preventDefault();save.disabled=true;const uid=session.user.id,prior={...profile},created=[];let saved=false;try{
     const avatarUrl=avatarFile.files[0]?await uploadProfileAsset(avatarFile.files[0],'avatar'):prior.avatar_url||'';if(avatarUrl!==prior.avatar_url)created.push(avatarUrl);
     const bannerUrl=bannerFile.files[0]?await uploadProfileAsset(bannerFile.files[0],'banner'):prior.banner_url||'';if(bannerUrl!==prior.banner_url)created.push(bannerUrl);
@@ -1138,6 +1148,8 @@ $('settings').onclick=()=>showDialog('Seu perfil e áudio',container=>{
     const updated=await checked(db.from('profiles').update({display_name:name.value.trim(),username:name.value.trim().toLowerCase(),bio:bio.value.trim(),pronouns:pronouns.value.trim(),presence_activity:activity.value.trim(),avatar_color:color.value,avatar_url:avatarUrl,banner_url:bannerUrl}).eq('id',uid).select('id'));
     if(!updated.length)throw Error('O perfil não pôde ser atualizado. Entre novamente.');saved=true;
     const retired=[prior.avatar_url,prior.banner_url].filter(path=>path?.startsWith('profiles/'+uid+'/')&&!new Set([avatarUrl,bannerUrl]).has(path));if(retired.length){const removed=await db.storage.from('orbita-files').remove([...new Set(retired)]);if(removed.error)toast('Perfil salvo. Não foi possível liberar o espaço das imagens antigas agora.');}
+    saveProfilePrefs({...loadProfilePrefs(),bannerColor:coverColor.value});
+    if(studioHub)await studioHub.save();
     await loadSocial();if(form.isConnected)$('app-dialog').close();toast('Perfil atualizado.');
   }catch(e){if(!saved&&created.length)await db.storage.from('orbita-files').remove(created.filter(Boolean));toast(e.code==='23505'?'Esse nome de usuário já está em uso.':errorText(e));}finally{save.disabled=false;}};
 });
@@ -1614,7 +1626,7 @@ callLayout=initCallLayout({audioSettings:()=>audioTools?.open(),micSettings:()=>
   avatar:(node,id)=>{const p=person(id);if(p.display_name==='Participante'){p.display_name=node.parentElement.querySelector('.participant-name')?.textContent||p.display_name;}setAvatar(node,p);},
   participant:participant=>showDialog(participant.name||'Participante',box=>{
     box.append(el('p','muted',qualityText(participant.connectionQuality)));
-    if(participant.isLocal){box.append(button('Meu perfil e áudio',()=>{$('app-dialog').close();$('settings').click();}));return;}
+    if(participant.isLocal){box.append(button('Meu perfil e áudio',()=>{$('app-dialog').close();openSettingsHub('voz');}));return;}
     for(const [source,label] of [['microphone','Microfone'],['screen_share_audio','Transmissão de tela']]){const field=volumeControl(participant,source,label),slider=field.querySelector('input');slider.setAttribute('aria-label',(source==='microphone'?'Volume do microfone de ':'Volume da transmissão de ')+(participant.name||'Participante'));slider.value=sourceVolume(participant.identity,source);field.querySelector('output').value=Math.round(Number(slider.value)*100)+'%';box.append(field);}
     box.append(el('p','muted','Estes volumes alteram apenas o que você ouve.'));
   })
@@ -1624,7 +1636,7 @@ updateCallUI=()=>{updateBeforeCallLayout();callLayout.update();};
 const feedContext={
   state:()=>({db,session,profile,moderator:siteRoles.some(role=>role.user_id===session?.user.id&&['creator','admin'].includes(role.role))}),
   el,toast,checked,showDialog,tools:async action=>{const tools=await loadSocialTools();if(session)tools[action]();},sharePost:post=>sharePostToConversation(post),questions:async id=>{const tools=await loadSocialTools();if(session)tools.questions(id);},
-  profile:p=>p.id===session?.user.id?$('settings').click():showProfile(person(p.id)||p),
+  profile:p=>p.id===session?.user.id?openSettingsHub('perfil'):showProfile(person(p.id)||p),
   open:()=>{navigationEpoch++;saveComposerDraft();saveConversation();stopConversation();generation++;home=true;selected=null;
     for(const id of ['text-view','voice-view','friends-view'])$(id).hidden=true;
     renderChannels();renderSocial();$('rail-servers-list').querySelectorAll('.server-icon.active').forEach(n=>n.classList.remove('active'));updateCallUI();enhancements.channelChanged().catch(()=>{});},
@@ -1689,20 +1701,7 @@ function applyProfileStyles() {
 }
 function openProfileCustomizer(){return openProfileAppearance('openProfileCustomizer');}
 // Hook into settings if available
-const originalSettingsClick = $('settings')?.onclick;
-if ($('settings')) {
-  $('settings').onclick = function(e) {
-    if (originalSettingsClick) originalSettingsClick.call(this, e);
-    setTimeout(() => {
-      const body = $('dialog-content');
-      if (body && !body.querySelector('#profile-custom-btn')) {
-        const btn = button('Personalizar nome e capa', openProfileCustomizer, 'soft-button');
-        btn.id = 'profile-custom-btn';
-        body.append(btn);
-      }
-    }, 50);
-  };
-}
+// 'Personalizar nome e capa' foi unificado na central (Perfil): fonte/efeito no estúdio, cor da capa no formulário.
 applyProfileStyles();
 
 // === Server / community theme ===
@@ -1789,20 +1788,20 @@ showProfile = function(p) {
   applyDecorations();applyProfileStyles();
   const panel=document.querySelector('#app-dialog .rich-profile[data-user-id]');
   if(panel){const own=p.id===session?.user.id,actions=panel.querySelector('.rp-actions');
-    if(own){const edit=[...actions.querySelectorAll('button')].find(b=>b.textContent==='Editar perfil');if(edit)edit.onclick=()=>{$('app-dialog').close();studio('openEditor');};
+    if(own){const edit=[...actions.querySelectorAll('button')].find(b=>b.textContent==='Editar perfil');if(edit)edit.onclick=()=>{$('app-dialog').close();openSettingsHub('perfil');};
       actions.append(button('Loja',()=>{$('app-dialog').close();studio('openStore');},'rp-action rp-outline'),button('Insígnias',()=>{$('app-dialog').close();studio('openBadges',session.user.id);},'rp-action rp-outline'));}
     const uid=session?.user.id;loadStudio().then(s=>{if(session?.user.id===uid&&panel.isConnected)s.decorateCard(panel,p);}).catch(()=>{});}
 };
 let studioTask;
 // Primeira visita depois do cadastro: boas-vindas com mini-tour (a data de cadastro vem do servidor).
 async function showFirstWelcome(transition,force=false){const uid=session?.user.id;if(!uid)return;try{const m=await import('./new-members.js');if(transition!==undefined&&transition!==sessionTransition||uid!==session?.user.id)return;
-  await m.maybeWelcome({el,db,uid,force,showDialog,editProfile:()=>loadStudio().then(s=>s.openEditor()),explore:()=>$('btn-explore-servers')?.click(),feed:()=>feed.open('foryou'),badges:()=>loadStudio().then(s=>s.openBadges(uid))});}catch(error){console.info('welcome',error?.message||error);}}
+  await m.maybeWelcome({el,db,uid,force,showDialog,editProfile:()=>openSettingsHub('perfil'),explore:()=>$('btn-explore-servers')?.click(),feed:()=>feed.open('foryou'),badges:()=>loadStudio().then(s=>s.openBadges(uid))});}catch(error){console.info('welcome',error?.message||error);}}
 window.orbitaShowWelcome=()=>showFirstWelcome(undefined,true);
 function loadStudio(){if(!studioTask)studioTask=import('./profile-studio.js').then(m=>m.initProfileStudio({el,button,toast,errorText,apiFetch,setAvatar,person,appearanceOf,saveAppearance,
   state:()=>({db,session,profile,isAdmin:siteRoles.some(r=>r.user_id===session?.user.id&&['admin','creator'].includes(r.role))}),
   saveProfile:async fields=>{const uid=session.user.id;await checked(db.from('profiles').update(fields).eq('id',uid).select('id'));if(session?.user.id===uid){Object.assign(profile,fields);const cur=peopleById.get(uid);if(cur)Object.assign(cur,fields);}},
   roleOf:id=>{if(home||!activeCommunity)return null;const link=memberRoles.find(r=>r.user_id===id);return link?communityRoleList.find(r=>r.id===link.role_id)||null:null;},
-  inCall:()=>room&&callChannel?callChannel.name:null,openSettings:()=>$('settings').click()})).catch(error=>{studioTask=null;throw error;});return studioTask;}
+  inCall:()=>room&&callChannel?callChannel.name:null,openSettings:section=>openSettingsHub(section||'perfil')})).catch(error=>{studioTask=null;throw error;});return studioTask;}
 async function studio(method,...args){const uid=session?.user.id;try{const s=await loadStudio();if(session?.user.id===uid)return s[method](...args);}catch(error){toast(errorText(error));}}
 window.orbitaStudio=studio;
 setTimeout(applyDecorations, 1000);

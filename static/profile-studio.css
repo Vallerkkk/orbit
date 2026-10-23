@@ -172,7 +172,7 @@
 .ps-badge-row .lv{display:none}.ps-badge-row button{position:relative}
 .rich-profile.pv2.ps-themed{background:linear-gradient(180deg,var(--pt1) 0%,var(--pt2) 100%)!important;--pv-panel:var(--pt1)}
 .rich-profile.pv2.ps-themed .rp-body{background:linear-gradient(180deg,#0000,#0b0a1260)!important}
-#app-dialog:has(.rich-profile.pv2.ps-themed){background:transparent!important}
+#app-dialog:not(.st-dialog):has(.rich-profile.pv2.ps-themed){background:transparent!important}
 .rich-profile.pv2.pk-border::before{inset:0;padding:3px}
 .ne-gradient{filter:drop-shadow(0 1px 2px #0009)}
 .rich-profile.ps-themed .rp-bio,.rich-profile.ps-themed .rp-username,.rich-profile.ps-themed .rp-voice-state{color:#fff!important;text-shadow:0 1px 2px #0007}

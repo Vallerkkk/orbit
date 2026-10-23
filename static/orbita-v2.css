@@ -212,18 +212,18 @@ body:has(#app-view:not([hidden]))::before { opacity: 0; }
   --pv-pink: #e07ad6; --pv-pink-2: var(--ac); --pv-grad: linear-gradient(90deg, #e47bc8 0%, var(--ac) 55%, var(--ac) 100%);
   --pv-track: #4c505b; --pv-green: #3ccf7a;
 }
-#app-dialog:has(.pv2), #app-dialog:has(.audio-panel), #app-dialog:has(.decoration-dialog) {
+#app-dialog:not(.st-dialog):has(.pv2), #app-dialog:has(.audio-panel), #app-dialog:has(.decoration-dialog) {
   width: min(372px, calc(100vw - 24px)) !important; max-width: 372px !important; padding: 0 !important;
   background: var(--pv-panel) !important; border: 1px solid var(--pv-border) !important; border-radius: 16px !important;
   box-shadow: 0 24px 60px rgba(0,0,0,.55) !important; overflow: hidden auto; color: var(--pv-text);
 }
 #app-dialog:has(.decoration-dialog) { width: min(392px, calc(100vw - 24px)) !important; max-width: 392px !important; }
-#app-dialog:has(.pv2) .dialog-body, #app-dialog:has(.audio-panel) .dialog-body, #app-dialog:has(.decoration-dialog) .dialog-body { padding: 0 !important; background: transparent !important; }
+#app-dialog:not(.st-dialog):has(.pv2) .dialog-body, #app-dialog:has(.audio-panel) .dialog-body, #app-dialog:has(.decoration-dialog) .dialog-body { padding: 0 !important; background: transparent !important; }
 
 /* ---------- PERFIL ---------- */
-#app-dialog:has(.pv2) .dialog-header { position: absolute !important; inset: 0 0 auto auto; z-index: 3; padding: 10px !important; background: none !important; border: 0 !important; }
-#app-dialog:has(.pv2) #dialog-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-#app-dialog:has(.pv2) #dialog-close { width: 30px; height: 30px; border-radius: 50%; background: rgba(8,9,15,.55) !important; color: #fff !important; }
+#app-dialog:not(.st-dialog):has(.pv2) .dialog-header { position: absolute !important; inset: 0 0 auto auto; z-index: 3; padding: 10px !important; background: none !important; border: 0 !important; }
+#app-dialog:not(.st-dialog):has(.pv2) #dialog-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+#app-dialog:not(.st-dialog):has(.pv2) #dialog-close { width: 30px; height: 30px; border-radius: 50%; background: rgba(8,9,15,.55) !important; color: #fff !important; }
 .rich-profile.pv2 { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; border-radius: 0 !important; }
 .pv2 .rp-banner { height: 118px !important; border-radius: 0 !important; background-size: cover; background-position: center; }
 .pv2 .rp-avatar-wrap { position: relative; margin: -46px 0 0 20px !important; width: 92px; height: 92px; }
@@ -383,7 +383,7 @@ body:has(#app-view:not([hidden]))::before { opacity: 0; }
 .decoration-dialog .deco-title { text-transform: none !important; }
 #app-dialog:has(.audio-panel) #dialog-title { flex: 1; text-align: left !important; }
 #app-dialog:has(.audio-panel) .dialog-header { min-height: 0 !important; margin: 0 !important; }
-#app-dialog:has(.pv2) #dialog-close { border: 0 !important; box-shadow: none !important; }
+#app-dialog:not(.st-dialog):has(.pv2) #dialog-close { border: 0 !important; box-shadow: none !important; }
 .audio-panel .panel-subtitle { margin-top: 2px; }
 #app-view .channel.active .channel-name { color: #fff !important; }
 #app-dialog .profile-edit-card form > .primary { background: linear-gradient(90deg,#b4469f,var(--ac)) !important; color: #fff !important; font-size: 14px !important; font-weight: 700 !important; }
@@ -979,3 +979,87 @@ body[data-color-mode=light] .st-seg>button[aria-checked=true]{background:#fff;co
   animation:none!important;filter:none!important;text-shadow:0 0 8px color-mix(in srgb,var(--nc2,var(--nc1,#c9a7ff)) 70%,transparent),0 1px 2px #000a!important}
 #voice-view .participant .participant-name:is(.ns,[class*="ne-"]),#voice-view .media-tile figcaption>span:is(.ns,[class*="ne-"]){background-color:rgba(12,14,24,.82)!important}
 .voice-tree-person .vt-name:is(.ns,[class*="ne-"]),#app-view .user-panel .up-name:is(.ns,[class*="ne-"]){background-color:transparent!important}
+
+/* ===== Central de configurações v2 (Grafite neutro + Loja v2) ===== */
+#app-dialog.st-dialog{--sg-bg:#0a0b0f;--sg-s1:#121318;--sg-s2:#1a1b22;--sg-s3:#23242d;--sg-b1:#2e3039;--sg-b2:#3a3c47;--sg-tx:#ecedf2;--sg-dim:#9a9caa;--ac:#e07ad6;
+  background:var(--sg-bg)!important;border:1px solid var(--sg-b1)!important;border-radius:18px!important;box-shadow:0 30px 80px #000c!important;color:var(--sg-tx);width:min(1080px,calc(100vw - 32px))!important;max-width:none!important;height:min(780px,calc(100dvh - 40px))!important}
+#app-dialog.st-dialog .dialog-header{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:14px 18px 14px 22px!important;background:var(--sg-s1)!important;border-bottom:1px solid var(--sg-b1)!important}
+#app-dialog.st-dialog #dialog-title{font:750 17px/1.2 var(--v2-font,inherit);letter-spacing:-.01em;color:var(--sg-tx)}
+#app-dialog.st-dialog #dialog-close{width:34px;height:34px;border-radius:10px;background:var(--sg-s2)!important;border:1px solid var(--sg-b1)!important;color:var(--sg-dim)!important;transition:background .15s,color .15s}
+#app-dialog.st-dialog #dialog-close:hover{background:var(--sg-s3)!important;color:var(--sg-tx)!important}
+#app-dialog.st-dialog .st-body{grid-template-columns:232px 1fr;background:var(--sg-bg)}
+#app-dialog.st-dialog .st-nav{background:var(--sg-s1);border-right:1px solid var(--sg-b1);padding:14px 12px;gap:4px}
+#app-dialog.st-dialog .st-tab{min-height:42px;padding:9px 12px;border-radius:12px;color:var(--sg-dim);font-weight:600;transition:background .15s,color .15s,transform .15s}
+#app-dialog.st-dialog .st-tab:hover{background:var(--sg-s2);color:var(--sg-tx)}
+#app-dialog.st-dialog .st-tab:active{transform:scale(.98)}
+#app-dialog.st-dialog .st-tab[aria-selected=true]{background:var(--sg-s3);color:var(--sg-tx);box-shadow:inset 0 0 0 1px var(--sg-b2)}
+#app-dialog.st-dialog .st-tab[aria-selected=true] .st-ico{color:var(--ac);opacity:1}
+#app-dialog.st-dialog .st-panels{padding:22px 28px 32px;background:var(--sg-bg)}
+#app-dialog.st-dialog .st-panel{gap:14px;animation:st-in .22s ease-out}
+@keyframes st-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+#app-dialog.st-dialog .st-panel-title{display:flex;align-items:center;gap:14px;margin:0 0 6px;padding:0 0 16px;border-bottom:1px solid var(--sg-b1);font:inherit}
+#app-dialog.st-dialog .st-panel-title h3{margin:0;font:750 20px/1.2 var(--v2-font,inherit);letter-spacing:-.015em;color:var(--sg-tx);text-transform:none}
+#app-dialog.st-dialog .st-panel-title p{margin:4px 0 0;font-size:13px;line-height:1.45;color:var(--sg-dim);font-weight:400}
+#app-dialog.st-dialog .st-panel-ico{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:12px;background:var(--sg-s2);border:1px solid var(--sg-b1);color:var(--ac)}
+#app-dialog.st-dialog .st-panel-ico .st-ico{width:20px;height:20px}
+/* cartões de seção */
+#app-dialog.st-dialog .st-panel>label.field,#app-dialog.st-dialog .st-panel>div:not(.profile-edit-card),#app-dialog.st-dialog .st-panel>section,#app-dialog.st-dialog .st-panel label.st-toggle{background:var(--sg-s1)!important;border:1px solid var(--sg-b1)!important;border-radius:14px;padding:14px 16px;transition:border-color .15s,background .15s}
+#app-dialog.st-dialog .st-panel>label.field:hover,#app-dialog.st-dialog .st-panel label.st-toggle:hover{border-color:var(--sg-b2)!important;background:var(--sg-s2)!important}
+#app-dialog.st-dialog .st-panel section label.field,#app-dialog.st-dialog .st-panel section label.st-toggle{background:var(--sg-s2)!important}
+#app-dialog.st-dialog .st-panel section.audio-settings>h3{color:var(--sg-dim);font-size:11.5px;letter-spacing:.08em}
+#app-dialog.st-dialog .st-panel>p.muted{background:transparent!important;border:1px dashed var(--sg-b1)!important;color:var(--sg-dim)}
+#app-dialog.st-dialog .st-panel>button.st-action{background-color:var(--sg-s1)!important;border:1px solid var(--sg-b1)!important;color:var(--sg-tx)!important;transition:border-color .15s,background-color .15s}
+#app-dialog.st-dialog .st-panel>button.st-action:hover{background-color:var(--sg-s2)!important;border-color:var(--sg-b2)!important}
+#app-dialog.st-dialog .st-panel>button.danger.st-action{color:#ff6b7a!important;border-color:#5a2a32!important}
+#app-dialog.st-dialog label.st-toggle input[type=checkbox]{background:var(--sg-s3)!important;box-shadow:inset 0 0 0 1px var(--sg-b2)!important}
+#app-dialog.st-dialog label.st-toggle input[type=checkbox]:checked{background:var(--ac)!important;box-shadow:none!important}
+#app-dialog.st-dialog .st-seg{background:var(--sg-bg);border:1px solid var(--sg-b1)}
+#app-dialog.st-dialog .st-seg>button{color:var(--sg-dim)}
+#app-dialog.st-dialog .st-seg>button:hover{color:var(--sg-tx)}
+#app-dialog.st-dialog .st-seg>button[aria-checked=true]{background:var(--sg-s3);color:var(--sg-tx);box-shadow:inset 0 0 0 1px var(--sg-b2),0 1px 0 #0006}
+#app-dialog.st-dialog .st-panels input[type=range]{background:linear-gradient(90deg,var(--ac) 0 var(--st-fill,50%),var(--sg-s3) var(--st-fill,50%))!important}
+#app-dialog.st-dialog label.st-device>.st-ico{background:var(--sg-s3);color:var(--ac)}
+#app-dialog.st-dialog .field input:not([type=checkbox]):not([type=range]):not([type=color]):not([type=file]),#app-dialog.st-dialog .field select,#app-dialog.st-dialog .field textarea{background:var(--sg-bg)!important;border:1px solid var(--sg-b1)!important;border-radius:11px!important;color:var(--sg-tx)!important;min-height:42px;transition:border-color .15s,box-shadow .15s}
+#app-dialog.st-dialog .field input:focus,#app-dialog.st-dialog .field select:focus,#app-dialog.st-dialog .field textarea:focus{border-color:var(--ac)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 22%,transparent)!important;outline:0}
+#app-dialog.st-dialog label.field{color:var(--sg-dim);font-size:12.5px;font-weight:600}
+/* Perfil: formulário + estúdio, com pré-visualização ao vivo fixa à direita */
+#app-dialog.st-dialog .st-panel .profile-edit-card{display:grid!important;grid-template-columns:minmax(0,1fr) 340px;grid-template-areas:"form preview" "cos preview";gap:16px 20px;align-items:start;background:none!important;border:0!important;box-shadow:none!important;padding:0!important}
+#app-dialog.st-dialog .profile-edit-card>.rp-banner-preview,#app-dialog.st-dialog .profile-edit-card>.rp-avatar-wrap{display:none!important}
+#app-dialog.st-dialog .st-studio,#app-dialog.st-dialog .ps-editor-hub{display:contents!important}
+#app-dialog.st-dialog .ps-editor-hub>.ps-ed-center{grid-area:preview;position:sticky;top:0;padding:16px!important;background:var(--sg-s1)!important;border:1px solid var(--sg-b1);border-radius:16px;overflow:visible;display:block!important}
+#app-dialog.st-dialog .ps-ed-stage{margin:0}
+#app-dialog.st-dialog .ps-ed-stage-label{color:var(--sg-dim);font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+#app-dialog.st-dialog .ps-editor-hub>.ps-ed-left{grid-area:cos;display:flex;flex-direction:column;gap:8px;padding:16px!important;border:1px solid var(--sg-b1)!important;border-radius:16px;background:var(--sg-s1);overflow:visible}
+#app-dialog.st-dialog .ps-editor-hub>.ps-ed-left::before{content:"Visual do perfil";display:block;font:700 14px/1.3 var(--v2-font,inherit);color:var(--sg-tx);padding-bottom:4px}
+#app-dialog.st-dialog .ps-ed-card{background:var(--sg-s2)!important;border:1px solid var(--sg-b1)!important;border-radius:12px!important}
+#app-dialog.st-dialog .ps-ed-card:hover{border-color:var(--sg-b2)!important}
+#app-dialog.st-dialog .ps-ed-store{align-self:flex-start}
+#app-dialog.st-dialog .profile-edit-card>form{grid-area:form;display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:18px;background:var(--sg-s1);border:1px solid var(--sg-b1);border-radius:16px}
+#app-dialog.st-dialog .profile-edit-card>form::before{content:"Identidade";grid-column:1/-1;font:700 14px/1.3 var(--v2-font,inherit);color:var(--sg-tx)}
+#app-dialog.st-dialog .profile-edit-card>form>*{grid-column:1/-1;margin:0!important}
+#app-dialog.st-dialog .profile-edit-card>form>label.field:has(input[maxlength="32"]),#app-dialog.st-dialog .profile-edit-card>form>label.field:has(input[maxlength="80"]){grid-column:auto}
+#app-dialog.st-dialog .profile-edit-card>form>label.field:has(input[type=color]){grid-column:auto}
+#app-dialog.st-dialog .profile-edit-card>form>p.muted{font-size:12px;color:var(--sg-dim);margin-top:-8px!important}
+#app-dialog.st-dialog .st-profile label.st-drop{border:1.5px dashed var(--sg-b2)!important;background:var(--sg-bg)!important;border-radius:14px!important;min-height:110px;transition:border-color .15s,background .15s}
+#app-dialog.st-dialog .st-profile label.st-drop:hover,#app-dialog.st-dialog .st-profile label.st-drop.is-over{border-color:var(--ac)!important;background:color-mix(in srgb,var(--ac) 6%,var(--sg-bg))!important}
+#app-dialog.st-dialog .st-drop-hint .st-ico{background:var(--sg-s3);color:var(--ac)}
+#app-dialog.st-dialog .st-profile input[type=color]{width:100%;height:40px;border-radius:10px;border:1px solid var(--sg-b2);background:var(--sg-bg);padding:3px;cursor:pointer}
+#app-dialog.st-dialog .st-swatch{width:30px!important;height:30px!important;border:2px solid var(--sg-s1)!important;box-shadow:0 0 0 1px var(--sg-b2)!important;transition:transform .12s}
+#app-dialog.st-dialog .st-swatch:hover{transform:scale(1.1)}
+#app-dialog.st-dialog .st-swatch[aria-pressed=true]{box-shadow:0 0 0 2px var(--sg-tx)!important}
+#app-dialog.st-dialog .st-sticky-save{justify-self:end;min-width:180px;background:var(--ac)!important;color:#16101a!important;border:0!important;border-radius:12px!important;font-weight:750;box-shadow:0 10px 26px -12px var(--ac)!important}
+#app-dialog.st-dialog .settings-audio-link{text-align:left}
+@media(max-width:980px){#app-dialog.st-dialog .st-panel .profile-edit-card{grid-template-columns:1fr;grid-template-areas:"preview" "form" "cos"}#app-dialog.st-dialog .ps-editor-hub>.ps-ed-center{position:static}}
+@media(max-width:760px){
+ #app-dialog.st-dialog{width:100vw!important;height:100dvh!important;border-radius:0!important;border:0!important}
+ #app-dialog.st-dialog .st-body{grid-template-columns:1fr}
+ #app-dialog.st-dialog .st-nav{border-right:0;border-bottom:1px solid var(--sg-b1);padding:8px 10px;gap:6px}
+ #app-dialog.st-dialog .st-tab{min-height:36px;padding:7px 12px;border-radius:999px;background:var(--sg-s2)}
+ #app-dialog.st-dialog .st-tab[aria-selected=true]{background:var(--sg-s3);box-shadow:inset 0 0 0 1px var(--ac)}
+ #app-dialog.st-dialog .st-panels{padding:16px 14px 28px}
+ #app-dialog.st-dialog .st-panel-title h3{font-size:18px}
+ #app-dialog.st-dialog .profile-edit-card>form{grid-template-columns:1fr;padding:14px}
+ #app-dialog.st-dialog .profile-edit-card>form>label.field{grid-column:1/-1!important}
+ #app-dialog.st-dialog .st-sticky-save{position:sticky;bottom:8px;width:100%}
+}
+@media(prefers-reduced-motion:reduce){#app-dialog.st-dialog .st-panel{animation:none}}
