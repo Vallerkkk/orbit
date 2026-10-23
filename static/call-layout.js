@@ -69,7 +69,12 @@ export function initCallLayout(context) {
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!pop.hidden){closeMore();more.focus();}});
   for(const [id,label] of [['call-audio','Áudio e dispositivos'],['call-more','Mais opções'],['leave-call','Sair da chamada']])$(id).title=label;
   view.classList.add('call-consolidated');
-  function placeWatch(){const w=watchBtn();if(w&&w.parentElement!==controls){w.id=w.id||'call-watch';w.classList.add('vc-btn','call-watch');w.classList.remove('feature-options','soft-button');w.title='Ouvir juntos';w.setAttribute('aria-label','Ouvir juntos');icon(w,'watch','Ouvir juntos');controls.insertBefore(w,audioBtn);}}
+  function placeWatch(){const w=watchBtn();if(w&&w.parentElement!==controls){w.id=w.id||'call-watch';w.classList.add('vc-btn','call-watch');w.classList.remove('feature-options','soft-button');w.title='Ouvir juntos';w.setAttribute('aria-label','Ouvir juntos');icon(w,'watch','Ouvir juntos');controls.insertBefore(w,audioBtn);}
+    if(w&&!w.dataset.toggle){w.dataset.toggle='1';const open=w.onclick;w.onclick=()=>{const panel=$('watch-panel');if(panel&&!panel.hidden){panel.querySelector('.wp-hide')?.click();syncWatch();return;}return open?.();};}syncWatch();}
+  // Toggle local: ocultar o painel não para a reprodução dos outros; o áudio continua e o botão mantém um indicador.
+  function syncWatch(){const w=$('call-watch');if(!w)return;const panel=$('watch-panel'),shown=!!panel&&!panel.hidden,label=shown?'Ocultar Ouvir juntos':'Ouvir juntos';
+    w.setAttribute('aria-pressed',String(shown));w.classList.toggle('active',shown);w.classList.toggle('watch-live',!!panel&&panel.hidden&&panel.classList.contains('is-playing'));if(w.getAttribute('aria-label')!==label){w.title=label;w.dataset.tip=label;w.setAttribute('aria-label',label);}}
   placeWatch();new MutationObserver(placeWatch).observe(view.querySelector('.chat-header'),{childList:true,subtree:true});
+  new MutationObserver(syncWatch).observe(view,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});
   return {update};
 }

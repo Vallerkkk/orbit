@@ -377,7 +377,7 @@ svg { display: block; flex-shrink: 0; }
 .category-header:hover { color: var(--text-dim); }
 .category-header svg { transition: transform .2s; }
 .category.collapsed .category-header svg.chev { transform: rotate(-90deg); }
-.category.collapsed .channel-list { display: none; }
+.category.collapsed .channel-list > :not(.active):not(.connected):not(.has-peers):not(.voice-tree-live) { display: none; }
 .cat-add-btn {
   width: 20px;
   height: 20px;

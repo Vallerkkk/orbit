@@ -1,6 +1,7 @@
 import {configureUiSounds,uiSoundsEnabled,setUiSoundsEnabled,uiSound} from './ui-sounds.js';
 import {chatMedia,renderChatMedia} from './chat-media.js';
 import {createAuthRecovery,isInvalidSessionError} from './auth-recovery.js';
+import {initSidebarToggle} from './sidebar-toggle.js';
 import './ui-polish.js';
 import {nicknameProblem} from './identity-rules.js';
 import {initSocialLogin} from './social-login.js';
@@ -200,7 +201,7 @@ function renderChannels() {
     node.setAttribute('aria-pressed', String(selected?.id === channel.id && !home));
     (channel.kind === 'text' ? text : voice).push(node);
     if (channel.kind === 'voice') {
-      const peers = publicVoicePresence.filter(p => p.channel_id === channel.id), signature = JSON.stringify(peers.map(info => [info.id, person(info.id).display_name, person(info.id).avatar_src]));
+      const peers = voicePeers(channel.id), signature = JSON.stringify(peers.map(info => [info.id, person(info.id).display_name, person(info.id).avatar_src]));
       let tree = voiceTrees.get(channel.id);
       if (!tree || tree.dataset.signature !== signature) {
         tree = el('div', 'voice-tree-live'); tree.dataset.signature = signature;
@@ -208,6 +209,7 @@ function renderChannels() {
         voiceTrees.set(channel.id, tree);
       }
       paintVoiceTree(tree, channel.id);
+      node.classList.toggle('has-peers', tree.children.length > 0);
       if (tree.children.length) voice.push(tree);
     }
   }
@@ -670,6 +672,18 @@ function paintVoiceTree(tree, channelId){
       const after=box.querySelector(`[data-k="${want[want.indexOf(k)+1]}"]`);box.insertBefore(node,after||null);
     }
   }
+}
+// Quem está numa sala de voz: presença do Supabase deduplicada por usuário (várias abas = várias metas)
+// + participantes reais do LiveKit na sala em que você está (cobre salas privadas, usuários invisíveis
+// e quem entrou antes da presença sincronizar).
+function voicePeers(channelId){
+  const seen=new Map();
+  for(const info of publicVoicePresence)if(info.channel_id===channelId&&!seen.has(info.id))seen.set(info.id,info);
+  if(room&&callChannel?.id===channelId&&room.state!=='disconnected'){
+    for(const p of [room.localParticipant,...room.remoteParticipants.values()]){const id=p?.identity;if(!id||seen.has(id))continue;
+      seen.set(id,{id,channel_id:channelId,microphone:!!p.isMicrophoneEnabled,camera:!!p.isCameraEnabled,screen:!!p.isScreenShareEnabled,deafened:p.isLocal?deafened:false});}
+  }
+  return [...seen.values()];
 }
 function reducedMotion(){return matchMedia('(prefers-reduced-motion: reduce)').matches;}
 function refreshVoiceTrees(){for(const [id,tree] of voiceTrees)paintVoiceTree(tree,id);}
@@ -2102,3 +2116,4 @@ initSettingsLayout();
 // Insígnias: batimento a cada minuto. O servidor confirma no LiveKit se a pessoa está na sala e com tela/câmera.
 setInterval(()=>{if(!session||document.hidden)return;const channel=room&&callChannel?.id;apiFetch('/api/badges/heartbeat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channel_id:channel||null,watch_party:!!(channel&&document.querySelector('.wp-ibtn'))})}).catch(()=>{});},60000);
 if(document.body)installGrafiteUi();else addEventListener('DOMContentLoaded',()=>installGrafiteUi(),{once:true});
+initSidebarToggle();

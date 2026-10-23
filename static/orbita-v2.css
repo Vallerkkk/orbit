@@ -1080,3 +1080,16 @@ body[data-color-mode=light] .st-seg>button[aria-checked=true]{background:#fff;co
 
 /* estúdio de perfil embutido não pode estourar a largura do diálogo */
 .st-profile,.st-studio,.ps-editor-hub{min-width:0!important;max-width:100%!important;box-sizing:border-box}
+
+/* Ouvir juntos: botão da barra é um toggle local do painel */
+#voice-view .vc-btn.call-watch { position: relative; }
+#voice-view .vc-btn.call-watch.watch-live::after { content: ""; position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--ac); box-shadow: 0 0 0 2px var(--bg, #111); }
+
+/* Canais e conversas: botão sempre funcional; no computador recolhe a barra lateral */
+@media (min-width:781px){
+  body.sidebar-collapsed .app>.sidebar{display:none!important}
+  #voice-view .chat-header>#call-navigation,#mobile-menu-btn,.sf-header .mobile-nav-btn{display:inline-flex!important;align-items:center;justify-content:center}
+  #mobile-menu-btn{flex:0 0 32px;width:32px;height:32px}
+  #channel-title{flex-shrink:0}
+  #voice-view .chat-header>#call-navigation.sidebar-shown,#mobile-menu-btn.sidebar-shown,.sf-header .mobile-nav-btn.sidebar-shown{background:var(--ac)!important;color:#fff!important}
+}
