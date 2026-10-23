@@ -61,7 +61,7 @@ export function initProfileAppearance(ctx) {
       function avatarNode(cls) {
         const av = el('div', 'dg-avatar ' + (cls || ''));
         if (profile.avatar_src) { const img = el('img'); img.src = profile.avatar_src; img.alt = ''; img.loading = 'lazy'; img.decoding = 'async'; av.append(img); }
-        else { av.textContent = (name[0] || 'O').toUpperCase(); av.style.background = profile.avatar_color || 'linear-gradient(135deg,#e07ad6,#8b5cff)'; }
+        else { av.textContent = (name[0] || 'O').toUpperCase(); av.style.background = profile.avatar_color || 'var(--ac-grad,linear-gradient(135deg,#e07ad6,#b78cff))'; }
         return av;
       }
       function bannerNode(cls) {

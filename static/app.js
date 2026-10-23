@@ -1463,10 +1463,12 @@ const baseLoadSocial=loadSocial;loadSocial=async()=>{await baseLoadSocial();upda
 const baseSettings=$('settings').onclick;
 $('settings').onclick=()=>{
   baseSettings();const container=$('dialog-content'),appearance=el('div');
-  loadExtraThemes().catch(error=>toast(errorText(error)));
-  const themeLabel=el('label','field','Tema'),theme=el('select');for(const [key,label]of[['orbita','Violeta Órbita'],['blurple','Blurple'],['emerald','Emerald'],['nitro','Pink'],['cyber','Cyber Neon'],['forest','Floresta'],['ocean','Oceano'],['sunset','Pôr do Sol'],['midnight','Meia-Noite'],['blood','Sangue'],['gold','Ouro'],['sakura','Sakura']]){const option=el('option','',label);option.value=key;theme.append(option);}theme.value=localStorage.getItem('orbita-theme')||'orbita';theme.setAttribute('aria-label','Tema');themeLabel.append(theme);appearance.append(themeLabel);
+  const THEMES=[['nitro','Pink','#e07ad6','#b78cff'],['orbita','Violeta Órbita','#9b87ff','#5aa9ff'],['blurple','Blurple','#7f89ff','#4fb3ff'],['emerald','Emerald','#34d399','#22d3ee'],['cyber','Cyber Neon','#22e6f5','#ff4fd8'],['forest','Floresta','#7bc96f','#d6c25e'],['ocean','Oceano','#4fb3ff','#2dd4bf'],['sunset','Pôr do Sol','#ff8a5c','#ff5d8f'],['midnight','Meia-Noite','#8fa8ff','#7c6bff'],['blood','Sangue','#ff5a6a','#ff9f43'],['gold','Ouro','#f2c14e','#ff9f43'],['sakura','Sakura','#ff9ec7','#c9a7ff']];
+  const themeLabel=el('div','field theme-field','Tema'),themeGrid=el('div','theme-grid');themeGrid.setAttribute('role','radiogroup');themeGrid.setAttribute('aria-label','Tema');const currentTheme=()=>localStorage.getItem('orbita-theme')||'nitro';
+  for(const [key,label,c1,c2] of THEMES){const card=el('button','theme-card');card.type='button';card.dataset.themeKey=key;card.setAttribute('role','radio');card.setAttribute('aria-checked',String(currentTheme()===key));card.style.setProperty('--tc1',c1);card.style.setProperty('--tc2',c2);const mini=el('span','theme-mini');mini.append(el('i','tm-rail'),el('i','tm-line'),el('i','tm-line short'),el('i','tm-btn'),el('i','tm-pill'));card.append(mini,el('span','theme-name',label));card.onclick=()=>{localStorage.setItem('orbita-theme',key);document.body.dataset.theme=key;for(const other of themeGrid.children)other.setAttribute('aria-checked',String(other===card));};themeGrid.append(card);}
+  themeLabel.append(themeGrid);appearance.append(themeLabel);
   const densityLabel=el('label','field','Densidade'),density=el('select');for(const value of ['cozy','compact']){const option=el('option','',value==='cozy'?'Confortável':'Compacta');option.value=value;density.append(option);}density.value=localStorage.getItem('orbita-density')||'cozy';densityLabel.append(density);appearance.append(densityLabel);
-  for(const [input,key]of[[theme,'theme'],[density,'density']])input.onchange=()=>{localStorage.setItem('orbita-'+key,input.value);document.body.dataset[key]=input.value;};
+  for(const [input,key]of[[density,'density']])input.onchange=()=>{localStorage.setItem('orbita-'+key,input.value);document.body.dataset[key]=input.value;};
   container.append(appearance,button('Aceitar convite de criador',()=>showCreatorInvite()),button('Sobre esta versão',()=>openCloud()));
   if(isAdmin())container.append(button('Administrar o site',()=>openManagement(),'primary'));
 };
@@ -1504,9 +1506,7 @@ const screenLabel=el('label','screen-option'),screenCheck=el('input');screenChec
 function updateScreenAudio(){localStorage.setItem('orbita-screen-audio',String(screenCheck.checked));}
 screenCheck.onchange=updateScreenAudio;updateScreenAudio();
 $('btn-notif-toggle').onclick=async()=>{if(!('Notification'in window))return toast('Este navegador não oferece notificações.');const permission=await Notification.requestPermission();toast(permission==='granted'?'Notificações ativadas neste navegador.':'Notificações não autorizadas.');};
-function loadExtraThemes(){return loadStyle('/static/themes.css');}
-if((localStorage.getItem('orbita-theme')||'orbita')!=='orbita')loadExtraThemes().catch(error=>toast(errorText(error)));
-document.body.dataset.theme=localStorage.getItem('orbita-theme')||'orbita';document.body.dataset.density=localStorage.getItem('orbita-density')||'cozy';
+document.body.dataset.theme=localStorage.getItem('orbita-theme')||'nitro';document.body.dataset.density=localStorage.getItem('orbita-density')||'cozy';
 window.addEventListener('pagehide',()=>{if(extraSubscription)db?.removeChannel(extraSubscription);});
 
 async function publishVoicePresence(force=false){
