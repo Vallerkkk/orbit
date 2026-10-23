@@ -933,6 +933,17 @@ body[data-color-mode=light] .st-seg>button[aria-checked=true]{background:#fff;co
 @media(max-width:1180px){.wp2 .wp-body{grid-template-columns:1fr}.wp2 .wp-side{max-height:none}}
 @media(max-width:900px){#voice-view .call-grid:has(>#watch-panel:not([hidden])){grid-template-columns:repeat(2,minmax(0,1fr))!important}#voice-view .call-grid:has(>#watch-panel:not([hidden]))>#watch-panel{grid-column:1/-1;grid-row:auto}#voice-view .call-grid:has(>#watch-panel:not([hidden]))>:not(#watch-panel){grid-column:auto}}
 @media(max-width:520px){.wp2 .wp-volume,.wp2 .wp-bar-right>.wp-ibtn[data-icon=sync]{display:none}.wp2 .wp-bar{flex-wrap:wrap!important}.wp2 .wp-seek{order:-1;flex:1 1 100%;margin:6px 4px 4px}.wp2 .wp-bar-right{margin-left:auto}.wp2 .wp-ibtn{width:30px;height:30px}.wp2 .watch-time{font-size:10.5px!important}.wp2 .wp-seek{margin:0 3px}}
+/* Ouvir juntos: barra de controles sempre dentro da coluna do player (container queries) */
+.wp2,.wp2 .wp-body>*{min-width:0}
+.wp2 .wp-main{container-type:inline-size}
+.wp2 .wp-bar{min-width:0;max-width:100%;box-sizing:border-box}
+.wp2 .wp-seek{flex:1 1 auto;min-width:48px}
+.wp2 .wp-bar-right,.wp2 .wp-vol{min-width:0;flex:0 1 auto}
+.wp2 .wp-volume{flex:0 1 70px;width:70px!important;min-width:40px}
+.wp2 .wp-side>*{min-width:0;max-width:100%}.wp2 .wp-search input{min-width:0;width:100%;box-sizing:border-box}.wp2 .wp-search button{min-width:0;white-space:normal}.wp2 .wp-more a{overflow-wrap:anywhere}
+@container (max-width:600px){.wp2 .wp-volume{display:none}}
+@container (max-width:500px){.wp2 .wp-bar{flex-wrap:wrap!important;row-gap:2px!important}.wp2 .wp-seek{order:-1;flex:1 1 100%;margin:6px 4px 4px}.wp2 .wp-bar-right{margin-left:auto}.wp2 .wp-bar-right>.wp-ibtn[data-icon=sync]{display:none}}
+@container (max-width:340px){.wp2 .wp-ibtn{width:30px;height:30px;min-height:30px!important}.wp2 .watch-time{font-size:10.5px!important}}
 /* Painel de administração global */
 #app-dialog:has(.adm-panel){width:min(780px,calc(100vw - 24px));max-width:none}.adm-panel{display:grid;gap:12px;min-width:0}
 .adm-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.adm-head p{margin:0;flex:1;min-width:220px}

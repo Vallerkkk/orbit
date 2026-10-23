@@ -2,7 +2,7 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.23+260ef49",
+   "version": "2026.10.23+c6add7f",
    "date": "23 out 2026",
    "highlights": [
     [
@@ -23,6 +23,13 @@
     ]
    ],
    "items": {
+    "visual": [
+     "YouTube dentro do Órbita — busque, assista no mini player enquanto conversa, salve para depois e conecte sua conta Google para ver suas inscrições.",
+     "Temas: o tema escolhido controla todo o sistema de destaque",
+     "Página /instalar redesenhada",
+     "Configurações v2: central única",
+     "Paleta Grafite neutro: tokens centrais, tooltip custom, tag ADM, agrupamento, pill de data e…"
+    ],
     "perfil": [
      "Membros v2: coluna direita dos canais de volta",
      "Identidade: @",
@@ -53,12 +60,6 @@
      "Novos membros: título próprio e só o atalho do trilho destacado",
      "Trilho: atalho 'Novos membros' ao lado do Feed, com estado ativo e acesso por teclado",
      "Feed Novos membros: timeline por dia com cartões, hero de boas-vindas, 👋 com RLS, Realtime…"
-    ],
-    "visual": [
-     "Temas: o tema escolhido controla todo o sistema de destaque",
-     "Página /instalar redesenhada",
-     "Configurações v2: central única",
-     "Paleta Grafite neutro: tokens centrais, tooltip custom, tag ADM, agrupamento, pill de data e…"
     ],
     "chamadas": [
      "Chamada: nomes com estilo da Loja sempre legíveis nos chips, lista de voz e painel do usuário"
