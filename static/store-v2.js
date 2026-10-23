@@ -1,12 +1,15 @@
-// Loja v2: vitrine com destaque em carrossel, abas, busca, filtros, seções por coleção,
+// Loja v3 (layout da v2 + antigo menu Decorações): vitrine com destaque em carrossel, abas, busca, filtros, seções por coleção,
 // cartões com pré-visualização ao vivo e modal de detalhes. A validação real (itens de ADM) fica no banco.
-import {ITEMS,ITEM_KINDS,packOf,cleanAppearance,PACKS} from './cosmetics.js';
-import {COLLECTIONS,RARITY} from './store-collections.js';
+import {ITEMS,ITEM_KINDS,packOf,cleanAppearance} from './cosmetics.js';
+import {COLLECTIONS as NEW_COLS,CLASSICS,RARITY} from './store-collections.js';
 import {styleName,frameAvatar,cardBorder,packVars} from './appearance-runtime.js';
 import {mountFx,destroyFxIn} from './fx-engine.js';
 
 const V2=ITEMS.filter(i=>i.v2);
-const TABS=[['destaques','Destaques'],['colecoes','Coleções'],['frame','Molduras'],['effect','Efeitos de perfil'],['card_border','Bordas de cartão'],['name_style','Nomes'],['server','Temas de servidor'],['adm','Exclusivos ADM']];
+const COLLECTIONS=[...NEW_COLS,...CLASSICS];
+const RANK=Object.keys(RARITY);
+const SORTS=[['col','Ordem da coleção'],['rar-desc','Raridade: maior primeiro'],['rar-asc','Raridade: menor primeiro'],['name','Nome (A–Z)']];
+const TABS=[['destaques','Destaques'],['colecoes','Coleções'],['frame','Molduras'],['effect','Efeitos de perfil'],['card_border','Bordas de cartão'],['name_style','Estilos de nome'],['server','Temas de servidor'],['equipados','Equipados']];
 const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export function createStoreV2(o){
@@ -44,16 +47,19 @@ export function createStoreV2(o){
     const bar=el('div','sv-bar'),tabs=el('div','sv-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Seções da loja');
     const tools=el('div','sv-tools'),q=el('input','sv-search');q.type='search';q.placeholder='Buscar itens e coleções';q.setAttribute('aria-label','Buscar na loja');
     const rar=el('select','sv-select');rar.setAttribute('aria-label','Filtrar por raridade');rar.append(new Option('Todas as raridades',''));for(const [k,v] of Object.entries(RARITY))rar.append(new Option(v.name,k));
-    const col=el('select','sv-select');col.setAttribute('aria-label','Filtrar por coleção');col.append(new Option('Todas as coleções',''));for(const c of COLLECTIONS)if(!c.admin||o.me().isAdmin)col.append(new Option(c.name,c.id));
-    tools.append(q,rar,col);bar.append(tabs,tools);s.head.after(bar);
+    const col=el('select','sv-select');col.setAttribute('aria-label','Filtrar por coleção');col.append(new Option('Todas as coleções',''));for(const [lab,list] of [['Novas',NEW_COLS],['Clássicas',CLASSICS]]){const g=document.createElement('optgroup');g.label=lab;for(const c of list)g.append(new Option(c.name+(c.admin?' (ADM)':''),c.id));col.append(g);}
+    const sort=el('select','sv-select');sort.setAttribute('aria-label','Ordenar itens');for(const [k,v] of SORTS)sort.append(new Option(v,k));
+    tools.append(q,rar,col,sort);bar.append(tabs,tools);s.head.after(bar);
     let current='destaques',timer;
     const match=i=>{const t=q.value.trim().toLowerCase(),p=packOf(i.pack);return (!rar.value||i.rarity===rar.value)&&(!col.value||i.pack===col.value)&&(!t||(i.name+' '+i.desc+' '+p.name+' '+ITEM_KINDS[i.kind]).toLowerCase().includes(t));};
     const filtering=()=>!!(q.value.trim()||rar.value||col.value);
+    const order=list=>{const v=sort.value;if(v==='col')return list;const a=[...list];if(v==='name')a.sort((x,y)=>x.name.localeCompare(y.name,'pt-BR'));else{const d=v==='rar-desc'?-1:1;a.sort((x,y)=>d*(RANK.indexOf(x.rarity)-RANK.indexOf(y.rarity))||x.name.localeCompare(y.name,'pt-BR'));}return a;};
     const clear=()=>{clearInterval(timer);destroyFxIn(s.body);s.body.replaceChildren();s.body.scrollTop=0;};
     function section(c,items){const sec=el('section','sv-section');sec.id='sv-col-'+c.id;sec.dataset.collection=c.id;const ban=el('header','sv-banner');packVars(ban,c);ban.style.setProperty('--c3',c.c[2]);const l=el('span','sv-banner-fx');ban.append(l);mountFx(l,{preset:c.fx,colors:c.c,bg:c.bg,mode:'effect'});
       const txt=el('div','sv-banner-txt');const h=el('h3','',c.name);txt.append(h,el('p','',c.tagline));const side=el('div','sv-banner-side');for(const t of c.tags||[])side.append(el('span','sv-tag sv-tag-'+t.toLowerCase(),t));
       const all=button(c.admin&&!o.me().isAdmin?'Só ADM':'Equipar coleção',async()=>{const patch={};for(const i of V2.filter(i=>i.pack===c.id&&i.kind!=='server'))patch[i.kind]=i.id;if(await o.equip(patch))render();},'sv-btn ghost');if(c.admin&&!o.me().isAdmin)all.disabled=true;side.append(all);
-      ban.append(txt,side);const g=el('div','sv-grid');for(const i of items)g.append(itemCard(i,detail));sec.append(ban,g);return sec;}
+      ban.append(txt,side);const g=el('div','sv-grid');for(const i of order(items))g.append(itemCard(i,detail));sec.append(ban,g);return sec;}
+    function group(title,sub,list){let n=0;const items=[];for(const c of list){const it=V2.filter(i=>i.pack===c.id&&match(i));if(it.length){items.push(section(c,it));n++;}}if(!n)return 0;const h=el('div','sv-group');h.append(el('h3','sv-h',title),el('p','sv-sub',sub));s.body.append(h,...items);return n;}
     function hero(){const feat=COLLECTIONS.filter(c=>c.featured).sort((a,b)=>a.featured-b.featured).concat(COLLECTIONS.filter(c=>!c.featured&&!c.admin).slice(0,2));let k=0;
       const h=el('section','sv-hero');h.setAttribute('aria-roledescription','carrossel');h.setAttribute('aria-label','Coleções em destaque');const stage=el('div','sv-hero-stage');const dots=el('div','sv-dots');
       const show=i=>{k=(i+feat.length)%feat.length;const c=feat[k];destroyFxIn(stage);stage.replaceChildren();packVars(h,c);h.style.setProperty('--c3',c.c[2]);h.style.setProperty('--hbg',c.bg);
@@ -66,22 +72,25 @@ export function createStoreV2(o){
       const prev=button('‹',()=>{show(k-1);restart();},'sv-arrow prev'),next=button('›',()=>{show(k+1);restart();},'sv-arrow next');prev.setAttribute('aria-label','Anterior');next.setAttribute('aria-label','Próxima');
       const restart=()=>{clearInterval(timer);if(!reduced())timer=setInterval(()=>{if(h.isConnected&&!document.hidden&&!h.matches(':hover'))show(k+1);},8000);};
       h.append(stage,prev,next,dots);show(0);restart();return h;}
-    function kindGrid(kind,title,sub){const wrap=el('div','sv-kind');wrap.append(el('h3','sv-h',title),el('p','sv-sub',sub));const g=el('div','sv-grid');const items=V2.filter(i=>i.kind===kind&&match(i)&&(!i.admin||o.me().isAdmin));for(const i of items)g.append(itemCard(i,detail));if(!items.length)g.append(el('p','sv-empty','Nada encontrado com esses filtros.'));wrap.append(g);return wrap;}
+    function kindGrid(kind,title,sub){const wrap=el('div','sv-kind');wrap.append(el('h3','sv-h',title),el('p','sv-sub',sub));const g=el('div','sv-grid');const items=order(V2.filter(i=>i.kind===kind&&match(i)&&(!i.admin||o.me().isAdmin)));for(const i of items)g.append(itemCard(i,detail));if(!items.length)g.append(el('p','sv-empty','Nada encontrado com esses filtros.'));wrap.append(g);return wrap;}
     function render(){const body=s.body;const keep=body.scrollTop;clear();
       if(current==='destaques'&&!filtering()){body.append(hero());const nov=el('h3','sv-h','Novidades e limitados');body.append(nov);const g=el('div','sv-grid');for(const i of V2.filter(i=>(i.tags||[]).length&&!i.admin&&i.kind==='card_border'))g.append(itemCard(i,detail));body.append(g);
-        for(const c of COLLECTIONS.filter(c=>c.featured))body.append(section(c,V2.filter(i=>i.pack===c.id)));}
-      else if(current==='colecoes'||current==='destaques'){const list=COLLECTIONS.filter(c=>!c.admin);let n=0;for(const c of list){const items=V2.filter(i=>i.pack===c.id&&match(i));if(items.length){body.append(section(c,items));n++;}}
-        if(!n)body.append(el('p','sv-empty','Nada encontrado com esses filtros.'));
-        if(!filtering()){const old=el('section','sv-section');old.append(el('h3','sv-h','Pacotes clássicos'),el('p','sv-sub','Os pacotes da primeira loja continuam disponíveis.'));const g=el('div','ps-pack-grid');for(const p of PACKS.filter(p=>!p.v2&&!p.admin))g.append(o.packCard(p,()=>{clear();o.renderPack(body,p,()=>render());}));old.append(g);body.append(old);}}
-      else if(current==='adm'){const c=COLLECTIONS.find(c=>c.admin);const note=el('p','sv-note',o.me().isAdmin?'Você é administrador global: estes itens estão liberados para você.':'Itens exclusivos dos administradores globais. O servidor recusa o uso por outras contas.');body.append(note,section(c,V2.filter(i=>i.pack===c.id&&match(i))));
-        const st=PACKS.find(p=>p.admin&&!p.v2);if(st){const g=el('div','ps-pack-grid');g.append(o.packCard(st,()=>{clear();o.renderPack(body,st,()=>render());}));body.append(el('h3','sv-h','Pacote clássico da equipe'),g);}}
+        for(const c of COLLECTIONS.filter(c=>c.featured))body.append(section(c,V2.filter(i=>i.pack===c.id)));
+        const cl=el('div','sv-group');cl.append(el('h3','sv-h','Clássicas refeitas'),el('p','sv-sub','Os pacotes de sempre, agora com animações novas.'));body.append(cl);const g2=el('div','sv-grid');for(const c of CLASSICS.filter(c=>!c.admin).slice(0,8))g2.append(itemCard(V2.find(i=>i.pack===c.id&&i.kind==='effect'),detail));body.append(g2);}
+      else if(current==='colecoes'||current==='destaques'){let n=0;
+        n+=group('Novas','Coleções da Loja v2, com animação própria e conjunto completo.',NEW_COLS.filter(c=>!c.admin));
+        n+=group('Clássicas','Os pacotes da primeira loja e as antigas decorações de perfil, refeitos com animação nova.',CLASSICS.filter(c=>!c.admin));
+        n+=group('Equipe Órbita ADM',o.me().isAdmin?'Você é administrador global: estes itens estão liberados para você.':'Exclusivos dos administradores globais. O servidor recusa o uso por outras contas.',COLLECTIONS.filter(c=>c.admin));
+        if(!n)body.append(el('p','sv-empty','Nada encontrado com esses filtros.'));}
+      else if(current==='equipados'){const mine=cleanAppearance(o.mine());const items=V2.filter(i=>mine[i.kind]===i.id);const wrap=el('div','sv-kind');wrap.append(el('h3','sv-h','Equipados'),el('p','sv-sub','O que você está usando agora. Toque num item para trocar ou remover.'));const g=el('div','sv-grid');for(const i of items)g.append(itemCard(i,detail));if(!items.length)g.append(el('p','sv-empty','Nada equipado ainda. Explore as coleções e equipe algo!'));wrap.append(g);
+        if(items.some(i=>i.kind!=='server')){const off=button('Remover tudo do perfil',async()=>{if(await o.equip({frame:'',effect:'',card_border:'',name_style:'',border:'',plate:'',legacy_frame:'',legacy_effect:''}))render();},'sv-btn ghost');wrap.append(off);}body.append(wrap);}
       else if(current==='name_style'){body.append(kindGrid('name_style','Nomes animados','Estilos de nome com movimento — aparecem no chat, na lista de membros e no perfil.'));const f=el('section','sv-section');f.append(el('h3','sv-h','Fontes e efeitos clássicos'));o.renderFonts(f);body.append(f);}
       else{const T={frame:['Molduras','Molduras animadas em volta do seu avatar.'],effect:['Efeitos de perfil','Animações no fundo do seu cartão de perfil.'],card_border:['Bordas de cartão','Um contorno vivo em volta do cartão inteiro: popover, perfil e Novos membros.'],server:['Temas de servidor','Paletas e fundos para o seu servidor.']}[current];body.append(kindGrid(current,...T));}
       if(keep&&current===render.last)body.scrollTop=keep;render.last=current;}
     function show2(view,colId){current=view;for(const b of tabs.children)b.setAttribute('aria-selected',String(b.dataset.view===view));
       clear();s.body.append(skeletons());requestAnimationFrame(()=>{render();if(colId){const t=s.body.querySelector('#sv-col-'+colId);if(t)s.body.scrollTop+=t.getBoundingClientRect().top-s.body.getBoundingClientRect().top-8;}});}
     for(const [k,v] of TABS){if(k==='adm'&&!o.me().isAdmin&&false)continue;const b=button(v,()=>show2(k),'');b.dataset.view=k;b.setAttribute('role','tab');tabs.append(b);}
-    let qt;q.oninput=()=>{clearTimeout(qt);qt=setTimeout(()=>{if(current==='destaques')current='colecoes',[...tabs.children].forEach(b=>b.setAttribute('aria-selected',String(b.dataset.view==='colecoes')));render();},180);};rar.onchange=col.onchange=()=>q.oninput();
+    let qt;q.oninput=()=>{clearTimeout(qt);qt=setTimeout(()=>{if(current==='destaques')current='colecoes',[...tabs.children].forEach(b=>b.setAttribute('aria-selected',String(b.dataset.view==='colecoes')));render();},180);};rar.onchange=col.onchange=sort.onchange=()=>q.oninput();
     s.back.addEventListener('ps-close',()=>{clearInterval(timer);destroyFxIn(s.box);});
 
     // ----- Detalhe -----
@@ -102,7 +111,7 @@ export function createStoreV2(o){
       function shut(){destroyFxIn(d);d.remove();window.removeEventListener('keydown',key,true);}setTimeout(()=>eq.focus({preventScroll:true}),0);}
     open.detail=detail;
     const startItem=V2.find(i=>i.id===start);const startCol=COLLECTIONS.find(c=>c.id===start);
-    if(start==='fontes')show2('name_style');else if(startCol)show2('colecoes',startCol.id);else if(TABS.some(t=>t[0]===start))show2(start);else show2('destaques');
+    if(start==='fontes')show2('name_style');else if(start==='adm'||start==='decoracoes')show2(start==='adm'?'colecoes':'frame');else if(startCol)show2('colecoes',startCol.id);else if(TABS.some(t=>t[0]===start))show2(start);else show2('destaques');
     if(startItem)setTimeout(()=>detail(startItem),50);
     return s;}
   return {open};

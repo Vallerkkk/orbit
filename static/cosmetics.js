@@ -1,26 +1,18 @@
-import {COLLECTIONS,KIND_V2} from './store-collections.js';
+import {COLLECTIONS,CLASSICS,LEGACY_DECOR,KIND_V2} from './store-collections.js';
 // Pacotes temáticos da Loja da Órbita: tema + animação exclusiva por pacote, molduras de avatar,
 // bordas do perfil completo, temas de servidor. scripts/badges-sql.mjs copia os ids para a validação no banco.
-export const PACKS=[
-  {id:'cyberpunk',name:'Cyberpunk',tagline:'Neon, chuva e falhas de sinal',anim:'neonrain',c:['#ff2bd6','#00e5ff'],bg:'#120a24'},
-  {id:'anime',name:'Anime',tagline:'Pétalas e brilho de abertura',anim:'petals',c:['#ff8fb7','#ffd1e3'],bg:'#2a1424'},
-  {id:'espaco',name:'Espaço',tagline:'Poeira estelar em órbita',anim:'stars',c:['#7b5cff','#2ec4ff'],bg:'#0b0d26'},
-  {id:'natureza',name:'Natureza',tagline:'Aurora sobre a floresta',anim:'aurora',c:['#2fbf71','#b6f36a'],bg:'#0c1f17'},
-  {id:'halloween',name:'Halloween',tagline:'Chamas de abóbora',anim:'flames',c:['#ff7a1a','#8a2be2'],bg:'#1d0d06'},
-  {id:'lofi',name:'Lo-fi',tagline:'Partículas lentas, fim de tarde',anim:'particles',c:['#f5a97f','#8aadf4'],bg:'#1f1a2e'},
-  {id:'retro',name:'Pixel/Retrô',tagline:'Pixels de fliperama',anim:'pixels',c:['#ffd166','#06d6a0'],bg:'#101820'},
-  {id:'oceano',name:'Oceano',tagline:'Bolhas no azul profundo',anim:'bubbles',c:['#1fa2ff','#12d8fa'],bg:'#06192e'},
-  {id:'glitch',name:'Sinal perdido',tagline:'Glitch em RGB',anim:'glitch',c:['#ff0055','#00ffd5'],bg:'#0d0d12'},
-  {id:'orbita-staff',name:'Equipe Órbita',tagline:'Exclusivo dos administradores globais',anim:'halo',c:['#c9a7ff','#ffffff'],bg:'#1a1033',admin:true},
-];
+// Os pacotes clássicos agora são coleções completas (store-collections.js > CLASSICS).
+export const PACKS=[];
 // Itens derivados de cada pacote: moldura de avatar, borda do perfil, efeito de perfil, tema de servidor e placa.
 export const ITEM_KINDS={frame:'Moldura do avatar',border:'Borda do perfil',effect:'Efeito de perfil',server:'Tema de servidor',plate:'Placa de identificação'};
 Object.assign(ITEM_KINDS,KIND_V2);
-const LEGACY_ITEMS=PACKS.flatMap(p=>['frame','border','effect','server','plate'].map(kind=>({id:`${p.id}-${kind}`,pack:p.id,kind,name:`${ITEM_KINDS[kind]} ${p.name}`,admin:!!p.admin})));
+// Ids antigos de borda do perfil (-border) e placa (-plate) seguem válidos como apelidos de
+// borda de cartão e estilo de nome da mesma coleção clássica.
+const LEGACY_ITEMS=CLASSICS.flatMap(p=>[['border','card_border'],['plate','name_style']].map(([kind,to])=>({id:`${p.id}-${kind}`,pack:p.id,kind,alias:`${p.id}-${to}`,name:p.items[to][0],admin:!!p.admin})));
 // Loja v2: coleções com 5 itens cada (nome, descrição e raridade próprios).
 const V2_KINDS=['frame','effect','card_border','name_style','server'];
-const V2_ITEMS=COLLECTIONS.flatMap(p=>V2_KINDS.map((kind,i)=>({id:`${p.id}-${kind}`,pack:p.id,kind,name:p.items[kind][0],desc:p.items[kind][1],rarity:p.rarity[i],admin:!!p.admin,v2:true,tags:p.tags||[]})));
-PACKS.push(...COLLECTIONS);
+const V2_ITEMS=[...COLLECTIONS,...CLASSICS].flatMap(p=>V2_KINDS.map((kind,i)=>({id:`${p.id}-${kind}`,pack:p.id,kind,name:p.items[kind][0],desc:p.items[kind][1],rarity:p.rarity[i],admin:!!p.admin,v2:true,classic:!!p.classic,tags:p.tags||[]})));
+PACKS.push(...COLLECTIONS,...CLASSICS);
 export const ITEMS=[...LEGACY_ITEMS,...V2_ITEMS];
 export const itemById=new Map(ITEMS.map(i=>[i.id,i]));
 export const NAME_FONTS=[
@@ -40,7 +32,9 @@ export function loadNameFont(id){const f=NAME_FONTS.find(f=>f.id===id);if(!f||lo
 const HEX=/^#[0-9a-f]{6}$/i;
 export function cleanAppearance(raw){const a=raw&&typeof raw==='object'?raw:{};const pick=(k,kind)=>{const i=itemById.get(a[k]);return i&&i.kind===kind?i.id:'';};
   const legacy=k=>/^[a-z0-9-]{1,48}$/.test(a[k]||'')?a[k]:'';
-  return {frame:pick('frame','frame'),legacy_frame:legacy('legacy_frame'),legacy_effect:legacy('legacy_effect'),banner_style:legacy('banner_style'),border:pick('border','border'),card_border:pick('card_border','card_border'),name_style:pick('name_style','name_style'),effect:pick('effect','effect'),server:pick('server','server'),plate:pick('plate','plate'),
+  const alias=(k,kind)=>{const i=itemById.get(a[k]);return i&&i.kind===k&&i.alias?i.alias:'';};
+  const decor=(k,kind)=>{const p=LEGACY_DECOR[kind][a[k]];return p?`${p}-${kind}`:'';};
+  return {frame:pick('frame','frame')||decor('legacy_frame','frame'),legacy_frame:legacy('legacy_frame'),legacy_effect:legacy('legacy_effect'),banner_style:legacy('banner_style'),border:'',card_border:pick('card_border','card_border')||alias('border'),name_style:pick('name_style','name_style')||alias('plate'),effect:pick('effect','effect')||decor('legacy_effect','effect'),server:pick('server','server'),plate:'',
     name_font:NAME_FONTS.some(f=>f.id===a.name_font)?a.name_font:'',name_effect:NAME_EFFECTS.some(e=>e.id===a.name_effect)?a.name_effect:'',
     theme:Array.isArray(a.theme)&&a.theme.length===2&&a.theme.every(c=>HEX.test(c))?a.theme:null,
     badges:Array.isArray(a.badges)?a.badges.filter(x=>typeof x==='string').slice(0,3):[]};}

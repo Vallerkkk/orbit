@@ -184,3 +184,36 @@
   .ps-body.sv-body{padding:14px 12px 30px}.sv-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.sv-prev{height:150px}.sv-mp{transform:scale(.9)}.sv-hero{min-height:300px}.sv-banner{flex-direction:column;align-items:flex-start}
   .sv-detail{padding:0}.sv-dpanel{border-radius:0;height:100%}.sv-dprev .sv-dcard{width:100%;max-width:320px}.sv-dprev>.sv-server{width:100%}}
 .sv-hero .sv-dots button.sv-dot{min-width:0!important;min-height:0!important;height:5px!important;width:22px!important;padding:0!important;flex:none!important}.sv-hero .sv-dots button.sv-dot[aria-current=true]{width:34px!important}
+/* Loja v3: coleções clássicas refeitas (borda, moldura e nome por animação) */
+.sv-group{margin:26px 0 4px;padding-top:6px;border-top:1px solid color-mix(in srgb,currentColor 12%,transparent)}.sv-group:first-child{margin-top:0;border-top:0}
+.cb[data-cb=synthgrid] .cb-ring{background:repeating-conic-gradient(from var(--cb-a),var(--c1) 0 20deg,var(--c2) 20deg 40deg);--cb-s:6s}
+.cb[data-cb=sparkle] .cb-ring{background:conic-gradient(from var(--cb-a),var(--c1),#fff,var(--c3),var(--c2),var(--c1));--cb-s:5s}
+.cb[data-cb=starfield] .cb-ring{background:conic-gradient(from var(--cb-a),var(--c1),transparent 30%,var(--c2),transparent 70%,var(--c1));--cb-s:9s}
+.cb[data-cb=canopy] .cb-ring{background:conic-gradient(from var(--cb-a),var(--c1),var(--c2),var(--c3),var(--c1));--cb-s:14s}.cb[data-cb=canopy] .cb-corner::after{border-radius:60% 0}
+.cb[data-cb=pumpkin] .cb-ring{background:conic-gradient(from var(--cb-a),#ff7a1a,#3a1460,#ffd65a,#8a2be2,#ff7a1a);--cb-s:4s}.cb[data-cb=pumpkin] .cb-glow{animation:cb-flick 3s steps(1) infinite}
+.cb[data-cb=lofi] .cb-ring{--cb-s:16s}
+.cb[data-cb=invaders] .cb-ring{background:conic-gradient(from var(--cb-a),var(--c1) 0 25%,var(--c2) 0 50%,var(--c3) 0 75%,var(--c1) 0);animation:cb-spin 4s steps(12) infinite;--cb-w:3px}.cb[data-cb=invaders] .cb-corner{border-radius:0}
+.cb[data-cb=jelly] .cb-ring{--cb-s:10s}.cb[data-cb=jelly] .cb-corner{border-radius:50%}
+.cb[data-cb=rgbglitch] .cb-ring{background:repeating-conic-gradient(from var(--cb-a),#ff0055 0 10deg,transparent 10deg 16deg,#00ffd5 16deg 26deg,transparent 26deg 32deg)}.cb[data-cb=rgbglitch] .cb-glow{animation:cb-flick 1.8s steps(1) infinite}.cb[data-cb=rgbglitch] .cb-corner{border-radius:0}
+.cb[data-cb=constel] .cb-ring,.cb[data-cb=divine] .cb-ring{background:conic-gradient(from var(--cb-a),#fff,var(--c1),#fff,var(--c3),#fff)}
+.cb[data-cb=shadow] .cb-ring{background:conic-gradient(from var(--cb-a),#0b0508,var(--c2),#0b0508 35%,var(--c1),#0b0508);--cb-s:7s}
+.cb[data-cb=winter] .cb-ring{background:repeating-conic-gradient(from var(--cb-a),var(--c1) 0 15deg,var(--c2) 15deg 30deg,var(--c3) 30deg 45deg);animation:cb-spin 6s steps(24) infinite}
+.cb[data-cb=hearts] .cb-ring{background:conic-gradient(from var(--cb-a),var(--c1),var(--c2),var(--c3),var(--c1))}.cb[data-cb=hearts] .cb-corner{border-radius:50%}
+.cb[data-cb=jewel] .cb-ring{background:conic-gradient(from var(--cb-a),#7a5410,#f7d774,#9be7ff,#fff7d0,#ff7ac8,#7a5410);--cb-w:3px}.cb[data-cb=jewel] .cb-corner{border-color:#f7d774;transform:rotate(45deg) scale(.8)}
+.cb[data-cb=lotus] .cb-ring{--cb-s:15s}
+.pk-frame[data-fx=invaders]::after{animation:cb-spin 3s steps(12) infinite}
+.pk-frame[data-fx=jewel]::after{background:conic-gradient(from var(--cb-a),#7a5410,#f7d774,#9be7ff,#ff7ac8,#7a5410)}
+.pk-frame[data-fx=rgbglitch]::before{animation:pk-orbit 1.4s steps(5) infinite}
+.ns-synthgrid{animation:ns-slide 4s linear infinite,ns-flick 3.4s steps(1) infinite;filter:drop-shadow(0 0 6px var(--nc1))}
+.ns-sparkle{animation:ns-slide 5s linear infinite,ns-pulse 2s ease-in-out infinite}
+.ns-starfield,.ns-constel,.ns-divine{filter:drop-shadow(0 0 7px var(--nc1))}
+.ns-canopy,.ns-lofi,.ns-lotus{animation-duration:9s}
+.ns-pumpkin{background-image:linear-gradient(0deg,#ff7a1a,#ffd65a 55%,#ff7a1a);background-size:100% 220%;animation:ns-rise 1.8s ease-in-out infinite alternate;filter:drop-shadow(0 0 6px #ff7a1a)}
+.ns-invaders{background-image:linear-gradient(90deg,var(--nc1) 0 33%,var(--nc2) 0 66%,var(--nc3) 0);animation:ns-slide 2.4s steps(3) infinite;filter:drop-shadow(2px 2px 0 #000)}
+.ns-jelly{background-size:100% 300%;background-image:linear-gradient(180deg,var(--nc1),var(--nc3),var(--nc2),var(--nc1));animation:ns-rise 3.4s ease-in-out infinite alternate,ns-pulse 3s ease-in-out infinite}
+.ns-rgbglitch{filter:drop-shadow(-1.5px 0 0 #ff0055) drop-shadow(1.5px 0 0 #00ffd5);animation:ns-slide 6s linear infinite,ns-zap 2.2s steps(1) infinite}
+.ns-shadow{animation:ns-slide 7s linear infinite,ns-pulse 2.6s ease-in-out infinite}
+.ns-winter{background-image:linear-gradient(90deg,var(--nc1),var(--nc3),var(--nc2),var(--nc1));animation:ns-slide 3s steps(6) infinite}
+.ns-hearts{animation-duration:5s}
+.ns-jewel{background-image:linear-gradient(100deg,#a57a1f 20%,#fff3c4 38%,#9be7ff 50%,#f7d774 62%,#a57a1f 80%);animation-duration:3s;filter:drop-shadow(0 0 6px #f7d77466)}
+@media (max-width:640px){.sv-tools{flex-wrap:wrap}.sv-tools .sv-search{flex:1 1 100%;max-width:none}.sv-tools .sv-select{flex:1 1 calc(33% - 6px);min-width:0;padding:0 6px;font-size:12px}}

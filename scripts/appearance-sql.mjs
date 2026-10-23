@@ -1,9 +1,10 @@
-// Gera a migration da Loja v2: validação de profiles.appearance com as coleções novas,
+// Gera a migration da Loja v3 (antes v2): validação de profiles.appearance com as coleções novas,
 // a borda de cartão (card_border) e o estilo de nome (name_style). Fonte: static/cosmetics.js.
 import {writeFile} from 'node:fs/promises';
 import {ITEMS,NAME_FONTS,NAME_EFFECTS,ADMIN_ONLY} from '../static/cosmetics.js';
 const q=s=>`'${String(s).replace(/'/g,"''")}'`,arr=a=>`array[${a.map(q).join(',')}]::text[]`;
-const sql=`-- Loja v2: coleções novas, "Borda de cartão" (card_border) e "Estilo de nome" (name_style) em profiles.appearance.
+const sql=`-- Loja v3: coleções clássicas refeitas (cada uma com moldura, efeito, borda de cartão, estilo de nome e tema)
+-- + coleções novas. Ids antigos (-border, -plate e os de pacote) seguem aceitos como apelidos.
 -- GERADO por scripts/appearance-sql.mjs. Só troca a função do trigger; itens de ADM seguem bloqueados no servidor.
 create or replace function orbita_private.guard_appearance() returns trigger
 language plpgsql security definer set search_path to '' as $$
@@ -37,4 +38,4 @@ begin
 end $$;
 revoke all on function orbita_private.guard_appearance() from public, anon, authenticated;
 `;
-await writeFile(new URL('../supabase/migrations/20261023050000_store_v2_card_border.sql',import.meta.url),sql);console.log('ok',ITEMS.length);
+await writeFile(new URL('../supabase/migrations/20261023070000_store_v3_classics.sql',import.meta.url),sql);console.log('ok',ITEMS.length);

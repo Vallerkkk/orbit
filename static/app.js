@@ -6,6 +6,7 @@ import {nicknameProblem} from './identity-rules.js';
 import {initSocialLogin} from './social-login.js';
 import {initNavigationMotion} from './navigation-motion.js';
 import {DECORATIONS} from './profile-decoration-catalog.js';
+import {LEGACY_DECOR} from './store-collections.js';
 import {applyAppearanceEverywhere} from './appearance-runtime.js';
 import {compactAppearance,stripAdminOnly} from './cosmetics.js';
 import {initShareReceiver} from './share-target.js';
@@ -1065,7 +1066,6 @@ function showProfile(p) {
     if (own) {
       actions.classList.add('rp-own-actions');
       actions.append(button('Editar perfil', () => { $('app-dialog').close(); openSettingsHub('perfil'); }, 'rp-action rp-primary'));
-      actions.append(button('Decorações', () => { $('app-dialog').close(); openDecorationGallery(); }, 'rp-action rp-outline'));
     } else {
       const f = friendships.find(f => [f.requester_id, f.recipient_id].includes(p.id));
       if (f?.status === 'accepted') actions.append(button('Enviar mensagem', async () => { $('app-dialog').close(); await startConversation(p); }, 'rp-action rp-primary'));
@@ -1681,7 +1681,7 @@ const PROFILE_PREFS_KEY = 'orbita-profile-prefs';
 // Decorações dos outros participantes chegam pela presença (só ids do catálogo, validados aqui).
 function ownDeco(){const p=loadProfilePrefs();return {frame:String(p.frame||''),effect:String(p.profileEffect||'')};}
 function decoFor(id){if(!id)return {};const ap=id===session?.user.id?null:appearanceOf(id);const raw=id===session?.user.id?ownDeco():ap?.legacy_frame||ap?.legacy_effect?{frame:ap.legacy_frame,effect:ap.legacy_effect}:publicVoicePresence.find(m=>m.id===id)?.deco||{};
-  const ok=(type,v)=>DECORATIONS.find(d=>d.type===type&&d.id===v&&d.css);return {frame:ok('frame',raw.frame),effect:ok('effect',raw.effect)};}
+  const ok=(type,v)=>!LEGACY_DECOR[type]?.[v]&&DECORATIONS.find(d=>d.type===type&&d.id===v&&d.css);return {frame:ok('frame',raw.frame),effect:ok('effect',raw.effect)};}
 function loadProfilePrefs() {
   try { return JSON.parse(localStorage.getItem(PROFILE_PREFS_KEY+':'+(session?.user.id||'guest')) || '{}') || {}; }
   catch { return {}; }
@@ -1789,13 +1789,14 @@ function applyDecorations() {
     DECORATIONS.filter(d => d.type === 'effect').forEach(d => p.classList.remove(d.css));
     if (prefs.profileEffect&&p.dataset.userId===session?.user.id) {
       const effect = DECORATIONS.find(d => d.id === prefs.profileEffect&&d.type==='effect');
-      if (effect?.css) p.classList.add(effect.css);
+      if (effect?.css&&!LEGACY_DECOR.effect[effect.id]) p.classList.add(effect.css);
     }
   });
   document.querySelectorAll('.rp-banner').forEach(b=>{for(const d of DECORATIONS.filter(d=>d.type==='banner'&&d.css))b.classList.remove(d.css);if(b.closest('[data-user-id]')?.dataset.userId===session?.user.id){const style=DECORATIONS.find(d=>d.type==='banner'&&d.id===prefs.bannerStyle);if(style?.css)b.classList.add(style.css);}});
 }
 
-function openDecorationGallery(){return openProfileAppearance('openDecorationGallery');}
+// O antigo menu Decorações agora faz parte da Loja (as decorações viraram coleções clássicas).
+function openDecorationGallery(){return studio('openStore','decoracoes');}
 // Apply on load and after profile render
 const baseShowProfile = showProfile;
 showProfile = function(p) {

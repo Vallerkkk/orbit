@@ -2,7 +2,7 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.23+164b019",
+   "version": "2026.10.23+a93a95b",
    "date": "23 out 2026",
    "highlights": [
     [
@@ -24,6 +24,7 @@
    ],
    "items": {
     "perfil": [
+     "Identidade: @",
      "Tooltips das insígnias: descrição curta para as 61 insígnias, tooltip próprio com cor da…",
      "Mensagens diretas v2: avatar com presença, nome de exibição estilizado, @handle/status,…",
      "Insígnias v2: arte premium por categoria, nível e raridade",
