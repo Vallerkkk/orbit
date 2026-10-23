@@ -2,7 +2,7 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.23+f0de4ee",
+   "version": "2026.10.23+b42d82a",
    "date": "23 out 2026",
    "highlights": [
     [
@@ -24,8 +24,13 @@
    ],
    "items": {
     "chamadas": [
+     "Chamada: Ouvir juntos e canais viram toggles reais",
      "Ouvir juntos: barra de controles não invade mais a fila",
      "Chamada: nomes com estilo da Loja sempre legíveis nos chips, lista de voz e painel do usuário"
+    ],
+    "adm": [
+     "Permissões de servidor: engrenagem/edição só para dono e ADMs globais",
+     "ADM: exclusão de servidor/canal fecha o diálogo, limpa o estado e volta ao servidor padrão"
     ],
     "visual": [
      "YouTube dentro do Órbita — busque, assista no mini player enquanto conversa, salve para depois e conecte sua conta Google para ver suas inscrições.",
@@ -64,9 +69,6 @@
      "Novos membros: título próprio e só o atalho do trilho destacado",
      "Trilho: atalho 'Novos membros' ao lado do Feed, com estado ativo e acesso por teclado",
      "Feed Novos membros: timeline por dia com cartões, hero de boas-vindas, 👋 com RLS, Realtime…"
-    ],
-    "adm": [
-     "ADM: exclusão de servidor/canal fecha o diálogo, limpa o estado e volta ao servidor padrão"
     ]
    }
   },

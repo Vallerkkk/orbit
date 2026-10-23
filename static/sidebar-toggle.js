@@ -1,4 +1,5 @@
 // Botão de canais e conversas: no computador recolhe/expande a barra lateral (estado salvo);
+// no Big Picture o botão da barra .bp-bar sempre abre a gaveta;
 // em telas de gaveta (≤780px) abre e fecha a gaveta. Toque fora fecha (tratado em app.js).
 const KEY='orbita-sidebar-collapsed',drawer=matchMedia('(max-width:780px)');
 const SEL='.mobile-nav-btn,#mobile-menu-btn,#call-navigation';
@@ -19,7 +20,7 @@ export function syncSidebarButtons(){
   const mobileOpen=document.body.classList.contains('mobile-menu-open');
   for(const b of document.querySelectorAll(SEL)){
     let open,label;
-    if(drawer.matches){open=mobileOpen;label=open?'Fechar canais e conversas':'Abrir canais e conversas';}
+    if(drawer.matches||b.closest('.bp-bar')){open=mobileOpen;label=open?'Fechar canais e conversas':'Abrir canais e conversas';}
     else{open=!collapsed;label=open?'Ocultar canais e conversas':'Mostrar canais e conversas';}
     b.setAttribute('aria-expanded',String(open));b.classList.toggle('sidebar-shown',open);
     if(b.getAttribute('aria-label')!==label){b.title=label;b.dataset.tip=label;b.setAttribute('aria-label',label);}
@@ -27,7 +28,7 @@ export function syncSidebarButtons(){
 }
 export function setSidebarCollapsed(value){collapsed=!!value;localStorage.setItem(KEY,collapsed?'1':'0');layout();syncSidebarButtons();}
 export function initSidebarToggle(){
-  document.addEventListener('click',e=>{const b=e.target instanceof Element&&e.target.closest(SEL);if(!b||drawer.matches)return;
+  document.addEventListener('click',e=>{const b=e.target instanceof Element&&e.target.closest(SEL);if(!b||drawer.matches||b.closest('.bp-bar'))return;
     e.preventDefault();e.stopImmediatePropagation();setSidebarCollapsed(!collapsed);},true);
   document.addEventListener('click',()=>requestAnimationFrame(syncSidebarButtons));
   drawer.addEventListener('change',()=>{if(!drawer.matches)document.body.classList.remove('mobile-menu-open');layout();syncSidebarButtons();});
