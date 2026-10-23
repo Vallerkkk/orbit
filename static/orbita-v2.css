@@ -774,3 +774,60 @@ body[data-color-mode=light] .st-tab,body[data-color-mode=light] .st-seg>button,b
 body[data-color-mode=light] .st-tab[aria-selected=true]{color:#1b1c28;background:color-mix(in srgb,#e47fd0 22%,#fff)}
 body[data-color-mode=light] .st-seg>button[aria-checked=true]{background:#fff;color:#1b1c28}
 #app-dialog.st-dialog:not([open]){display:none}
+
+/* ===== Redesign: chat, canais, rail e modais ===== */
+/* Chat: linhas com respiro, hover suave, leitura confortável */
+#message-list .message{border-radius:12px;padding-block:6px;transition:background .15s}
+#message-list .message:hover,#message-list .message:focus-within{background:color-mix(in srgb,currentColor 4%,transparent)}
+#message-list .message-content>p,#message-list .message-content .rich-text{font-size:15px;line-height:1.5;max-width:76ch}
+#message-list .message-meta time{font-size:12px;opacity:.7}
+#message-list{scroll-padding-top:56px;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 22px);mask-image:linear-gradient(to bottom,transparent 0,#000 22px)}
+#message-list .message-menu>summary{opacity:0;transition:opacity .15s}
+#message-list .message:hover .message-menu>summary,#message-list .message:focus-within .message-menu>summary,#message-list .message-menu[open]>summary{opacity:1}
+@media (hover:none),(max-width:760px){
+  #message-list .message-menu>summary{opacity:.55;background:transparent!important;border-color:transparent!important;box-shadow:none!important;width:32px;height:32px;min-height:32px;font-size:16px}
+}
+#message-list .message-menu>summary:focus-visible{opacity:1;outline:2px solid #e47fd0;outline-offset:2px}
+/* Composer */
+#app-view .composer,#app-view #message-form{border-radius:16px}
+/* Canais: item ativo com barra, categorias mais legíveis */
+#app-view .channel-list .channel{position:relative;border-radius:10px;transition:background .15s,color .15s}
+#app-view .channel-list .channel.active::before{content:"";position:absolute;left:-8px;top:8px;bottom:8px;width:3px;border-radius:3px;background:linear-gradient(#f07fc8,#b86cf2)}
+#app-view .category-header{letter-spacing:.08em;font-size:11px;opacity:.75}
+#app-view .category-header:hover{opacity:1}
+/* Menu do servidor */
+#server-dropdown{border-radius:14px;padding:6px;box-shadow:0 24px 60px -20px #000c;backdrop-filter:blur(14px)}
+#server-dropdown button{border-radius:9px;min-height:36px;padding-inline:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;transition:background .12s}
+#server-dropdown button:hover,#server-dropdown button:focus-visible{background:color-mix(in srgb,#b86cf2 18%,transparent)}
+/* Rail: pílula indicadora e ícone que arredonda no hover */
+#server-rail .server-icon{position:relative;transition:border-radius .18s,transform .18s,background .18s}
+#server-rail .server-icon:hover{border-radius:14px;transform:translateY(-1px)}
+#server-rail .server-icon.active{border-radius:14px}
+#server-rail .server-icon.active::before,#server-rail .server-icon:hover::before{content:"";position:absolute;left:-10px;top:50%;width:4px;height:8px;border-radius:0 4px 4px 0;background:#fff;transform:translateY(-50%);transition:height .18s}
+#server-rail .server-icon.active::before{height:28px}
+#server-rail .server-icon:hover:not(.active)::before{height:16px}
+@media(max-width:760px){#server-rail .server-icon::before{display:none}}
+/* Modais genéricos */
+#app-dialog:not(.st-dialog) .dialog-body{display:flex;flex-direction:column;gap:12px}
+#app-dialog:not(.st-dialog) #dialog-close:focus:not(:focus-visible){outline:0;box-shadow:none}
+#app-dialog:not(.st-dialog) label.md-toggle{padding:12px 14px;border:1px solid var(--v2-border,#ffffff14);border-radius:12px;background:color-mix(in srgb,currentColor 3%,transparent);font-weight:500}
+#app-dialog:not(.st-dialog) label.md-toggle:hover{border-color:color-mix(in srgb,#b86cf2 45%,transparent)}
+#app-dialog:not(.st-dialog) .dialog-body>.primary,#app-dialog:not(.st-dialog) form>.primary,#app-dialog:not(.st-dialog) form>button[type=submit]{align-self:flex-end;min-width:150px;padding-inline:22px}
+#app-dialog:not(.st-dialog) .field input,#app-dialog:not(.st-dialog) .field select,#app-dialog:not(.st-dialog) .field textarea{border-radius:12px}
+#app-dialog:not(.st-dialog) .field input:focus,#app-dialog:not(.st-dialog) .field textarea:focus,#app-dialog:not(.st-dialog) .field select:focus{border-color:#b86cf2;box-shadow:0 0 0 3px color-mix(in srgb,#b86cf2 25%,transparent)}
+#app-dialog[open]{animation:md-in .2s ease-out}
+@keyframes md-in{from{opacity:0;transform:translateY(8px) scale(.985)}}
+#app-dialog::backdrop{backdrop-filter:blur(4px)}
+@media(prefers-reduced-motion:reduce){#app-dialog[open]{animation:none}#server-rail .server-icon,#message-list .message{transition:none}}
+/* Editar perfil: campos sem cartão aninhado, grade em duas colunas */
+.profile-edit-card form,.profile-edit-card .pe-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
+.profile-edit-card form>*{grid-column:1/-1}
+.profile-edit-card form>label.field:has(input:not([type=file]):not([type=color])){grid-column:auto}
+.st-panel .profile-edit-card label.field,.profile-edit-card label.field{background:none!important;border:0!important;padding:0!important}
+.profile-edit-card label.field input:not([type=file]):not([type=color]),.profile-edit-card label.field textarea{margin-top:6px}
+@media(max-width:760px){.profile-edit-card form{grid-template-columns:1fr}.profile-edit-card form>label.field{grid-column:1/-1}}
+.profile-edit-card form>label.field:first-child,.profile-edit-card form>p.muted+label.field{grid-column:1/-1}
+.profile-edit-card form>p.muted{margin:-8px 0 0;font-size:12px}
+.profile-edit-card form>label.field{grid-column:1/-1!important}
+.profile-edit-card form>label.field:nth-of-type(3),.profile-edit-card form>label.field:nth-of-type(4){grid-column:auto!important}
+@media(max-width:760px){.profile-edit-card form>label.field:nth-of-type(n){grid-column:1/-1!important}}
