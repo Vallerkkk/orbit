@@ -2,7 +2,7 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.23+c6add7f",
+   "version": "2026.10.23+f0de4ee",
    "date": "23 out 2026",
    "highlights": [
     [
@@ -23,6 +23,10 @@
     ]
    ],
    "items": {
+    "chamadas": [
+     "Ouvir juntos: barra de controles não invade mais a fila",
+     "Chamada: nomes com estilo da Loja sempre legíveis nos chips, lista de voz e painel do usuário"
+    ],
     "visual": [
      "YouTube dentro do Órbita — busque, assista no mini player enquanto conversa, salve para depois e conecte sua conta Google para ver suas inscrições.",
      "Temas: o tema escolhido controla todo o sistema de destaque",
@@ -60,9 +64,6 @@
      "Novos membros: título próprio e só o atalho do trilho destacado",
      "Trilho: atalho 'Novos membros' ao lado do Feed, com estado ativo e acesso por teclado",
      "Feed Novos membros: timeline por dia com cartões, hero de boas-vindas, 👋 com RLS, Realtime…"
-    ],
-    "chamadas": [
-     "Chamada: nomes com estilo da Loja sempre legíveis nos chips, lista de voz e painel do usuário"
     ],
     "adm": [
      "ADM: exclusão de servidor/canal fecha o diálogo, limpa o estado e volta ao servidor padrão"

@@ -910,6 +910,9 @@ $('app-dialog').addEventListener('close',()=>{if($('app-dialog').open)return;dis
 function showDialog(title, build) {
   if(!$('app-dialog').open)dialogReturnFocus=document.activeElement;disposeDialog();$('dialog-title').textContent=title;const body=el('div','dialog-body');$('dialog-content').replaceChildren(body);build(body);if(!$('app-dialog').open)$('app-dialog').showModal();
 }
+// Bio ("Sobre você"): quebras de linha preservadas; no máx. 8 linhas e 1 linha em branco seguida.
+function normalizeBio(value,max=160){let lines=String(value||'').replace(/\r\n?/g,'\n').split('\n').map(l=>l.replace(/[ \t]+$/,''));const text=lines.join('\n').replace(/\n{3,}/g,'\n\n').trim().split('\n');return (text.length>8?[...text.slice(0,7),text.slice(7).join(' ')]:text).join('\n').slice(0,max);}
+function bioField(parent,label,value,max=160){const l=el('label','field bio-field',label),ta=el('textarea');ta.rows=4;ta.maxLength=max;ta.value=value||'';const count=el('small','bio-counter');const upd=()=>{count.textContent=ta.value.length+'/'+max;};ta.addEventListener('input',upd);upd();l.append(ta,count);parent.append(l);return ta;}
 function inputField(parent,label,value,max=160) {
   const l=el('label','field',label), input=el('input'); input.value=value||'';input.maxLength=max;l.append(input);parent.append(l);return input;
 }
@@ -1180,7 +1183,7 @@ $('settings').onclick=()=>showDialog('Configurações',container=>{
   wrap.append(av);
   card.append(wrap);
   const form=el('form');
-  const handle=inputField(form,'@ (nome de usuário)',profile.username||'',24),name=inputField(form,'Nickname (nome de exibição)',profile.display_name||'',32),bio=inputField(form,'Sobre você',profile.bio,160),pronouns=inputField(form,'Pronomes',profile.pronouns,32),activity=inputField(form,'Atividade (ex.: Jogando Minecraft / Ouvindo música)',profile.presence_activity,80),color=inputField(form,'Cor do perfil',profile.avatar_color,7);color.type='color';
+  const handle=inputField(form,'@ (nome de usuário)',profile.username||'',24),name=inputField(form,'Nickname (nome de exibição)',profile.display_name||'',32),bio=bioField(form,'Sobre você',profile.bio,160),pronouns=inputField(form,'Pronomes',profile.pronouns,32),activity=inputField(form,'Atividade (ex.: Jogando Minecraft / Ouvindo música)',profile.presence_activity,80),color=inputField(form,'Cor do perfil',profile.avatar_color,7);color.type='color';
   setupHandleFields(handle,name,profile);
   const avatarFile=profileFileField(form,'Foto do perfil',profile.avatar_src),bannerFile=profileFileField(form,'Banner (pode ser GIF animado)',profile.banner_src);
   // Cor da capa (antes em 'Personalizar nome e capa'): usada quando não há banner.
@@ -1190,13 +1193,13 @@ $('settings').onclick=()=>showDialog('Configurações',container=>{
   // Estúdio do perfil (pré-visualização ao vivo + cosméticos) embutido na mesma seção.
   const studioMount=el('div','st-studio');let studioHub=null;const uidAtOpen=session.user.id;
   loadStudio().then(st=>{if(!studioMount.isConnected&&!card.isConnected)return;if(session?.user.id!==uidAtOpen)return;studioHub=st.openEditor({mount:studioMount,info:{bio:bio.value,pronouns:pronouns.value},focusFile:kind=>{const f=kind==='banner'?bannerFile:avatarFile;f.closest('label')?.scrollIntoView({block:'center',behavior:'smooth'});f.focus();}});}).catch(()=>studioMount.remove());
-  const live=()=>studioHub?.setInfo({bio:bio.value,pronouns:pronouns.value,presence_activity:activity.value,avatar_color:color.value});bio.addEventListener('input',live);pronouns.addEventListener('input',live);activity.addEventListener('input',live);color.addEventListener('input',live);
+  const live=()=>studioHub?.setInfo({bio:normalizeBio(bio.value),pronouns:pronouns.value,presence_activity:activity.value,avatar_color:color.value});bio.addEventListener('input',live);pronouns.addEventListener('input',live);activity.addEventListener('input',live);color.addEventListener('input',live);
   const save=el('button','primary','Salvar alterações');save.type='submit';form.append(save);card.prepend(studioMount);card.append(form); container.append(card);
   form.onsubmit=async event=>{event.preventDefault();save.disabled=true;const uid=session.user.id,prior={...profile},created=[];let saved=false;try{
     const avatarUrl=avatarFile.files[0]?await uploadProfileAsset(avatarFile.files[0],'avatar'):prior.avatar_url||'';if(avatarUrl!==prior.avatar_url)created.push(avatarUrl);
     const bannerUrl=bannerFile.files[0]?await uploadProfileAsset(bannerFile.files[0],'banner'):prior.banner_url||'';if(bannerUrl!==prior.banner_url)created.push(bannerUrl);
     if(session?.user.id!==uid)throw Error('Sua conta mudou; salve o perfil novamente.');
-    const updated=await checked(db.from('profiles').update({display_name:name.value.trim(),...(handle.value.trim().toLowerCase()!==String(prior.username||'').toLowerCase()?{username:handle.value.trim().toLowerCase()}:{}),bio:bio.value.trim(),pronouns:pronouns.value.trim(),presence_activity:activity.value.trim(),avatar_color:color.value,avatar_url:avatarUrl,banner_url:bannerUrl}).eq('id',uid).select('id'));
+    const updated=await checked(db.from('profiles').update({display_name:name.value.trim(),...(handle.value.trim().toLowerCase()!==String(prior.username||'').toLowerCase()?{username:handle.value.trim().toLowerCase()}:{}),bio:normalizeBio(bio.value),pronouns:pronouns.value.trim(),presence_activity:activity.value.trim(),avatar_color:color.value,avatar_url:avatarUrl,banner_url:bannerUrl}).eq('id',uid).select('id'));
     if(!updated.length)throw Error('O perfil não pôde ser atualizado. Entre novamente.');saved=true;
     const retired=[prior.avatar_url,prior.banner_url].filter(path=>path?.startsWith('profiles/'+uid+'/')&&!new Set([avatarUrl,bannerUrl]).has(path));if(retired.length){const removed=await db.storage.from('orbita-files').remove([...new Set(retired)]);if(removed.error)toast('Perfil salvo. Não foi possível liberar o espaço das imagens antigas agora.');}
     saveProfilePrefs({...loadProfilePrefs(),bannerColor:coverColor.value});
