@@ -831,3 +831,18 @@ body[data-color-mode=light] .st-seg>button[aria-checked=true]{background:#fff;co
 .profile-edit-card form>label.field{grid-column:1/-1!important}
 .profile-edit-card form>label.field:nth-of-type(3),.profile-edit-card form>label.field:nth-of-type(4){grid-column:auto!important}
 @media(max-width:760px){.profile-edit-card form>label.field:nth-of-type(n){grid-column:1/-1!important}}
+/* Medidor de microfone ao vivo */
+.mic-meter{display:grid;grid-template-columns:1fr auto;gap:8px 12px;align-items:center;margin-top:8px}
+.mic-meter>span{grid-column:1/-1;font-size:12px}
+.mic-meter-bar{position:relative;height:10px;border-radius:999px;background:color-mix(in srgb,currentColor 12%,transparent);overflow:hidden}
+.mic-meter-fill{height:100%;width:0;border-radius:inherit;background:#8a8f9c;transition:width .06s linear}
+.mic-meter-fill.open{background:linear-gradient(90deg,#3ecf8e,#f07fc8)}
+.mic-meter-mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:#fff;border-radius:2px;box-shadow:0 0 0 1px #0006}
+@media(prefers-reduced-motion:reduce){.mic-meter-fill{transition:none}}
+/* Ouvir juntos */
+.watch-panel .watch-video{aspect-ratio:16/9;width:100%;border-radius:12px;overflow:hidden;background:#000}
+.watch-panel .watch-video iframe{width:100%!important;height:100%!important;min-height:0!important;display:block}
+.watch-controls{align-items:center}
+.watch-time,.watch-quality{font-variant-numeric:tabular-nums;font-size:12px;opacity:.8;padding-inline:4px}
+.watch-quality:empty{display:none}
+.watch-quality{border:1px solid currentColor;border-radius:6px;padding:1px 6px;opacity:.6}

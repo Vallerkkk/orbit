@@ -543,6 +543,7 @@ function onTrack(track, participant, publication) {
   if (previous?.track === track) { previous.publication = publication || previous.publication;if(track.kind==='audio')applyRemoteVolume(previous);syncCallMedia();return; }
   if (previous) disposeMedia(previous);
   const media = track.attach(), sid = publication?.trackSid || track.sid;
+  if(track.kind==='video'){if(!participant.isLocal)media.orbitaPublication=publication;const mst=track.mediaStreamTrack;if(mst&&'contentHint' in mst&&!mst.contentHint)mst.contentHint=source==='screen_share'?'detail':'motion';}
   if (sid) media.dataset.track = sid;
   const entry = {key, track, media, publication, participantId:participant.identity,source:track.kind==='audio'?audioSource(source):source, cleanups:[]};
   callMedia.set(key, entry);
@@ -707,12 +708,11 @@ $('join-call').onclick = async () => {
         videoCodec:'vp8',
         videoEncoding:media.cameraPublish.videoEncoding,
         screenShareEncoding:media.screenPublish.screenShareEncoding,
-        videoSimulcastLayers:media.mode==='economia'?[VideoPresets.h180,VideoPresets.h360]:[VideoPresets.h360,VideoPresets.h720],
+        // As camadas simulcast ficam abaixo da camada principal (videoEncoding); repetir 720p desperdiçava banda.
+        videoSimulcastLayers:media.mode==='economia'?[VideoPresets.h180]:[VideoPresets.h180,VideoPresets.h360],
         screenShareSimulcastLayers:media.mode==='economia'
-          ?[ScreenSharePresets.h360fps15,ScreenSharePresets.h720fps15]
-          :media.mode==='equilibrada'
-            ?[ScreenSharePresets.h720fps15,ScreenSharePresets.h1080fps15]
-            :[ScreenSharePresets.h720fps30,ScreenSharePresets.h1080fps30],
+          ?[ScreenSharePresets.h360fps15]
+          :[ScreenSharePresets.h720fps15],
       },
     }); audioTools.bind(connected);room = connected; callChannel = target;
     connected.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {if(room!==connected)return;onTrack(track, participant, publication);updateCallUI();})
@@ -720,14 +720,16 @@ $('join-call').onclick = async () => {
       .on(RoomEvent.TrackUnpublished, (publication, participant) => {if(room!==connected)return;removeTrack(publication.track,publication,participant);updateCallUI();})
       .on(RoomEvent.LocalTrackPublished, publication => { if(room!==connected)return;if(publication.track?.kind==='audio')audioTools?.sync(connected).catch(()=>{});if(publication.track?.kind==='video')onTrack(publication.track,connected.localParticipant,publication);updateCallUI(); })
       .on(RoomEvent.LocalTrackUnpublished, publication => {if(room!==connected)return;removeTrack(publication.track,publication,connected.localParticipant);updateCallUI();});
-    connected.on(RoomEvent.ParticipantConnected,()=>{if(room===connected)uiSound('peerJoin');}).on(RoomEvent.ParticipantDisconnected,()=>{if(room===connected)uiSound('peerLeave');});
+    connected.on(RoomEvent.ParticipantConnected,()=>{if(room===connected)uiSound('peerJoin',{gap:400});}).on(RoomEvent.ParticipantDisconnected,()=>{if(room===connected)uiSound('peerLeave',{gap:400});});
+    // Sons de chamada: reconexão, tela compartilhada por outra pessoa e queda inesperada.
+    connected.on(RoomEvent.Reconnecting,()=>{if(room===connected)uiSound('off',{gap:1000});}).on(RoomEvent.Reconnected,()=>{if(room===connected)uiSound('on',{gap:1000});}).on(RoomEvent.TrackPublished,publication=>{if(room===connected&&publication?.source==='screen_share')uiSound('open',{gap:600});});
     for (const event of [RoomEvent.ParticipantConnected, RoomEvent.ParticipantDisconnected, RoomEvent.TrackMuted, RoomEvent.TrackUnmuted]) connected.on(event, updateCallUI);
     connected.on(RoomEvent.ActiveSpeakersChanged,updateSpeakingUI);
     connected.on(RoomEvent.DataReceived,receiveCallData);
     connected.on(RoomEvent.ConnectionQualityChanged,updateCallUI);
     connected.on(RoomEvent.Reconnecting, () => { $('call-status').textContent = 'Reconectando à sala…'; });
     connected.on(RoomEvent.Reconnected, updateCallUI);
-    connected.on(RoomEvent.Disconnected, () => { if (room === connected) { leaveCall(); toast('Você saiu da chamada.'); } });
+    connected.on(RoomEvent.Disconnected, () => { if (room === connected) { uiSound('leave');leaveCall(); toast('Você saiu da chamada.'); } });
     await connected.connect(result.url, result.token);
     if (!current() || room !== connected) { await connected.disconnect(); return; }
     uiSound('join');
@@ -1096,11 +1098,13 @@ $('private-call').onclick=()=>{
 };
 function incomingCall(event){
   if(event.caller_id===session?.user.id||Date.now()-Date.parse(event.created_at)>60000)return;
-  const p=person(event.caller_id);$('incoming-name').textContent=p.display_name+' está chamando…';$('incoming-call').hidden=false;
+  const p=person(event.caller_id);$('incoming-name').textContent=p.display_name+' está chamando…';$('incoming-call').hidden=false;ringIncoming();
   $('answer-call').onclick=async()=>{try{const c=await checked(db.from('conversations').select('*').eq('id',event.conversation_id).single());$('incoming-call').hidden=true;await openConversation(c,true);$('join-call').click();}catch(e){toast(errorText(e));}};
   setTimeout(()=>{$('incoming-call').hidden=true;},30000);
 }
 $('decline-call').onclick=()=>{$('incoming-call').hidden=true;};
+// Toque de chamada recebida: repete o chime até atender, recusar ou expirar (30 s).
+let ringTimer=0;function ringIncoming(){clearInterval(ringTimer);const started=Date.now();const ring=()=>{if($('incoming-call').hidden||Date.now()-started>30000){clearInterval(ringTimer);return;}uiSound('chime',{gap:1500});};ring();ringTimer=setInterval(ring,2500);}
 $('friends-nav').onclick=showFriends;
 $('settings').onclick=()=>showDialog('Seu perfil e áudio',container=>{
   const card = el('div', 'profile-edit-card');
