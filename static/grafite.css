@@ -176,7 +176,7 @@ body[data-color-mode=light]{--bg:#f4f5f7;--s1:#ffffff;--s2:#ffffff;--s3:#eceef2;
 .nm-badge svg{width:26px;height:26px}
 .nm-about{margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--s2);border:1px solid var(--bd)}
 .nm-label{display:block;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin-bottom:4px}
-.nm-about p{margin:0;color:var(--t1);font-size:14px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.nm-about p{margin:0;color:var(--t1);font-size:14px;line-height:1.5;white-space:pre-line;overflow-wrap:anywhere}
 .nm-joined{display:flex;align-items:center;gap:6px;margin:12px 0 0;font-size:12px;color:var(--t3)}
 .nm-joined .sf-ico{width:14px;height:14px;color:var(--t3)}
 .nm-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
@@ -404,7 +404,7 @@ html body #members-sidebar.mv2[hidden]{transform:translateX(100%);visibility:hid
 .mv2-dm-name{font-size:18px;font-weight:750;color:var(--t1)}
 .mv2-dm-user{color:var(--t2);font-size:13px}
 .mv2-dm-label{margin-top:10px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
-.mv2-dm-bio{margin:0;font-size:13.5px;color:var(--t2);line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.mv2-dm-bio{margin:0;font-size:13.5px;color:var(--t2);line-height:1.45;white-space:pre-line;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:5;line-clamp:5;overflow:hidden}
 .mv2-dm-btn{margin-top:12px;align-self:stretch;padding:8px;border-radius:9px;background:var(--s3,var(--s1))!important;border:1px solid var(--bd)!important;color:var(--t1)!important;font-weight:600}
 .mv2-dm-btn:hover{border-color:var(--ac)!important}
 @media (min-width:1100px){body.mv2-open #app-view .main{margin-right:var(--mv2-w,256px);transition:margin-right .22s cubic-bezier(.2,.8,.2,1)}}
@@ -431,3 +431,8 @@ body.yt-open .mv2-edge-btn,body.yt-open #btn-members-toggle,body.yt-open #member
 .ytc-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}.ytc-btn{height:32px;padding:0 13px;border-radius:9px;background:#23242d;border:1px solid #2e3039;color:#e8e9ee;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}.ytc-btn.ac{background:var(--ac,#e07ad6);border-color:var(--ac,#e07ad6);color:var(--onac,#1a0f19)}
 @media(min-width:781px){body.yt-open #app-view .sidebar{display:none}}
 .ytc-media img{width:100%!important;height:100%!important;max-width:none!important}.ytc-title{border:0!important;box-shadow:none!important}
+
+/* Bio com quebras de linha (texto puro via textContent) */
+.rich-profile .rp-bio,.pv2 .rp-bio{white-space:pre-line;overflow-wrap:anywhere}
+.field.bio-field textarea{width:100%;min-height:88px;resize:vertical;font:inherit;line-height:1.45;white-space:pre-wrap}
+.field.bio-field .bio-counter{display:block;text-align:right;font-size:11px;opacity:.7;margin-top:2px}
