@@ -5,6 +5,8 @@ import './ui-polish.js';
 import {initSocialLogin} from './social-login.js';
 import {initNavigationMotion} from './navigation-motion.js';
 import {DECORATIONS} from './profile-decoration-catalog.js';
+import {applyAppearanceEverywhere} from './appearance-runtime.js';
+import {compactAppearance,stripAdminOnly} from './cosmetics.js';
 import {initShareReceiver} from './share-target.js';
 import {initThemeAccessibility,foreground} from './theme-accessibility.js';
 import {initAppUpdates} from './app-updates.js';
@@ -1497,7 +1499,7 @@ window.addEventListener('pagehide',()=>{if(extraSubscription)db?.removeChannel(e
 async function publishVoicePresence(force=false){
   if(!presenceChannel||!session||!profile)return;
   if(profile.presence_status==='invisible'){if(force)await presenceChannel.untrack();return;}
-  const value={status:enhancements?.presenceStatus()||profile.presence_status||'online',channel_id:room&&!callChannel?.private&&!callChannel?.is_private&&!communities.find(c=>c.id===callChannel?.community_id)?.invite_only?callChannel?.id:null,microphone:!!room?.localParticipant.isMicrophoneEnabled,deafened:!!room&&deafened,camera:!!room?.localParticipant.isCameraEnabled,screen:!!room?.localParticipant.isScreenShareEnabled,deco:ownDeco()};
+  const value={status:enhancements?.presenceStatus()||profile.presence_status||'online',channel_id:room&&!callChannel?.private&&!callChannel?.is_private&&!communities.find(c=>c.id===callChannel?.community_id)?.invite_only?callChannel?.id:null,microphone:!!room?.localParticipant.isMicrophoneEnabled,deafened:!!room&&deafened,camera:!!room?.localParticipant.isCameraEnabled,screen:!!room?.localParticipant.isScreenShareEnabled,deco:{...ownDeco(),ap:compactAppearance(appearanceOf(session.user.id))}};
   const signature=JSON.stringify(value);if(!force&&signature===lastPresenceSignature)return;lastPresenceSignature=signature;await presenceChannel.track(value);
 }
 
@@ -1645,7 +1647,7 @@ boot();
 const PROFILE_PREFS_KEY = 'orbita-profile-prefs';
 // Decorações dos outros participantes chegam pela presença (só ids do catálogo, validados aqui).
 function ownDeco(){const p=loadProfilePrefs();return {frame:String(p.frame||''),effect:String(p.profileEffect||'')};}
-function decoFor(id){if(!id)return {};const raw=id===session?.user.id?ownDeco():publicVoicePresence.find(m=>m.id===id)?.deco||{};
+function decoFor(id){if(!id)return {};const ap=id===session?.user.id?null:appearanceOf(id);const raw=id===session?.user.id?ownDeco():ap?.legacy_frame||ap?.legacy_effect?{frame:ap.legacy_frame,effect:ap.legacy_effect}:publicVoicePresence.find(m=>m.id===id)?.deco||{};
   const ok=(type,v)=>DECORATIONS.find(d=>d.type===type&&d.id===v&&d.css);return {frame:ok('frame',raw.frame),effect:ok('effect',raw.effect)};}
 function loadProfilePrefs() {
   try { return JSON.parse(localStorage.getItem(PROFILE_PREFS_KEY+':'+(session?.user.id||'guest')) || '{}') || {}; }
@@ -1653,17 +1655,31 @@ function loadProfilePrefs() {
 }
 function saveProfilePrefs(prefs) {
   localStorage.setItem(PROFILE_PREFS_KEY+':'+(session?.user.id||'guest'), JSON.stringify(prefs));
+  // As decorações antigas também vão para profiles.appearance (públicas e persistentes).
+  const legacyFont={display:'orbitron',mono:'spacemono',serif:'cinzel'}[prefs.font],legacyEffect={glow:'neon',shimmer:'shine',rainbow:'rainbow'}[prefs.effect],current=appearanceOf(session?.user.id);
+  if(session)saveAppearance({...current,legacy_frame:prefs.frame&&prefs.frame!=='none'?prefs.frame:'',legacy_effect:prefs.profileEffect||'',banner_style:prefs.bannerStyle||'',name_font:current.name_font||legacyFont||'',name_effect:current.name_effect||legacyEffect||''}).catch(()=>{});
   applyProfileStyles();publishVoicePresence().catch(()=>{});
 }
+// ===== Aparência pública (profiles.appearance) =====
+// Fonte da verdade é o banco; se a migration ainda não foi aplicada, cai para localStorage + presença.
+let appearanceLocal=false;
+const appearanceKey=()=>'orbita-appearance:'+(session?.user.id||'guest');
+function appearanceOf(id){if(!id)return {};
+  if(id===session?.user.id){const fromDb=profile?.appearance;if(!appearanceLocal&&fromDb&&Object.keys(fromDb).length)return fromDb;try{return JSON.parse(localStorage.getItem(appearanceKey())||'null')||fromDb||{};}catch{return fromDb||{};}}
+  const p=peopleById.get(id);if(p?.appearance&&Object.keys(p.appearance).length)return p.appearance;
+  // Via presença (sem banco): itens de ADM só valem se a pessoa for ADM global segundo site_roles.
+  const ap=publicVoicePresence.find(m=>m.id===id)?.deco?.ap||{};return siteRoles.some(r=>r.user_id===id)?ap:stripAdminOnly(ap);}
+async function saveAppearance(next){const uid=session?.user.id;if(!uid)throw Error('Entre novamente na sua conta.');const value=compactAppearance(next);
+  const {error}=await db.from('profiles').update({appearance:value}).eq('id',uid);
+  if(error){if(error.code==='42501'||/exclusiv/i.test(error.message||''))throw Error(error.message||'Este item é exclusivo dos administradores do app.');
+    if(error.code==='PGRST204'||error.code==='42703'||/appearance/i.test(error.message||'')){appearanceLocal=true;localStorage.setItem(appearanceKey(),JSON.stringify(value));}else throw Error(errorText(error));}
+  else{appearanceLocal=false;localStorage.removeItem(appearanceKey());}
+  if(session?.user.id!==uid)return;if(profile)profile.appearance=value;const cur=peopleById.get(uid);if(cur)cur.appearance=value;
+  document.querySelectorAll('.rich-profile[data-dressed]').forEach(c=>delete c.dataset.dressed);applyProfileStyles();applyDecorations();publishVoicePresence().catch(()=>{});}
+function appearanceOwner(node){if(node.id==='user-avatar'||node.classList.contains('up-name'))return session?.user.id;const card=node.closest('[data-user-id],[data-participant-id],[data-message-id]');if(!card)return null;
+  return card.dataset.userId||card.dataset.participantId||messages.get(card.dataset.messageId)?.author_id||null;}
 function applyProfileStyles() {
-  const prefs = loadProfilePrefs();
-  document.querySelectorAll('.message-meta strong, .up-name, .participant-name, .member-name, .member strong, .rp-name').forEach(el => {
-    el.classList.remove('name-font-inter','name-font-mono','name-font-serif','name-font-display','name-effect-glow','name-effect-shimmer','name-effect-rainbow');
-    const card=el.closest('[data-user-id],[data-participant-id],[data-message-id]');
-    const owner=el.classList.contains('up-name') || card?.dataset.userId===session?.user.id || card?.dataset.participantId===session?.user.id || messages.get(card?.dataset.messageId)?.author_id===session?.user.id;
-    if(owner && ['inter','mono','serif','display'].includes(prefs.font)) el.classList.add('name-font-'+prefs.font);
-    if(owner && ['glow','shimmer','rainbow'].includes(prefs.effect)) el.classList.add('name-effect-'+prefs.effect);
-  });
+  if(!session)return;applyAppearanceEverywhere(document,appearanceOwner,appearanceOf);
 }
 function openProfileCustomizer(){return openProfileAppearance('openProfileCustomizer');}
 // Hook into settings if available
@@ -1764,8 +1780,21 @@ function openDecorationGallery(){return openProfileAppearance('openDecorationGal
 const baseShowProfile = showProfile;
 showProfile = function(p) {
   baseShowProfile(p);
-  applyDecorations();
+  applyDecorations();applyProfileStyles();
+  const panel=document.querySelector('#app-dialog .rich-profile[data-user-id]');
+  if(panel){const own=p.id===session?.user.id,actions=panel.querySelector('.rp-actions');
+    if(own){const edit=[...actions.querySelectorAll('button')].find(b=>b.textContent==='Editar perfil');if(edit)edit.onclick=()=>{$('app-dialog').close();studio('openEditor');};
+      actions.append(button('Loja',()=>{$('app-dialog').close();studio('openStore');},'rp-action rp-outline'),button('Insígnias',()=>{$('app-dialog').close();studio('openBadges',session.user.id);},'rp-action rp-outline'));}
+    const uid=session?.user.id;loadStudio().then(s=>{if(session?.user.id===uid&&panel.isConnected)s.decorateCard(panel,p);}).catch(()=>{});}
 };
+let studioTask;
+function loadStudio(){if(!studioTask)studioTask=import('./profile-studio.js').then(m=>m.initProfileStudio({el,button,toast,errorText,apiFetch,setAvatar,person,appearanceOf,saveAppearance,
+  state:()=>({db,session,profile,isAdmin:siteRoles.some(r=>r.user_id===session?.user.id&&['admin','creator'].includes(r.role))}),
+  saveProfile:async fields=>{const uid=session.user.id;await checked(db.from('profiles').update(fields).eq('id',uid).select('id'));if(session?.user.id===uid){Object.assign(profile,fields);const cur=peopleById.get(uid);if(cur)Object.assign(cur,fields);}},
+  roleOf:id=>{if(home||!activeCommunity)return null;const link=memberRoles.find(r=>r.user_id===id);return link?communityRoleList.find(r=>r.id===link.role_id)||null:null;},
+  inCall:()=>room&&callChannel?callChannel.name:null,openSettings:()=>$('settings').click()})).catch(error=>{studioTask=null;throw error;});return studioTask;}
+async function studio(method,...args){const uid=session?.user.id;try{const s=await loadStudio();if(session?.user.id===uid)return s[method](...args);}catch(error){toast(errorText(error));}}
+window.orbitaStudio=studio;
 setTimeout(applyDecorations, 1000);
 // Reaplica quadros/efeitos quando chat, membros, perfil ou chamada renderizam novos avatares.
 {let decoFrame=0;new MutationObserver(records=>{if(decoFrame||!records.some(r=>r.addedNodes.length))return;decoFrame=requestAnimationFrame(()=>{decoFrame=0;applyDecorations();applyProfileStyles();});}).observe(document.body,{childList:true,subtree:true});}
@@ -1953,3 +1982,6 @@ window.addEventListener('focus',checkResumedSession);window.addEventListener('on
 // 'Estado da conexão' não tinha ação: abre os detalhes de conexão (mesma janela do botão da chamada).
 $('btn-free-setup')?.addEventListener('click',()=>$('connection-info')?.click());
 initSettingsLayout();
+
+// Insígnias: batimento a cada minuto. O servidor confirma no LiveKit se a pessoa está na sala e com tela/câmera.
+setInterval(()=>{if(!session||document.hidden)return;const channel=room&&callChannel?.id;apiFetch('/api/badges/heartbeat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channel_id:channel||null,watch_party:!!(channel&&document.querySelector('.wp-ibtn'))})}).catch(()=>{});},60000);

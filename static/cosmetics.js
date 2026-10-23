@@ -32,8 +32,11 @@ export function loadNameFont(id){const f=NAME_FONTS.find(f=>f.id===id);if(!f||lo
 // Normaliza a aparência salva no banco (profiles.appearance); qualquer coisa fora do catálogo é descartada.
 const HEX=/^#[0-9a-f]{6}$/i;
 export function cleanAppearance(raw){const a=raw&&typeof raw==='object'?raw:{};const pick=(k,kind)=>{const i=itemById.get(a[k]);return i&&i.kind===kind?i.id:'';};
-  return {frame:pick('frame','frame')||String(a.legacy_frame||''),border:pick('border','border'),effect:pick('effect','effect')||String(a.legacy_effect||''),server:pick('server','server'),plate:pick('plate','plate'),
+  const legacy=k=>/^[a-z0-9-]{1,48}$/.test(a[k]||'')?a[k]:'';
+  return {frame:pick('frame','frame'),legacy_frame:legacy('legacy_frame'),legacy_effect:legacy('legacy_effect'),banner_style:legacy('banner_style'),border:pick('border','border'),effect:pick('effect','effect'),server:pick('server','server'),plate:pick('plate','plate'),
     name_font:NAME_FONTS.some(f=>f.id===a.name_font)?a.name_font:'',name_effect:NAME_EFFECTS.some(e=>e.id===a.name_effect)?a.name_effect:'',
     theme:Array.isArray(a.theme)&&a.theme.length===2&&a.theme.every(c=>HEX.test(c))?a.theme:null,
     badges:Array.isArray(a.badges)?a.badges.filter(x=>typeof x==='string').slice(0,3):[]};}
 export function packOf(id){return PACKS.find(p=>p.id===(itemById.get(id)?.pack||id));}
+export function compactAppearance(a){const c=cleanAppearance(a),out={};for(const [k,v] of Object.entries(c))if(Array.isArray(v)?v.length:v)out[k]=v;return out;}
+export function stripAdminOnly(a){const c=cleanAppearance(a);for(const k of ['frame','border','effect','server','plate'])if(ADMIN_ONLY.includes(c[k]))c[k]='';if(ADMIN_ONLY.includes('name:'+c.name_effect))c.name_effect='';return c;}
