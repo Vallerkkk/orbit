@@ -2745,3 +2745,11 @@ grant execute on function public.badge_state(uuid), public.sync_my_badges(), pub
 insert into public.badge_grants(user_id,badge_id,permanent)
 select id,'dono',true from public.profiles where id='50e5ae56-07e3-4023-9461-f653997fcc2e' and username='kalioptha'
 on conflict (user_id,badge_id) do update set permanent=true;
+
+-- Migration: 20261023001000_profile_appearance_grant.sql
+-- Corrige a migration de insígnias: o authenticated não tinha UPDATE na coluna
+-- profiles.appearance (o guard_appearance continua barrando itens de ADM), e
+-- orbita_private.badge_events ficou sem RLS (só é acessada por funções SECURITY DEFINER).
+grant update(appearance) on public.profiles to authenticated;
+alter table orbita_private.badge_events enable row level security;
+revoke all on orbita_private.badge_events from anon, authenticated;
