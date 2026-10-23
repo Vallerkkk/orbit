@@ -1063,3 +1063,9 @@ body[data-color-mode=light] .st-seg>button[aria-checked=true]{background:#fff;co
  #app-dialog.st-dialog .st-sticky-save{position:sticky;bottom:8px;width:100%}
 }
 @media(prefers-reduced-motion:reduce){#app-dialog.st-dialog .st-panel{animation:none}}
+
+/* alvo de toque mínimo de 44px no fechar do diálogo (mobile) */
+@media (max-width:760px),(pointer:coarse){#dialog-close{min-width:44px!important;min-height:44px!important}}
+
+/* estúdio de perfil embutido não pode estourar a largura do diálogo */
+.st-profile,.st-studio,.ps-editor-hub{min-width:0!important;max-width:100%!important;box-sizing:border-box}

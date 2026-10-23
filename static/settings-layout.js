@@ -70,7 +70,7 @@ function arrange(dialog){
 }
 export function initSettingsLayout(){
   const dialog=document.getElementById('app-dialog');if(!dialog)return;let timer=0;
-  const isSettings=()=>/Seu perfil e áudio|Configurações/.test(document.getElementById('dialog-title')?.textContent||'');
+  const isSettings=()=>/^(Seu perfil e áudio|Configurações)$/.test((document.getElementById('dialog-title')?.textContent||'').trim());
   const run=()=>{clearTimeout(timer);timer=setTimeout(()=>{if(dialog.open&&isSettings())arrange(dialog);else if(!isSettings()){dialog.classList.remove('st-dialog');if(dialog.open)for(const l of dialog.querySelectorAll('label.check-field:not(.st-toggle)'))l.classList.add('st-toggle','md-toggle');}},30);};
   new MutationObserver(run).observe(dialog,{childList:true,subtree:true,attributes:true,attributeFilter:['open']});
   // A janela "Editar perfil" fora das Configurações também ganha as zonas de arraste e as cores.
