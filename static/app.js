@@ -362,6 +362,10 @@ async function validateCachedMessages(version,target){
 }
 // Reuse unchanged rows so live updates preserve images, focus and open controls.
 const messageRows=new Map(),dayDividers=new Map();
+const RENDER_WINDOW=150,renderWindows=new Map();let renderWindow=RENDER_WINDOW;
+function hiddenRenderRows(){return Math.max(0,messages.size+outbox.rows(session.user.id,selected).length-renderWindow);}
+function expandRenderWindow(){if(!selected||hiddenRenderRows()<=0)return false;renderWindow+=100;renderMessages(false,capturePosition());return true;}
+{let windowTick=0;$('message-list').addEventListener('scroll',()=>{if(windowTick)return;windowTick=requestAnimationFrame(()=>{windowTick=0;const list=$('message-list');if(list.scrollTop<400&&hiddenRenderRows()>0)expandRenderWindow();});},{passive:true});}
 let renderedScope='',rowStyleKey='',rowStyleRevision=0;
 function createMessageRow(message,grouped=false) {
     const messageProfile=peopleById.get(message.author_id)||message.profiles||{},name = messageProfile.display_name || 'Participante';
@@ -390,21 +394,23 @@ function createMessageRow(message,grouped=false) {
 }
 function renderMessages(scroll = false, position) {
   const list=$('message-list'),saved=position||lastViewport||capturePosition(),scope=(selected?.private?'dm:':'channel:')+selected?.id;
-  if(renderedScope!==scope){messageRows.clear();dayDividers.clear();list.replaceChildren();renderedScope=scope;}
+  if(renderedScope!==scope){messageRows.clear();dayDividers.clear();list.replaceChildren();if(renderedScope)renderWindows.set(renderedScope,renderWindow);renderedScope=scope;renderWindow=renderWindows.get(scope)||RENDER_WINDOW;}
   const nodes=[];list.classList.toggle('history-long',messages.size>200);list.setAttribute('aria-busy',String(loading||initialHistory));
   const welcome=list.querySelector('.welcome')||el('div','welcome');
   if(!welcome.childNodes.length){welcome.append(el('div','welcome-icon','#'),el('h1','',(selected.private?'Sua conversa com ':'Bem-vindo a #')+selected.name),el('p','',selected.private?'Mensagens e chamadas visíveis apenas para vocês dois.':'Um espaço para conversar, compartilhar e estar junto.'));}
   if(initialHistory&&!messages.size){const skeleton=el('div','history-skeleton');skeleton.setAttribute('aria-label','Carregando mensagens');skeleton.setAttribute('role','status');for(let i=0;i<6;i++)skeleton.append(el('div','skeleton-message'));nodes.push(skeleton);}else{nodes.push(welcome);if(!messages.size){let action=welcome.querySelector('button');if(!action){action=button('Escrever a primeira mensagem',()=>$('message-input').focus());welcome.append(action);}}}
   if(historyError){const warning=el('div','history-error');warning.append(el('span','',historyError),button('Tentar novamente',()=>loadMessages(generation,true)));nodes.push(warning);}
-  if(hasMore){const more=list.querySelector('.load-more')||button('Carregar mensagens anteriores',()=>loadMessages(generation),'load-more');more.disabled=loading;nodes.push(more);}
-  const sorted=[...messages.values(),...outbox.rows(session.user.id,selected)].filter(m=>!m.thread_root&&(!pinsOnly||m.pinned||m.local_state)).sort((a,b)=>a.created_at.localeCompare(b.created_at)||a.id.localeCompare(b.id));
+  const all=[...messages.values(),...outbox.rows(session.user.id,selected)].filter(m=>!m.thread_root&&(!pinsOnly||m.pinned||m.local_state)).sort((a,b)=>a.created_at.localeCompare(b.created_at)||a.id.localeCompare(b.id));
+  // Janela de renderização: só as últimas N linhas ficam no DOM; rolar ao topo (ou o botão) revela mais antes de buscar no servidor.
+  const hiddenRows=Math.max(0,all.length-renderWindow),sorted=hiddenRows?all.slice(hiddenRows):all;
+  if(hasMore||hiddenRows){const more=list.querySelector('.load-more')||button('Carregar mensagens anteriores',()=>{if(expandRenderWindow())return;renderWindow=Math.max(renderWindow,messages.size+100);loadMessages(generation);},'load-more');more.disabled=loading&&!hiddenRows;nodes.push(more);}
   const shared=JSON.stringify([memberRoles,communityRoleList,communityEmojiList,[...communityEmojiUrls],session.user.id,hasCommunityPermission('manage_messages')]),keep=new Set();
   if(shared!==rowStyleKey){rowStyleKey=shared;rowStyleRevision++;}
   let previous;
   const usedDays=new Set(),now=new Date(),yesterday=new Date();yesterday.setDate(now.getDate()-1);let lastDay;
   for(const message of sorted){
     const day=new Date(message.created_at).toDateString();if(day!==lastDay){let divider=dayDividers.get(day);if(!divider){divider=el('div','ux-day-divider');divider.setAttribute('role','separator');dayDividers.set(day,divider);}const label=day===now.toDateString()?'Hoje':day===yesterday.toDateString()?'Ontem':new Date(message.created_at).toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'});if(divider.textContent!==label)divider.textContent=label;divider.setAttribute('aria-label',label);nodes.push(divider);usedDays.add(day);lastDay=day;}
-    const grouped=!!previous&&previous.author_id===message.author_id&&!message.reply_to&&!message.pinned&&new Date(message.created_at)-new Date(previous.created_at)<300000&&new Date(message.created_at).toDateString()===new Date(previous.created_at).toDateString();
+    const grouped=!!previous&&previous.author_id===message.author_id&&!message.reply_to&&!message.pinned&&new Date(message.created_at)-new Date(previous.created_at)<420000&&new Date(message.created_at).toDateString()===new Date(previous.created_at).toDateString();
     const quoted=message.reply_to?messages.get(message.reply_to):null;
     const author=peopleById.get(message.author_id)||message.profiles||{};const mentions=[...message.content.matchAll(/@([A-Za-z0-9_]{3,24})/g)].map(match=>peopleByUsername.get(match[1].toLowerCase())?.id||'');
     const signature=JSON.stringify([message,author.display_name,author.avatar_color,author.avatar_src,mentions,quoted?.content,quoted?.profiles?.display_name,rowStyleRevision,grouped]);
@@ -1766,7 +1772,10 @@ setTimeout(() => {
 applyServerTheme();
 
 let preferencesFrame;
-const preferencesObserver=new MutationObserver(()=>{if(preferencesFrame)return;preferencesFrame=requestAnimationFrame(()=>{preferencesFrame=null;applyProfileStyles();applyServerTheme();applyDecorations();});});
+// Mutações só dentro do chat: estiliza apenas as linhas novas (varrer o documento inteiro a cada mensagem travava históricos grandes).
+const chatRoots=new Set();let chatRootsFrame=0;
+function onlyChat(records){const list=$('message-list');if(!list)return false;for(const r of records){if(r.type!=='childList'||!list.contains(r.target))return false;}for(const r of records)for(const n of r.addedNodes)if(n instanceof Element)chatRoots.add(n);if(!chatRootsFrame)chatRootsFrame=requestAnimationFrame(()=>{chatRootsFrame=0;const roots=[...chatRoots];chatRoots.clear();if(!session)return;for(const root of roots)if(root.isConnected){applyAppearanceEverywhere(root,appearanceOwner,appearanceOf);if(root.matches?.('.message-meta strong'))applyAppearanceEverywhere(root.parentElement,appearanceOwner,appearanceOf);}});return true;}
+const preferencesObserver=new MutationObserver(records=>{if(onlyChat(records))return;if(preferencesFrame)return;preferencesFrame=requestAnimationFrame(()=>{preferencesFrame=null;applyProfileStyles();applyServerTheme();applyDecorations();});});
 preferencesObserver.observe($('app-view'),{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});
 
 // === Profile decorations gallery (Discord-shop style) ===
@@ -1774,7 +1783,8 @@ preferencesObserver.observe($('app-view'),{childList:true,subtree:true,attribute
 
 function applyDecorations() {
   const prefs = loadProfilePrefs();
-  document.querySelectorAll('.rp-avatar, .up-avatar, .avatar, #user-avatar, .participant-avatar, .tile-avatar').forEach(av => {
+  // Avatares do chat nunca recebem quadro: fora da varredura (eram centenas de linhas a cada mutação).
+  document.querySelectorAll('.rp-avatar, .up-avatar, .avatar:not(#message-list .avatar), #user-avatar, .participant-avatar, .tile-avatar').forEach(av => {
     DECORATIONS.filter(d => d.type === 'frame'&&d.css).forEach(d => av.classList.remove(d.css));
     const owner=av.dataset.userId||av.querySelector('[data-user-id]')?.dataset.userId||av.closest('[data-user-id],[data-participant-id]')?.dataset.userId||av.closest('[data-participant-id]')?.dataset.participantId||messages.get(av.closest('[data-message-id]')?.dataset.messageId)?.author_id;
     // Quadros só no cartão de perfil e nos tiles da chamada; listas laterais e chat ficam com avatar simples.
@@ -1822,7 +1832,7 @@ async function studio(method,...args){const uid=session?.user.id;try{const s=awa
 window.orbitaStudio=studio;
 setTimeout(applyDecorations, 1000);
 // Reaplica quadros/efeitos quando chat, membros, perfil ou chamada renderizam novos avatares.
-{let decoFrame=0;new MutationObserver(records=>{if(decoFrame||!records.some(r=>r.addedNodes.length))return;decoFrame=requestAnimationFrame(()=>{decoFrame=0;applyDecorations();applyProfileStyles();});}).observe(document.body,{childList:true,subtree:true});}
+{let decoFrame=0;new MutationObserver(records=>{if(decoFrame||!records.some(r=>r.addedNodes.length)||onlyChat(records))return;decoFrame=requestAnimationFrame(()=>{decoFrame=0;applyDecorations();applyProfileStyles();});}).observe(document.body,{childList:true,subtree:true});}
 
 // The status selector stays reachable when the mobile navigation drawer closes.
 document.body.append($('status-popover'));

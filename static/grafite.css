@@ -347,3 +347,23 @@ body[data-density=compact]{--chat-fs:14px;--chat-lh:1.4;--chat-av:32px;--chat-na
 .handle-hint[data-state=bad],.nick-hint[data-state=bad]{color:var(--err,#ff5a6a)!important}
 .handle-hint[data-state=wait]{color:var(--t3)!important}
 .handle-field input{font-family:var(--mono,ui-monospace,monospace);letter-spacing:.01em}
+
+/* ===== Chat v3: agrupamento real, leveza e desempenho (canais e DMs) ===== */
+/* O bloco Chat v2 forçava display:flex no cabeçalho e desfazia o agrupamento: linhas seguidas do mesmo autor repetiam nome e hora. */
+#message-list .message.message-grouped .message-meta{display:none!important}
+#message-list .message.message-grouped>.avatar{visibility:hidden!important;height:0!important;min-height:0!important;margin-top:0!important}
+#message-list .message.message-grouped{margin-top:0!important;padding-top:2px!important;padding-bottom:2px!important;min-height:0!important}
+#message-list .message.message-grouped::before{opacity:0;transition:opacity .1s}
+#message-list .message.message-grouped:hover::before,#message-list .message.message-grouped:focus-within::before{opacity:1}
+/* Históricos longos (>200): linhas fora da tela não são pintadas nem diagramadas. */
+#message-list.history-long>.message{content-visibility:auto;contain-intrinsic-size:auto 64px}
+#message-list.history-long>.message.message-grouped{contain-intrinsic-size:auto 28px}
+/* Nome estilizado parado no chat; anima só ao passar o mouse na linha. */
+#message-list .message .message-meta strong,#message-list .message .message-meta strong *,#message-list .message .message-meta strong::before,#message-list .message .message-meta strong::after{animation-play-state:paused!important}
+#message-list .message:hover .message-meta strong,#message-list .message:hover .message-meta strong *,#message-list .message:hover .message-meta strong::before,#message-list .message:hover .message-meta strong::after{animation-play-state:running!important}
+@media (prefers-reduced-motion:reduce){#message-list .message:hover .message-meta strong,#message-list .message:hover .message-meta strong::before,#message-list .message:hover .message-meta strong::after{animation-play-state:paused!important}}
+/* Sem desfoque/sombras caras nas linhas; molduras no chat são só CSS (sem canvas). */
+#message-list .message,#message-list .message>.avatar{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+#message-list .message>.avatar canvas,#message-list .message .pk-fx{display:none!important}
+#message-list .message>.avatar{transition:none}
+#message-list .message:hover>.avatar:not(:hover){transform:none}
