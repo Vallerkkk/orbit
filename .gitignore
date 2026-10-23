@@ -17,3 +17,10 @@ artifacts/
 orbita_lula_droid_memory.json
 work-*.log
 work-*.err
+
+# Evite publicar credenciais
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.json
