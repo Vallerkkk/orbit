@@ -18,6 +18,7 @@ export function initLuladroid(ctx) {
   document.querySelectorAll('#luladroid-panel,#luladroid-toggle').forEach(node => node.remove());
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   let active = false, muted = false, recognition = null, closed = false;
+  let recorder = null, micStream = null, recorderTimer = null, sendingAudio = false, useRecorder = false;
   let callId = '', log = [], lastFinal = '', lastFinalAt = 0;
 
   const panel = el('aside', 'luladroid-panel');
@@ -49,9 +50,7 @@ export function initLuladroid(ctx) {
   const transcripts = button('Transcrições', () => showTranscripts(), 'soft-button');
   actions.append(listen, stopButton, mute, transcripts);
 
-  const note = el('p', 'luladroid-note', Recognition
-    ? 'O reconhecimento do navegador pode enviar áudio ao fornecedor do navegador. Só o texto é guardado; áudio não é armazenado pela Órbita.'
-    : 'Este navegador não oferece reconhecimento de voz. Use Chrome, Edge ou outro navegador compatível.');
+  const note = el('p', 'luladroid-note', 'A transcrição usa o reconhecimento do navegador ou, no desktop, o serviço de transcrição configurado no servidor. O áudio não é armazenado pela Órbita.');
   panel.append(header, intro, logBox, actions, note);
 
   const toggle = button('Lula', () => setOpen(panel.hidden), 'soft-button');
@@ -109,6 +108,71 @@ export function initLuladroid(ctx) {
     if (muted && 'speechSynthesis' in window) speechSynthesis.cancel();
   }
 
+  async function startRecorder() {
+    if (!active || !current() || !inRoom() || recorder || micStream) return;
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      setStatus('Captura de áudio não disponível');
+      return toast('Este dispositivo não suporta captura de áudio para transcrição.');
+    }
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!active || !inRoom()) { stopRecorder(); return; }
+      const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg', 'audio/mp4']
+        .find(type => MediaRecorder.isTypeSupported(type));
+      if (!mimeType) throw new Error('Formato de gravação não suportado');
+      const capture = () => {
+        if (!active || !micStream || recorder || sendingAudio || !inRoom()) return;
+        const chunks = [];
+        const instance = new MediaRecorder(micStream, { mimeType });
+        recorder = instance;
+        instance.ondataavailable = event => { if (event.data?.size) chunks.push(event.data); };
+        instance.onerror = () => { setStatus('Falha na captura de áudio'); stopRecorder(); };
+        instance.onstop = async () => {
+          if (recorder === instance) recorder = null;
+          if (!active || !inRoom() || !chunks.length) return;
+          sendingAudio = true;
+          try {
+            const audio = new Blob(chunks, { type: mimeType });
+            if (audio.size > 1000 && audio.size <= 4_000_000) {
+              const response = await apiFetch('/api/ai/transcribe-audio', {
+                method: 'POST', headers: { 'Content-Type': mimeType.split(';')[0] }, body: audio,
+              });
+              if (!response.ok) throw new Error('Transcrição indisponível (' + response.status + ')');
+              const data = await response.json();
+              if (data.text?.trim() && active) await handle(data.text.trim());
+            }
+          } catch (error) {
+            setStatus('Transcrição do PC indisponível');
+            toast(error.message || 'Verifique a configuração de STT no servidor.');
+            active = false; listen.hidden = false; stopButton.hidden = true; stopRecorder();
+          } finally {
+            sendingAudio = false;
+            if (active && micStream) capture();
+          }
+        };
+        instance.start();
+        recorderTimer = setTimeout(() => { if (instance.state === 'recording') instance.stop(); }, 4500);
+        setStatus('Transcrevendo áudio do PC', true);
+      };
+      capture();
+    } catch (error) {
+      stopRecorder(); setStatus('Não foi possível acessar o microfone');
+      toast('Permita o microfone nas configurações do Windows e do aplicativo.');
+    }
+  }
+
+  function stopRecorder() {
+    clearTimeout(recorderTimer); recorderTimer = null;
+    const previous = recorder; recorder = null;
+    if (previous) {
+      previous.onstop = null;
+      try { if (previous.state !== 'inactive') previous.stop(); } catch {}
+    }
+    const stream = micStream; micStream = null;
+    stream?.getTracks().forEach(track => track.stop());
+  }
+
+
   function startRecognition() {
     if (!Recognition || !active || recognition) return;
     recognition = new Recognition();
@@ -125,14 +189,16 @@ export function initLuladroid(ctx) {
     recognition.onerror = event => {
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
         active = false; setStatus('Microfone não autorizado'); toast('Autorize o microfone para usar o Lula.'); stopRecognition();
-      } else if (event.error !== 'aborted') setStatus('Reconhecimento indisponível');
+      } else if (event.error === 'network' || event.error === 'language-not-supported') {
+        useRecorder = true; stopRecognition(); startRecorder();
+      } else if (event.error !== 'aborted' && event.error !== 'no-speech') setStatus('Reconhecimento indisponível');
     };
     recognition.onend = () => {
       recognition = null;
-      if (active && current() && inRoom()) setTimeout(() => { if (active) startRecognition(); }, 500);
+      if (active && !useRecorder && !micStream && current() && inRoom()) setTimeout(() => { if (active) startRecognition(); }, 500);
     };
     try { recognition.start(); setStatus('Escuta ativa', true); }
-    catch { recognition = null; setStatus('Não foi possível iniciar'); }
+    catch { recognition = null; useRecorder = true; startRecorder(); }
   }
 
   function stopRecognition() {
@@ -180,18 +246,18 @@ export function initLuladroid(ctx) {
 
   function activate() {
     if (!current()) return toast('Entre em uma sala de voz para usar o Lula.');
-    if (!Recognition) return toast('Este navegador não oferece reconhecimento de voz.');
+    if (!Recognition && !window.MediaRecorder) return toast('Este navegador não permite transcrição de áudio.');
     if (!inRoom()) return toast('Entre na chamada antes de ativar o Lula.');
     if (active) return;
     showDialog('Ativar Lula', box => {
       box.classList.add('luladroid-consent');
       box.append(
-        el('p', '', 'Ao ativar, o navegador transcreve a sua fala nesta chamada. O texto fica no histórico restrito aos administradores do site. O áudio não é gravado pela Órbita.'),
+        el('p', '', 'Ao ativar, sua fala será transcrita pelo navegador ou, quando necessário, enviada em trechos de áudio para um serviço de transcrição. O histórico textual fica restrito aos administradores. A Órbita não armazena o áudio.'),
         el('p', '', 'Diga “eai Lula” seguido da pergunta. A resposta será reproduzida somente no seu dispositivo. Não fale dados confidenciais.'),
         button('Ativar escuta do Lula', () => {
           document.getElementById('app-dialog').close();
           active = true; listen.hidden = true; stopButton.hidden = false;
-          setStatus('Escuta ativa', true); startRecognition();
+          setStatus('Escuta ativa', true); if (Recognition && !useRecorder) startRecognition(); else startRecorder();
         }, 'primary'),
         button('Agora não', () => document.getElementById('app-dialog').close(), 'soft-button'),
       );
@@ -199,7 +265,7 @@ export function initLuladroid(ctx) {
   }
 
   function deactivate() {
-    active = false; stopRecognition();
+    active = false; stopRecognition(); stopRecorder(); useRecorder = false;
     listen.hidden = false; stopButton.hidden = true;
     setStatus('Assistente de voz');
   }
@@ -231,21 +297,21 @@ export function initLuladroid(ctx) {
     const next = scope();
     if (next !== callId) {
       callId = next; log = []; logBox.replaceChildren(); lastFinal = '';
-      if (!next) { active = false; stopRecognition(); setOpen(false); }
+      if (!next) { active = false; stopRecognition(); stopRecorder(); setOpen(false); }
     }
     const ready = current() && inRoom();
-    listen.disabled = !ready || !Recognition;
+    listen.disabled = !ready || (!Recognition && !window.MediaRecorder);
     transcripts.hidden = !state().isAdmin;
     if (!ready) {
-      active = false; stopRecognition();
+      active = false; stopRecognition(); stopRecorder(); useRecorder = false;
       setStatus(current() ? 'Entre na chamada para ativar' : 'Assistente de voz');
     } else if (active) setStatus('Escuta ativa', true);
-    else if (!Recognition) setStatus('Reconhecimento indisponível');
+    else if (!Recognition && !window.MediaRecorder) setStatus('Reconhecimento indisponível');
     else setStatus('Pronto para ativar');
   }
 
   function shutdown() {
-    closed = true; active = false; stopRecognition();
+    closed = true; active = false; stopRecognition(); stopRecorder();
     if ('speechSynthesis' in window) speechSynthesis.cancel();
     document.querySelectorAll('#luladroid-panel,#luladroid-toggle').forEach(node => node.remove());
   }
