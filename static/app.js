@@ -1349,8 +1349,10 @@ function navigation(direct=false){
 function renderCommunityRail(){
   const nodes=[],keep=new Set();
   for(const c of communities){keep.add(c.id);let b=communityNodes.get(c.id);if(!b){b=button(initials(c.name),()=>openCommunity(b.orbitaCommunity),'server-icon');b.dataset.communityId=c.id;communityNodes.set(c.id,b);}b.orbitaCommunity=c;b.title=c.name;b.setAttribute('aria-label',c.name);b.classList.toggle('active',c.id===activeCommunity&&!home&&!selected?.private);if(b.textContent!==initials(c.name))b.textContent=initials(c.name);nodes.push(b);}
-  for(const id of communityNodes.keys())if(!keep.has(id))communityNodes.delete(id);reconcileNodes($('rail-servers-list'),nodes);navigation(home||selected?.private);
+  for(const id of communityNodes.keys())if(!keep.has(id))communityNodes.delete(id);reconcileNodes($('rail-servers-list'),nodes);navigation(home||selected?.private);markLiveServers();
 }
+function markLiveServers(){for(const [id,b] of communityNodes){const ids=new Set((communityViews.get(id)?.channels||[]).map(ch=>ch.id));const live=publicVoicePresence.some(p=>ids.has(p.channel_id));b.classList.toggle('live',live);if(live)b.dataset.live='Chamada ativa';else delete b.dataset.live;}}
+window.addEventListener('orbita:presence',()=>markLiveServers());
 async function refreshCommunity(c,intent){
   const known=new Set(communityViews.get(c.id)?.channels.map(ch=>ch.id)||[]);
   const found=await checked(db.from('channels').select('*').eq('community_id',c.id).order('position'));

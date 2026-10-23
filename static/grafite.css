@@ -264,3 +264,20 @@ body[data-color-mode=light]{--accent:var(--ac);--accent-hover:var(--ac-h);--acce
 .chat-header .dm-head #header-ch-icon{display:none}
 .chat-header .dm-presence{border-color:var(--s1)}
 #channel-title.dm-head-name.ns{color:color-mix(in srgb,var(--nc1) 75%,#fff)!important;background:none!important;-webkit-text-fill-color:currentColor!important;animation:none!important}
+
+/* ===== Trilho v2: ícones nítidos, squircle, pílula animada e destaque do tema ===== */
+#server-rail .server-icon{position:relative;border-radius:50%!important;background:linear-gradient(160deg,var(--s3),var(--s2))!important;border:1px solid var(--bdh)!important;color:var(--t1)!important;font-weight:750;letter-spacing:.02em;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 2px 6px -2px #000a!important;transition:border-radius .22s cubic-bezier(.3,.7,.4,1),background .2s,box-shadow .2s,transform .18s,border-color .2s;overflow:visible}
+#server-rail .server-icon svg{color:var(--t1)!important;opacity:.92;transition:color .2s,transform .2s}
+#server-rail .server-icon::before{left:-12px;width:4px;background:var(--t1)!important;border-radius:0 4px 4px 0;transition:transform .22s cubic-bezier(.3,.7,.4,1),height .22s cubic-bezier(.3,.7,.4,1),background .2s}
+#server-rail .server-icon:hover{border-radius:16px!important;transform:translateY(-1px);background:linear-gradient(160deg,color-mix(in srgb,var(--ac) 30%,var(--s3)),color-mix(in srgb,var(--ac) 12%,var(--s2)))!important;border-color:color-mix(in srgb,var(--ac) 55%,var(--bdh))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 0 0 3px color-mix(in srgb,var(--ac) 16%,transparent),0 8px 18px -8px var(--ac-glow)!important}
+#server-rail .server-icon:hover svg{color:#fff!important;transform:scale(1.06)}
+#server-rail .server-icon.active,#server-rail .server-icon[aria-current=true],#server-rail .server-icon[aria-current=page],#server-rail .server-icon[aria-pressed=true]{border-radius:16px!important;background:var(--ac-grad)!important;border-color:transparent!important;color:var(--onac)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 8px 22px -10px var(--ac)!important}
+#server-rail .server-icon.active svg,#server-rail .server-icon[aria-current=page] svg,#server-rail .server-icon[aria-current=true] svg{color:var(--onac)!important}
+#server-rail .server-icon.active::before,#server-rail .server-icon[aria-current=page]::before,#server-rail .server-icon[aria-current=true]::before{background:var(--ac)!important;height:36px}
+#server-rail .server-icon:focus-visible{outline:2px solid var(--ac)!important;outline-offset:3px}
+#server-rail .server-icon.has-unread::after,#server-rail .server-icon.unread::after{content:"";position:absolute;right:-2px;bottom:-2px;width:12px;height:12px;border-radius:50%;background:var(--t1);border:3px solid var(--bg)}
+#server-rail .server-icon .badge,#server-rail .server-icon #friends-badge:not(:empty),#server-rail .server-icon .mention-badge{position:absolute;right:-5px;bottom:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--err)!important;color:#fff;font-size:10.5px;font-weight:800;display:grid;place-items:center;border:3px solid var(--bg)}
+#server-rail .server-icon.live::after{content:"";position:absolute;right:-3px;bottom:-3px;width:14px;height:14px;border-radius:50%;background:var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23062' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 9v6M12 6v12M16 9v6'/%3E%3C/svg%3E") center/9px no-repeat;border:3px solid var(--bg);animation:rail-live 1.6s ease-in-out infinite}
+@keyframes rail-live{50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 30%,transparent)}}
+#server-rail .rail-divider{height:2px!important;width:28px!important;margin:6px auto!important;border-radius:2px;background:linear-gradient(90deg,transparent,var(--bdh),transparent)!important}
+@media(prefers-reduced-motion:reduce){#server-rail .server-icon,#server-rail .server-icon::before,#server-rail .server-icon svg{transition:none}#server-rail .server-icon:hover{transform:none}#server-rail .server-icon.live::after{animation:none}}
