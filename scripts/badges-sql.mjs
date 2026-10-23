@@ -157,7 +157,8 @@ select jsonb_build_object(
  'carnaval',(select count(*) from m where extract(month from local)=2),
  'junina',(select count(*) from m where extract(month from local)=6),
  'ferias',(select count(*) from m where extract(month from local) in (1,7)),
- 'orbita_day',((select count(*) from days where extract(month from day)=10 and extract(day from day)=19)+(select count(*) from m where extract(month from local)=10 and extract(day from local)=19)),
+ 'orbita_day',((select count(*) from days where extract(month from day)=10 and extract(day from day)=19)+(select count(*) from m where extract(month from local)=10 and extract(day from local)=19))
+) || jsonb_build_object(
  'call_minutes',coalesce((select sum(amount) from e where kind='call_minute'),0),
  'long_call',(select count(*) from (select day from e where kind='call_minute' group by day having sum(amount)>=180) d),
  'screenshare',coalesce((select sum(amount) from e where kind='screenshare_minute'),0),
