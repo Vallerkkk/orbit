@@ -1,8 +1,8 @@
 {
-  "version": "e11d3526d1992209",
-  "entry": "/static/dist/app-YHYWQ7S4.js",
+  "version": "109847ec13cddb44",
+  "entry": "/static/dist/app-3DTYCEST.js",
   "files": [
-    "/static/dist/app-YHYWQ7S4.js",
+    "/static/dist/app-3DTYCEST.js",
     "/static/dist/call-layout-41217c9121da3858.css",
     "/static/dist/chunk-admin-controls-GQTGOWXU.js",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js",
@@ -27,7 +27,7 @@
     "/static/dist/chunk-prod-BILYJVBG.js",
     "/static/dist/chunk-profile-appearance-Q4LHGK7B.js",
     "/static/dist/chunk-profile-studio-4BGWRWVI.js",
-    "/static/dist/chunk-social-feed-S5WLRCYD.js",
+    "/static/dist/chunk-social-feed-R5YWRPHP.js",
     "/static/dist/chunk-social-tools-DK33SCIA.js",
     "/static/dist/chunk-telemetry-L3E3VUOP.js",
     "/static/dist/chunk-voice-chat-BHSY2K7F.js",
@@ -42,7 +42,7 @@
     "/static/dist/orbita-v2-7ced82f43aa67016.css",
     "/static/dist/polish-9e30c3704e33af2f.css",
     "/static/dist/profile-studio-2945f3cd485c28f5.css",
-    "/static/dist/social-feed-db5be836f065552c.css",
+    "/static/dist/social-feed-98f30344f5e35420.css",
     "/static/dist/store-v2-4b284961e3da793c.css",
     "/static/dist/style-bb7bec90e03c46ab.css"
   ],
@@ -51,7 +51,7 @@
     "/static/enhancements.css": "/static/dist/enhancements-bae842f815459588.css",
     "/static/interface.css": "/static/dist/interface-6924e0bf452e76e0.css",
     "/static/fluency.css": "/static/dist/fluency-e8bd643cf9fd04e1.css",
-    "/static/social-feed.css": "/static/dist/social-feed-db5be836f065552c.css",
+    "/static/social-feed.css": "/static/dist/social-feed-98f30344f5e35420.css",
     "/static/call-layout.css": "/static/dist/call-layout-41217c9121da3858.css",
     "/static/community-ux.css": "/static/dist/community-ux-a28b5109c4b7b2bc.css",
     "/static/identity.css": "/static/dist/identity-fd4b34a93e86c63c.css",
@@ -63,7 +63,7 @@
     "/static/grafite.css": "/static/dist/grafite-5adfeec8fa3e83d8.css"
   },
   "integrity": {
-    "/static/dist/app-YHYWQ7S4.js": "1affeb84979ba14cdfe6259b004364ea6743d1fcdc6b3c4e039c9b7910893599",
+    "/static/dist/app-3DTYCEST.js": "0a3d273097a1a68f122133449989601cd36a01d827d6e4a9654c183086b8ac5a",
     "/static/dist/call-layout-41217c9121da3858.css": "41217c9121da385886b24e21b88d59a06c04e575277db89d6c1901b1a99d41da",
     "/static/dist/chunk-admin-controls-GQTGOWXU.js": "5319426849b564d55b883205e9bf2346539b5cbf0d28a74c5df453e03ddf63d4",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js": "db2508c2c9152fbe631806e53dd148bd67a8b3695a0094caa6145d906b978027",
@@ -88,7 +88,7 @@
     "/static/dist/chunk-prod-BILYJVBG.js": "392e7c812c1ce2bb32af37ededef482035b91913c868d087465a8667a23b8a0a",
     "/static/dist/chunk-profile-appearance-Q4LHGK7B.js": "c7553595dbcde8bec033ff0159f0470ddfad656a5c2c4a153d0dc0ffda282b17",
     "/static/dist/chunk-profile-studio-4BGWRWVI.js": "fe98c771b9eb034f5503443460156c5b78e935d0fe840772082af1076c60780f",
-    "/static/dist/chunk-social-feed-S5WLRCYD.js": "5b91efe0f16fa2c19ec99508b1959f85ee2ab4f7187909d869d1fcf59653a512",
+    "/static/dist/chunk-social-feed-R5YWRPHP.js": "d6678d38f1d9b47ca7cd32118f21bd5cf9a288639fe11c5ec0549f250fde3ffd",
     "/static/dist/chunk-social-tools-DK33SCIA.js": "b30c1a3a2f6f141ff22b008f02c967a07474812987c854c9b3785374a78e1b76",
     "/static/dist/chunk-telemetry-L3E3VUOP.js": "3132e8830e5589029e82064b1fc2e9c325e2bcaaaf0f50eb9a7cc31f52ddba8c",
     "/static/dist/chunk-voice-chat-BHSY2K7F.js": "ec22cc5db5a13e64232ba19973145824603959f2778ecc8864a429ffca62d1cf",
@@ -103,7 +103,7 @@
     "/static/dist/orbita-v2-7ced82f43aa67016.css": "7ced82f43aa67016bae4b5bba0a33ab29ed25d5b5899d78549a929e4b7aef28c",
     "/static/dist/polish-9e30c3704e33af2f.css": "9e30c3704e33af2f58e9330948fffaeb5dca7beb172355dfbb845e08418161ef",
     "/static/dist/profile-studio-2945f3cd485c28f5.css": "2945f3cd485c28f5bb4031ed013e7514822d269ecadf9e474d6d5c0548acf774",
-    "/static/dist/social-feed-db5be836f065552c.css": "db5be836f065552c817829a13a806b531ff74bc52ee6c642a31d8b1cf02d0bd9",
+    "/static/dist/social-feed-98f30344f5e35420.css": "98f30344f5e35420ebbb55f440f804c4109ecc6b4ebf8d775a6b80f6186b6113",
     "/static/dist/store-v2-4b284961e3da793c.css": "4b284961e3da793c07bc58497ed02a4f8aa58ccf96599fcb948bfad1b209da68",
     "/static/dist/style-bb7bec90e03c46ab.css": "bb7bec90e03c46abfccf343a64273f9728219b50e239b495162c98fc83acacba"
   }
