@@ -164,3 +164,39 @@
  .social-feed .sf-more-tabs>summary .sf-ico{display:none}
 }
 .social-feed .sf-act{white-space:nowrap;flex:0 0 auto;min-width:0!important;width:auto!important}.social-feed .sf-actions{flex-wrap:nowrap;gap:2px}
+/* Barra de ações: distribuição uniforme, alinhamento e microanimações */
+.social-feed .sf-actions{display:grid!important;grid-auto-flow:column;grid-auto-columns:1fr;justify-items:center;align-items:center;gap:2px;margin:10px -6px 0;padding-top:6px;border-top:1px solid color-mix(in srgb,currentColor 7%,transparent)}
+.social-feed .sf-actions>*{justify-self:center}
+.social-feed .sf-act{display:inline-flex!important;align-items:center;justify-content:center;gap:6px;min-width:44px!important;height:36px;padding:0 12px!important;border-radius:999px!important;line-height:1;transition:background .18s,color .18s,transform .18s}
+.social-feed .sf-act .sf-ico{width:19px;height:19px;stroke-width:1.75;display:block;transition:transform .18s}
+.social-feed .sf-act span{display:inline-block;min-width:1ch;font-variant-numeric:tabular-nums;font-weight:600;line-height:19px}
+.social-feed .sf-act span:empty{display:none}
+.social-feed .sf-act:hover .sf-ico{transform:scale(1.12)}
+.social-feed .sf-act:not(.sf-like,.sf-repost,.sf-save):hover{color:#a99bff!important;background:color-mix(in srgb,#8b6cff 14%,transparent)!important}
+.social-feed .sf-like:hover{color:#ff6fa8!important;background:color-mix(in srgb,#ff6fa8 14%,transparent)!important}
+.social-feed .sf-repost:hover{color:#3ddc84!important;background:color-mix(in srgb,#3ddc84 14%,transparent)!important}
+.social-feed .sf-save:hover{color:#f5b84a!important;background:color-mix(in srgb,#f5b84a 14%,transparent)!important}
+.social-feed .sf-save[aria-pressed=true]{color:#f5b84a!important}
+.social-feed .sf-act:active{transform:scale(.92)}
+.social-feed .sf-act:focus-visible{outline:2px solid #e47fd0;outline-offset:2px}
+.social-feed .sf-like{position:relative}
+.social-feed .sf-like.sf-pop .sf-ico{animation:sf-heart .45s cubic-bezier(.2,1.6,.4,1)}
+.social-feed .sf-like.sf-pop::before{content:"";position:absolute;left:12px;top:50%;width:20px;height:20px;margin-top:-10px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,#ff6fa8 0 2px,transparent 3px) 50% 0/6px 6px no-repeat,radial-gradient(circle,#ffb3d1 0 2px,transparent 3px) 100% 50%/6px 6px no-repeat,radial-gradient(circle,#ff6fa8 0 2px,transparent 3px) 50% 100%/6px 6px no-repeat,radial-gradient(circle,#ffb3d1 0 2px,transparent 3px) 0 50%/6px 6px no-repeat;animation:sf-burst .5s ease-out forwards}
+.social-feed .sf-repost.sf-pop .sf-ico{animation:sf-spin .45s ease-out}
+.social-feed .sf-save.sf-pop .sf-ico{animation:sf-bounce .45s cubic-bezier(.3,1.8,.5,1)}
+.social-feed .sf-act:not(.sf-like,.sf-repost,.sf-save).sf-pop .sf-ico{animation:sf-heart .3s ease-out}
+.social-feed .sf-act span.sf-tick{animation:sf-tick .34s ease-out}
+@keyframes sf-heart{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
+@keyframes sf-burst{0%{transform:scale(.4);opacity:1}100%{transform:scale(2.1);opacity:0}}
+@keyframes sf-spin{from{transform:rotate(0)}to{transform:rotate(180deg)}}
+@keyframes sf-bounce{0%{transform:translateY(0)}35%{transform:translateY(-5px) scale(1.1)}70%{transform:translateY(1px)}100%{transform:none}}
+@keyframes sf-tick{0%{transform:translateY(-6px);opacity:0}100%{transform:none;opacity:1}}
+@media(max-width:780px){.social-feed .sf-act{padding:0 8px!important;min-width:38px!important}.social-feed .sf-actions{margin:8px -4px 0}}
+@media(prefers-reduced-motion:reduce){.social-feed .sf-act,.social-feed .sf-act .sf-ico{transition:none}.social-feed .sf-act.sf-pop .sf-ico,.social-feed .sf-act.sf-pop::before,.social-feed .sf-act span.sf-tick{animation:none!important}.social-feed .sf-act:hover .sf-ico,.social-feed .sf-act:active{transform:none}}
+#app-view .social-feed .sf-actions{display:grid!important;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);justify-content:stretch;gap:2px}
+#app-view .social-feed .sf-actions button{margin:0!important;justify-self:center;max-width:100%}
+#app-view .social-feed .sf-actions button[aria-label="Curtir"]:not([aria-pressed=true]){color:var(--sf-muted)}
+#app-view .social-feed .sf-actions button[aria-pressed=true]:not(.sf-like,.sf-repost,.sf-save){color:var(--v2-accent)}
+@media(max-width:780px){#app-view .social-feed .sf-act{padding:0 6px!important;min-width:34px!important;gap:4px}}
+#app-view .social-feed .sf-actions{grid-auto-columns:auto;justify-content:space-around}
+#app-view .social-feed .sf-actions .sf-spacer{display:none}

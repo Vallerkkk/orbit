@@ -202,3 +202,10 @@ export function initSocialFeed(ctx) {
   nav.onclick=()=>open();window.addEventListener('online',()=>{if(!root.hidden)updateComposer();});window.addEventListener('offline',()=>{if(!root.hidden)updateComposer();});
   return {open,hide,legacyReports:moderation,sessionChanged:reset,deepLink(){const id=new URL(location.href).searchParams.get('post');if(validId(id)){open('thread',{parent:id});const url=new URL(location.href);url.searchParams.delete('post');history.replaceState(null,'',url);}}};
 }
+
+// Microanimações da barra de ações: pop no clique e transição do contador (sem efeito com movimento reduzido).
+document.addEventListener('click',event=>{const node=event.target.closest?.('.social-feed .sf-act');if(!node||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  node.classList.remove('sf-pop');void node.offsetWidth;node.classList.add('sf-pop');setTimeout(()=>node.classList.remove('sf-pop'),600);
+  const count=node.querySelector('span'),before=count?.textContent;if(!count)return;
+  for(const wait of [60,400,1200])setTimeout(()=>{if(count.isConnected&&count.textContent!==before&&!count.classList.contains('sf-tick')){count.classList.add('sf-tick');setTimeout(()=>count.classList.remove('sf-tick'),360);}},wait);
+},true);
