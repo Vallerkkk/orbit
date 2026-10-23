@@ -976,14 +976,21 @@ async function initSocial() {
 const memberNodes=new Map(),memberHeads=new Map(),MEMBER_CAP=200;let memberExpand=new Set();
 const membersKey=()=>'orbita-members-panel:'+(session?.user.id||'guest');
 function membersWanted(){const saved=localStorage.getItem(membersKey());if(saved==='1')return true;if(saved==='0')return false;return matchMedia('(min-width:1100px)').matches;}
-function membersContext(){if(!session||home||!selected)return '';if(selected.private)return 'dm';return selected.kind==='voice'?'':'channel';}
+function membersContext(){if(!session||home||!selected)return '';{const fv=document.getElementById('feed-view');if(fv&&!fv.hidden)return '';}if(selected.private)return 'dm';return selected.kind==='voice'?'':'channel';}
 function syncMembersPanel(){const ctx=membersContext(),open=!!ctx&&membersWanted(),btn=$('btn-members-toggle'),side=$('members-sidebar');
   btn.hidden=!ctx;btn.classList.toggle('active',open);btn.setAttribute('aria-pressed',String(open));const label=open?'Ocultar membros':'Mostrar membros';btn.title=label+' (Ctrl+Shift+M)';btn.setAttribute('aria-label',label);
+  const hideBtn=$('mv2-hide'),showBtn=$('mv2-show');if(hideBtn)hideBtn.hidden=!open;if(showBtn)showBtn.hidden=!ctx||open;document.body.classList.toggle('mv2-feed',!!document.getElementById('feed-view')&&!document.getElementById('feed-view').hidden);
   side.hidden=!open;side.classList.add('mv2');side.dataset.ctx=ctx;document.body.classList.add('members-hidden');document.body.classList.toggle('mv2-open',open);document.body.classList.remove('members-open');return open;}
 function toggleMembers(force){const next=typeof force==='boolean'?force:!$('btn-members-toggle').classList.contains('active');localStorage.setItem(membersKey(),next?'1':'0');renderMembers();if(next)requestAnimationFrame(()=>$('member-list').querySelector('.member')?.focus({preventScroll:true}));}
 $('btn-members-toggle').onclick=()=>toggleMembers();
+{const chev=d=>'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+d+'"/></svg>';
+ const hideBtn=el('button','mv2-edge-btn');hideBtn.id='mv2-hide';hideBtn.type='button';hideBtn.title='Ocultar membros';hideBtn.setAttribute('aria-label','Ocultar membros');hideBtn.innerHTML=chev('m6 17 5-5-5-5M13 17l5-5-5-5');hideBtn.onclick=()=>toggleMembers(false);
+ document.querySelector('#members-sidebar .member-heading')?.append(hideBtn);
+ const showBtn=el('button','mv2-edge-btn mv2-show');showBtn.id='mv2-show';showBtn.type='button';showBtn.hidden=true;showBtn.title='Mostrar membros';showBtn.setAttribute('aria-label','Mostrar membros');showBtn.innerHTML=chev('m11 17-5-5 5-5M18 17l-5-5 5-5');showBtn.onclick=()=>toggleMembers(true);
+ document.body.append(showBtn);
+ const fvWatch=new MutationObserver(()=>{const fv=document.getElementById('feed-view');if(fv&&!fv.__mv2){fv.__mv2=1;new MutationObserver(()=>renderMembers()).observe(fv,{attributes:true,attributeFilter:['hidden']});renderMembers();}if(fv)fvWatch.disconnect();});fvWatch.observe(document.body,{childList:true,subtree:true});}
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key.toLowerCase()==='m'&&membersContext()){e.preventDefault();toggleMembers();}if(e.key==='Escape'&&document.body.classList.contains('mv2-open')&&!matchMedia('(min-width:1100px)').matches&&!$('app-dialog').open)toggleMembers(false);});
-document.addEventListener('pointerdown',e=>{if(!document.body.classList.contains('mv2-open')||matchMedia('(min-width:1100px)').matches)return;if(e.target.closest('#members-sidebar,#btn-members-toggle,dialog'))return;toggleMembers(false);},true);
+document.addEventListener('pointerdown',e=>{if(!document.body.classList.contains('mv2-open')||matchMedia('(min-width:1100px)').matches)return;if(e.target.closest('#members-sidebar,#btn-members-toggle,#mv2-show,dialog'))return;toggleMembers(false);},true);
 function memberActivity(p,isOnline,voice){if(voice)return voice.screen?'Ao vivo · compartilhando a tela':'Em voz · '+(channels.find(c=>c.id===voice.channel_id)?.name||'chamada');return p.custom_status||p.presence_activity||(isOnline?({idle:'Ausente',dnd:'Não perturbe'}[p.presence_status]||'Disponível'):'Offline');}
 function memberRow(p,isOnline,voice){const signature=JSON.stringify([p.display_name,p.avatar_src,p.avatar_color,p.custom_status,p.presence_activity,p.presence_status,isOnline,voice?.channel_id,!!voice?.screen,memberRoles.filter(r=>r.user_id===p.id),communityRoleList.length,roleFor(p.id),JSON.stringify(p.appearance||{})]);
   const cached=memberNodes.get(p.id);if(cached?.signature===signature)return cached.node;

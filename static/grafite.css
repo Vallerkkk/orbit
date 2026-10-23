@@ -410,4 +410,11 @@ html body #members-sidebar.mv2[hidden]{transform:translateX(100%);visibility:hid
 @media (min-width:1100px){body.mv2-open #app-view .main{margin-right:var(--mv2-w,256px);transition:margin-right .22s cubic-bezier(.2,.8,.2,1)}}
 @media (max-width:1099.98px){html body #members-sidebar.mv2{top:56px;width:min(300px,86vw);border-radius:14px 0 0 14px;border:1px solid var(--bdh)!important;border-right:0!important;box-shadow:-24px 0 48px -16px rgba(0,0,0,.6)}}
 @media (max-width:760px){html body #members-sidebar.mv2{top:calc(56px + env(safe-area-inset-top));bottom:env(safe-area-inset-bottom)}}
+#members-sidebar.mv2 .member-heading .mv2-edge-btn{margin-left:4px}
+.mv2-edge-btn{display:grid;place-items:center;width:28px;height:28px;padding:0;border-radius:7px;background:transparent!important;border:1px solid transparent!important;color:var(--t3)!important;cursor:pointer;flex:none}
+.mv2-edge-btn:hover,.mv2-edge-btn:focus-visible{color:var(--ac)!important;background:color-mix(in srgb,var(--ac) 12%,transparent)!important;border-color:color-mix(in srgb,var(--ac) 35%,transparent)!important}
+.mv2-edge-btn:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+.mv2-edge-btn[hidden],body.mv2-feed .mv2-edge-btn,body.mv2-feed #btn-members-toggle,body.mv2-feed #members-sidebar{display:none!important}
+.mv2-show{position:fixed;top:64px;right:0;z-index:39;width:22px;height:36px;border-radius:9px 0 0 9px;background:var(--s2)!important;border:1px solid var(--bd)!important;border-right:0!important}
+@media (max-width:760px){.mv2-show{top:calc(64px + env(safe-area-inset-top));width:26px;height:40px}}
 @media (prefers-reduced-motion:reduce){html body #members-sidebar.mv2,html body #members-sidebar.mv2[hidden],body.mv2-open #app-view .main{transition:none!important}}

@@ -32,6 +32,22 @@ const shots='/workspace/redesign-shots';fs.mkdirSync(shots,{recursive:true});
   await page.reload({waitUntil:'networkidle'});await page.locator('#message-list .message').first().waitFor();assert.equal(await side.isVisible(),false);
   await page.keyboard.press('Control+Shift+M');await side.locator('.mv2-row').first().waitFor();
   if(label==='desktop'){await page.evaluate(OTHER=>{const d=window.__qaData;},OTHER);}
+  // v3: » no topo da coluna oculta, « na borda direita restaura (mesmo estado do botão do cabeçalho)
+  const hide=page.locator('#mv2-hide'),show=page.locator('#mv2-show');
+  assert.equal(await hide.isVisible(),true);assert.equal(await show.isVisible(),false);assert.equal(await hide.getAttribute('aria-label'),'Ocultar membros');
+  if(label!=='tablet')await page.screenshot({path:path.join(shots,`full-members-v3-${label}-shown.png`)});
+  await hide.click();await page.waitForTimeout(150);assert.equal(await side.isVisible(),false);assert.equal(await btn.getAttribute('aria-pressed'),'false');
+  assert.equal(await show.isVisible(),true);assert.equal(await show.getAttribute('title'),'Mostrar membros');
+  assert.equal(await page.evaluate(()=>Object.entries(localStorage).find(([k])=>k.startsWith('orbita-members-panel:'))?.[1]),'0');
+  if(label==='desktop')await page.screenshot({path:path.join(shots,`full-members-v3-desktop-hidden.png`)});
+  await show.click();await side.locator('.mv2-row').first().waitFor();assert.equal(await btn.getAttribute('aria-pressed'),'true');assert.equal(await show.isVisible(),false);
+  if(label==='desktop'){
+   await page.locator('#feed-nav').click();await page.locator('#feed-view:not([hidden])').waitFor();await page.waitForTimeout(150);
+   assert.equal(await side.isVisible(),false);assert.equal(await btn.isVisible(),false);assert.equal(await show.isVisible(),false);assert.equal(await hide.isVisible(),false);
+   await page.screenshot({path:path.join(shots,'full-members-v3-feed.png')});
+   await page.locator('#rail-servers-list .server-icon').first().click().catch(()=>{});await page.locator('.channel-item,[data-channel-id]').filter({hasNotText:'voz'}).first().click().catch(()=>{});
+   await page.locator('#message-list .message').first().waitFor();await side.locator('.mv2-row').first().waitFor();assert.equal(await btn.isVisible(),true);
+  }
   if(mobile){await page.mouse.click(60,500);await page.waitForTimeout(150);assert.equal(await side.isVisible(),false,'toque fora fecha a gaveta');}
   assert.deepEqual(errors,[]);report.push({label,sections:heads,incremental:true,persisted:true});await context.close();
  }
