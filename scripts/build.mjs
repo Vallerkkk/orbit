@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),staticDir=path.join(root,'static'),dist=path.join(staticDir,'dist');
 await mkdir(dist,{recursive:true});
+try{const {generate}=await import('./release-notes.mjs');console.error('release-notes',JSON.stringify(generate(root)));}catch(error){console.error('release-notes: mantendo o JSON commitado',error?.message);}
 const hash=data=>createHash('sha256').update(data).digest('hex').slice(0,16);
 const cssMap={};const cssFiles=['style','enhancements','interface','fluency','social-feed','call-layout','community-ux','identity','polish','modern','orbita-v2','profile-studio','store-v2','grafite'];
 for(const name of cssFiles){const source=await readFile(path.join(staticDir,name+'.css'));const {code}=transform({filename:name+'.css',code:source,minify:true,targets:{chrome:110<<16,safari:16<<16,firefox:115<<16}});const file=name+'-'+hash(code)+'.css';await writeFile(path.join(dist,file),code);cssMap['/static/'+name+'.css']='/static/dist/'+file;}

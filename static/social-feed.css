@@ -273,3 +273,4 @@
 .social-feed .sf-tab[aria-current=page]{color:var(--t1)!important;box-shadow:inset 0 -2px 0 var(--ac)}
 .social-feed .sf-tab[aria-current=page] svg{color:var(--ac)}
 @media(prefers-reduced-motion:reduce){.social-feed .sf-post,.social-feed .sf-act,.social-feed .sf-live-badge{transition:none;animation:none}.social-feed .sf-post:hover{transform:none}}
+.social-feed .sf-news-new{margin-left:auto;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:750;letter-spacing:.04em;text-transform:uppercase;background:color-mix(in srgb,var(--ac) 16%,transparent);color:var(--accent-ink,var(--ac));border:1px solid color-mix(in srgb,var(--ac) 35%,transparent)}.social-feed .sf-news-new[hidden]{display:none}.social-feed .sf-news-new:not([hidden])+.sf-news-dot{margin-left:6px}

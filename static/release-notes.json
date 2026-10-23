@@ -1,0 +1,149 @@
+{
+ "generated": true,
+ "releases": [
+  {
+   "version": "2026.10.23+49fd08d",
+   "date": "23 out 2026",
+   "highlights": [
+    [
+     "loja",
+     "Loja v2: coleções animadas, bordas de cartão e estilos de nome"
+    ],
+    [
+     "visual",
+     "Configurações unificadas: tudo num só lugar, com o Perfil e prévia ao vivo"
+    ],
+    [
+     "feed",
+     "Novos membros: atalho no trilho e linha do tempo para dar boas-vindas"
+    ],
+    [
+     "correcoes",
+     "Correções: excluir servidor/canal e nomes estilizados nas chamadas"
+    ]
+   ],
+   "items": {
+    "feed": [
+     "Feed v3: ações coloridas com estados, cartões e widgets mais detalhados, composer com ícones…",
+     "Feed: remove a aba 'Novos membros' da barra",
+     "Novos membros: título próprio e só o atalho do trilho destacado",
+     "Trilho: atalho 'Novos membros' ao lado do Feed, com estado ativo e acesso por teclado",
+     "Feed Novos membros: timeline por dia com cartões, hero de boas-vindas, 👋 com RLS, Realtime…"
+    ],
+    "visual": [
+     "Temas: o tema escolhido controla todo o sistema de destaque",
+     "Página /instalar redesenhada",
+     "Configurações v2: central única",
+     "Paleta Grafite neutro: tokens centrais, tooltip custom, tag ADM, agrupamento, pill de data e…"
+    ],
+    "chamadas": [
+     "Chamada: nomes com estilo da Loja sempre legíveis nos chips, lista de voz e painel do usuário"
+    ],
+    "adm": [
+     "ADM: exclusão de servidor/canal fecha o diálogo, limpa o estado e volta ao servidor padrão"
+    ],
+    "loja": [
+     "Loja v2: coleções animadas, borda de cartão e estilos de nome"
+    ],
+    "perfil": [
+     "Insígnias v2: arte premium por categoria, nível e raridade",
+     "Editor de perfil: cards com ícones, estados de hover e ativo, prévia centralizada e maior,…"
+    ]
+   }
+  },
+  {
+   "version": "2026.10.22+38e98c7",
+   "date": "22 out 2026",
+   "highlights": [
+    [
+     "chamadas",
+     "Vídeo nítido nas chamadas: câmera e tela sem borrão"
+    ],
+    [
+     "chamadas",
+     "Ouvir juntos com player grande e controles próprios"
+    ],
+    [
+     "feed",
+     "Feed com nova barra de publicação e Novidades"
+    ],
+    [
+     "visual",
+     "Visual novo em todo o app, com configurações em abas"
+    ]
+   ],
+   "items": {
+    "visual": [
+     "Redesign geral do app: chat, canais, barra lateral e janelas",
+     "Configurações organizadas em abas",
+     "Ícones de \"ao vivo\" na lista de salas de voz",
+     "Lula: transcrição no servidor via Gemini quando não há STT_API_KEY, modo digitado como…",
+     "Add server-side desktop transcription fallback",
+     "Integrate Lula AI with Flatkey MiniMax-H3",
+     "Rename voice assistant to Lula",
+     "Regenera supabase.sql com o GRANT de valid_poll",
+     "Migração: concede EXECUTE em orbita_private.valid_poll(jsonb) a authenticated",
+     "Use NVIDIA NIM Nemotron 3 Ultra for LulaDroid",
+     "Integrate LulaDroid with OpenRouter",
+     "Adiciona versao e botao para forcar atualizacao da interface",
+     "Importa Orbita corrigida com envio de mensagens e novo layout"
+    ],
+    "correcoes": [
+     "Vídeo da câmera e da tela não fica mais borrado ou escurecido",
+     "\"Sobre você\" atualizado aparece para todo mundo",
+     "Decorações não cobrem mais o vídeo das chamadas",
+     "Corrige 'permission denied for table profiles': restaura grants por coluna ausentes no banco",
+     "Corrige vídeo borrado nos tiles: a figcaption",
+     "Corrige redução de ruído: não inicializa o RNNoise antes de setProcessor",
+     "Corrige fotos de perfil: <img> com object-fit cover centralizado, recorte quadrado 512px no…",
+     "Corrige permissão ao enviar mensagens: migração idempotente de grants/política, gatilhos…",
+     "Corrige IA de chamadas: import time, seguranca e memoria"
+    ],
+    "audio": [
+     "Filtro de ruído e medidor do microfone nas configurações de voz",
+     "Sons sutis e animações nos controles da chamada",
+     "Enable PC/Electron fallback audio transcription for Lula",
+     "Animações e sons sutis na galeria de decorações",
+     "Atualiza para Jesus 19 corrigido com audio e LulaDroid"
+    ],
+    "perfil": [
+     "Decorações de perfil com quadros e efeitos animados",
+     "Fotos de perfil exibidas corretamente",
+     "Migration de insígnias: divide jsonb_build_object de badge_metrics",
+     "Perfil: 'Sobre você' dos outros é relido de profiles ao abrir o cartão",
+     "Painéis 1:1",
+     "Redesenha interface e cria Profile Decoration gratuito"
+    ],
+    "loja": [
+     "Loja de pacotes, fontes do nome, insígnias e editor de perfil estilo Discord"
+    ],
+    "chat": [
+     "O envio de mensagens voltou a funcionar de forma confiável",
+     "Seletor de mídia no chat: emojis Unicode completos, GIFs e figurinhas via GIPHY",
+     "Compacta o botao de chat no cabecalho mobile"
+    ],
+    "adm": [
+     "Comandos de moderação para ADM global com checagem no servidor, auditoria e painel Administração"
+    ],
+    "chamadas": [
+     "Barra de controles flutuante na chamada (microfone, câmera, tela, Ouvir juntos, Mais, Sair)",
+     "Decorações do seu perfil aparecem no seu cartão da chamada",
+     "Ouvir juntos repaginado: player grande 16:9, fila com capa e quem adicionou, controles próprios e qualidade",
+     "Ouvir juntos v2: player 16:9 em destaque",
+     "Ícones ao vivo na lista de voz",
+     "Reconstrói a galeria de Decorações de Perfil: todas as decorações do pacote original por…",
+     "Ajusta cabecalho mobile da chamada com o LulaDroid",
+     "Evita duplicar o painel LulaDroid ao entrar na chamada",
+     "Implementa painel LulaDroid na chamada com respostas Gemini"
+    ],
+    "feed": [
+     "Feed novo, com abas Para você, Seguindo, Em alta e Salvos",
+     "Painel \"Ao vivo agora\" com as salas abertas",
+     "Barra de publicação mais limpa, com ícones",
+     "Esta área de Novidades",
+     "Feed: composer em barra única"
+    ]
+   }
+  }
+ ]
+}
