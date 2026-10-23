@@ -909,7 +909,7 @@ async function loadSocial() {
     checked(db.from('friendships').select('*')),
     checked(db.from('conversations').select('*').order('created_at',{ascending:false}))]);
   if(session?.user.id!==userId||revision!==socialRevision)return;[people,friendships,conversations]=results;peopleById=new Map(people.map(p=>[p.id,p]));peopleByUsername=new Map(people.map(p=>[p.username?.toLowerCase(),p]));
-  profile=person(session.user.id);await hydrateProfileMedia();if(session?.user.id!==userId||revision!==socialRevision)return;$('user-name').textContent=profile.display_name;
+  profile=person(session.user.id);await hydrateProfileMedia();if(session?.user.id!==userId||revision!==socialRevision)return;$('user-name').textContent=profile.display_name;setSelfHandle(profile.username);
   setAvatar($('user-avatar'),profile);
   renderSocial();renderMembers();if(home)renderFriends();if(room)updateCallUI();
 }
@@ -1437,6 +1437,8 @@ $('up-profile-btn').onclick=()=>{
 };
 document.querySelectorAll('.sp-opt').forEach(opt=>opt.onclick=async()=>{try{const value=opt.dataset.status==='offline'?'invisible':opt.dataset.status||'online';await checked(db.from('profiles').update({presence_status:['online','idle','dnd','invisible'].includes(value)?value:'online'}).eq('id',session.user.id));$('status-popover').classList.add('hidden');await loadSocial();if(presenceChannel){if(value==='invisible')await presenceChannel.untrack();else await publishVoicePresence(true);}updateSelfStatus();}catch(e){toast(errorText(e));}});
 $('save-custom-status-btn').onclick=async()=>{try{await checked(db.from('profiles').update({custom_status:$('custom-status-input').value.trim().slice(0,80)}).eq('id',session.user.id));await loadSocial();updateSelfStatus();$('status-popover').classList.add('hidden');}catch(e){toast(errorText(e));}};
+// @handle no painel do usuário (abaixo do nome, truncado).
+function setSelfHandle(u){const info=$('user-name')?.parentElement;if(!info)return;let h=$('user-handle');if(!h){h=el('span','up-handle');h.id='user-handle';info.insertBefore(h,$('self-status-text'));}h.textContent=u?'@'+u:'';h.hidden=!u;}
 function updateSelfStatus(){if(!profile)return;$('self-status-text').textContent=profile.custom_status||({online:'Disponível',idle:'Ausente',dnd:'Não perturbar',invisible:'Invisível'}[profile.presence_status]||'Disponível');$('self-status-dot').style.background=({online:'var(--online)',idle:'var(--idle)',dnd:'var(--dnd)',invisible:'var(--offline)'}[profile.presence_status]);}
 const baseLoadSocial=loadSocial;loadSocial=async()=>{await baseLoadSocial();updateSelfStatus();};
 const baseSettings=$('settings').onclick;
