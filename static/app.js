@@ -1831,7 +1831,7 @@ const settingsBeforeAudioDevices=$('settings').onclick;
 $('settings').onclick=()=>{settingsBeforeAudioDevices();audioTools.fields($('dialog-content'));};
 
 const adminContext={el,button,toast,checked,showDialog,inputField,errorText,apiFetch,
- state:()=>({db,session,people,siteRoles,activeCommunity,selected}),hasPermission:permission=>hasCommunityPermission(permission),
+ state:()=>({db,session,people,siteRoles,activeCommunity,selected,communities,channels,callChannel,messages}),hasPermission:permission=>hasCommunityPermission(permission),
  refreshRoles:async()=>{siteRoles=await checked(db.from('site_roles').select('*'));renderMembers();},
  diagnostics:async()=>{const module=await import('./admin-diagnostics.js');if(session)module.showDiagnostics(adminContext);},
  reports:async()=>{const tools=await loadSocialTools();if(session)tools.moderation();},moderation:()=>enhancements.showModeration(),audit:()=>enhancements.showAudit(),clearDraft:()=>{drafts.set(draftKey(selected),'');resizeComposer();}
@@ -1839,8 +1839,13 @@ const adminContext={el,button,toast,checked,showDialog,inputField,errorText,apiF
 
 let adminTask;
 function loadAdmin(){if(!adminTask)adminTask=import('./admin-controls.js').then(module=>module.initAdminControls(adminContext)).catch(error=>{adminTask=null;throw error;});return adminTask;}
+// Menu de contexto ADM: só aparece para ADM global (dica visual); toda ação é revalidada no servidor.
+document.addEventListener('contextmenu',event=>{if(!session||!siteRoles.some(r=>r.user_id===session.user.id)||event.defaultPrevented&&!document.querySelector('.ux-context-menu'))return;const t=event.target;if(t.closest('input,textarea,[contenteditable=true]'))return;
+ const target=t.closest('.server-icon[data-community-id]')||t.closest('.channel[data-channel-id]')||t.closest('#message-list .message[data-message-id]')||t.closest('#member-list .member[data-user-id]')||t.closest('#voice-view [data-participant-id]');if(!target)return;
+ const info={communityId:target.dataset.communityId,channelId:target.dataset.channelId,messageId:target.dataset.messageId,userId:target.dataset.userId||target.dataset.participantId,voice:!!target.dataset.participantId,x:event.clientX,y:event.clientY};
+ if(!document.querySelector('.ux-context-menu'))event.preventDefault();loadAdmin().then(m=>m.adminContextMenu(info)).catch(error=>toast(errorText(error)));});
 const settingsBeforeLazyAdmin=$('settings').onclick;
-$('settings').onclick=()=>{settingsBeforeLazyAdmin();if(siteRoles.some(r=>r.user_id===session?.user.id)){const box=$('dialog-content').querySelector('.dialog-body')||$('dialog-content');box.append(button('Administração da Órbita',async()=>{const admin=await loadAdmin();admin.management();}));}};
+$('settings').onclick=()=>{settingsBeforeLazyAdmin();if(siteRoles.some(r=>r.user_id===session?.user.id)){const box=$('dialog-content').querySelector('.dialog-body')||$('dialog-content');box.append(button('Administração',async()=>{const admin=await loadAdmin();admin.panel();}),button('Administração da Órbita',async()=>{const admin=await loadAdmin();admin.management();}));}};
 $('message-form').addEventListener('submit',event=>{const value=$('message-input').value.trim();if(!/^\/(admin|adm|removeradm|silenciar|liberar|banir|desbanir|auditoria|ajuda)(?:\s|$)/i.test(value))return;if(window.orbitaAdminReady)return;event.preventDefault();event.stopImmediatePropagation();const uid=session?.user.id;loadAdmin().then(admin=>{if(session?.user.id===uid&&$('message-input').value.trim()===value)admin.command(value);}).catch(error=>toast(errorText(error)));},true);
 
 initAppUpdates({room:()=>room,dirty:()=>!!$('message-input').value.trim()||!!document.querySelector('.sf-composer textarea')?.value.trim(),beforeReload:()=>saveComposerDraft()});
