@@ -8,6 +8,7 @@ import {initShareReceiver} from './share-target.js';
 import {initThemeAccessibility,foreground} from './theme-accessibility.js';
 import {initAppUpdates} from './app-updates.js';
 import {loadStyle} from './lazy-assets.js';
+import {initSettingsLayout} from './settings-layout.js';
 import {initAudioControls} from './audio-controls.js';
 import {initCallReactions} from './call-reactions.js';
 import { initCommunityUX } from './community-ux.js';
@@ -953,7 +954,7 @@ async function initSocial() {
   if(presenceChannel) await db.removeChannel(presenceChannel);
   if(!current())return;
   presenceChannel=db.channel('community:main',{config:{private:true,presence:{key:uid}}});
-  presenceChannel.on('presence',{event:'sync'},()=>{publicVoicePresence=Object.entries(presenceChannel.presenceState()).flatMap(([id,metas])=>metas.map(meta=>({...meta,id})));online=new Set(Object.keys(presenceChannel.presenceState()));renderMembers();renderChannels();if(home)renderFriends();requestAnimationFrame(applyDecorations);});
+  presenceChannel.on('presence',{event:'sync'},()=>{publicVoicePresence=Object.entries(presenceChannel.presenceState()).flatMap(([id,metas])=>metas.map(meta=>({...meta,id})));window.dispatchEvent(new Event('orbita:presence'));online=new Set(Object.keys(presenceChannel.presenceState()));renderMembers();renderChannels();if(home)renderFriends();requestAnimationFrame(applyDecorations);});
   presenceChannel.subscribe(async status=>{if(status==='SUBSCRIBED')await publishVoicePresence(true);});
 }
 const memberNodes=new Map();
@@ -1923,6 +1924,7 @@ window.addEventListener('focus',checkResumedSession);window.addEventListener('on
   document.addEventListener('click',event=>{const t=event.target instanceof Element?event.target:null;if(!t)return;
     if(t.closest('.reaction,.vc-reaction,.emoji-picker button'))return uiSound('react',{gap:150});
     if(t.closest('.sf-like,[data-feed-like]'))return uiSound('like',{gap:200});
+    if(t.closest('.sf-repost,.sf-save'))return uiSound('react',{gap:200});
     if(t.closest('[data-channel-id],.server-rail button,.community-button,.dg-tab,[role="tab"]'))return uiSound('tab',{gap:140});
     if(t.closest('.primary-button,button[type="submit"],.primary'))return uiSound('tap',{gap:180});
   },true);
@@ -1934,3 +1936,4 @@ window.addEventListener('focus',checkResumedSession);window.addEventListener('on
 
 // 'Estado da conexão' não tinha ação: abre os detalhes de conexão (mesma janela do botão da chamada).
 $('btn-free-setup')?.addEventListener('click',()=>$('connection-info')?.click());
+initSettingsLayout();

@@ -694,3 +694,83 @@ body:has(#voice-view:not([hidden]) .call-footer:not([hidden])) .vb-actions{displ
 :is(#member-list,.voice-tree,.voice-tree-person,#message-list,.user-panel,.up-avatar-wrap) .avatar[class*="avatar-frame-"],#user-avatar[class*="avatar-frame-"]{box-shadow:none!important;animation:none!important;outline:none!important}
 :is(#member-list,.voice-tree,.voice-tree-person,#message-list) .avatar[class*="avatar-frame-"]::before,:is(#member-list,.voice-tree,.voice-tree-person,#message-list) .avatar[class*="avatar-frame-"]::after{content:none!important;display:none!important}
 :is(#member-list .member,.voice-tree-person){contain:paint}
+
+/* ===== Configurações em abas (settings-layout.js) ===== */
+#app-dialog.st-dialog{width:min(920px,calc(100vw - 32px));max-width:none;height:min(720px,calc(100dvh - 48px));max-height:none;flex-direction:column;padding:0;overflow:hidden}
+#app-dialog.st-dialog[open]{display:flex}
+#app-dialog.st-dialog #dialog-content{flex:1;min-height:0;display:flex;overflow:hidden;padding:0}
+#app-dialog.st-dialog .st-body{flex:1;min-height:0;display:grid;grid-template-columns:210px 1fr;gap:0;padding:0;overflow:hidden;max-height:none}
+.st-nav{display:flex;flex-direction:column;gap:2px;padding:8px 10px 16px 16px;border-right:1px solid var(--v2-border,#ffffff14);overflow:auto}
+.st-tab{display:flex;align-items:center;gap:10px;min-height:40px;padding:8px 12px;border:0;border-radius:10px;background:transparent;color:inherit;font:600 13.5px/1.2 var(--v2-font,inherit);text-align:left;cursor:pointer}
+.st-tab:hover{background:color-mix(in srgb,currentColor 7%,transparent);color:var(--v2-text,#fff)}
+.st-tab[aria-selected=true]{background:color-mix(in srgb,#e47fd0 16%,transparent);color:var(--v2-text,#fff);box-shadow:inset 3px 0 0 #e47fd0}
+.st-ico{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.st-panels{min-height:0;overflow:auto;overscroll-behavior:contain;padding:4px 22px 24px;scrollbar-width:thin}
+.st-panel{display:flex;flex-direction:column;gap:10px}
+.st-panel[hidden]{display:none}
+.st-panel-title{margin:4px 0 4px;font:700 16px/1.3 var(--v2-font,inherit)}
+.st-panel>label.field,.st-panel>div:not(.profile-edit-card),.st-panel>section,.st-panel label.st-toggle,.st-panel>p.muted{padding:12px 14px;border:1px solid var(--v2-border,#ffffff14);border-radius:14px;background:color-mix(in srgb,currentColor 3%,transparent);margin:0}
+.st-panel>p.muted{background:transparent;border-style:dashed;font-size:12.5px}
+.st-panel section.audio-settings{display:flex;flex-direction:column;gap:10px}
+.st-panel section.audio-settings>h3{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--v2-dim,#a9a6c3);margin:0}
+.st-panel section label.field,.st-panel section label.st-toggle{padding:10px 12px;border-radius:12px;border:1px solid var(--v2-border,#ffffff14);background:color-mix(in srgb,currentColor 3%,transparent)}
+.st-panel>div:not(.profile-edit-card){display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.st-panel>div:not(.profile-edit-card)>label.field{margin:0}
+/* Toggles */
+label.st-toggle{display:flex!important;align-items:center;justify-content:space-between;gap:12px;flex-direction:row-reverse;cursor:pointer;font-weight:600}
+label.st-toggle input[type=checkbox]{appearance:none;-webkit-appearance:none;flex:none;width:42px;height:24px;margin:0;border-radius:999px;background:color-mix(in srgb,currentColor 18%,transparent);position:relative;cursor:pointer;transition:background .18s}
+label.st-toggle input[type=checkbox]::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0006;transition:transform .18s}
+label.st-toggle input[type=checkbox]:checked{background:linear-gradient(135deg,#f07fc8,#b86cf2)}
+label.st-toggle input[type=checkbox]:checked::after{transform:translateX(18px)}
+label.st-toggle input[type=checkbox]:focus-visible{outline:2px solid #e47fd0;outline-offset:2px}
+/* Sliders rosa */
+.st-panels input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:999px;background:linear-gradient(90deg,#e47fd0 0 var(--st-fill,50%),color-mix(in srgb,currentColor 16%,transparent) var(--st-fill,50%));margin:10px 0 4px}
+.st-panels input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid #e47fd0;box-shadow:0 2px 8px #0006;cursor:pointer}
+.st-panels input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid #e47fd0}
+/* Segmentado */
+.st-native{position:absolute!important;opacity:0!important;width:1px!important;height:1px!important;pointer-events:none!important;overflow:hidden}
+.st-seg{display:flex;flex-wrap:wrap;gap:4px;padding:4px;margin-top:8px;border-radius:12px;background:color-mix(in srgb,currentColor 6%,transparent)}
+.st-seg>button{flex:1 1 0;min-width:max-content;min-height:34px;padding:6px 12px;border:0;border-radius:9px;background:transparent;color:var(--v2-dim,#a9a6c3);font:600 12.5px var(--v2-font,inherit);cursor:pointer}
+.st-seg>button[aria-checked=true]{background:var(--v2-panel,#1c1b2c);color:var(--v2-text,#fff);box-shadow:0 1px 4px #0005,inset 0 0 0 1px color-mix(in srgb,#e47fd0 55%,transparent)}
+.st-panel label.field{position:relative}
+/* Dispositivos em cartão */
+label.st-device{display:grid!important;grid-template-columns:40px 1fr;grid-template-rows:auto auto;column-gap:12px;align-items:center}
+label.st-device>.st-ico{grid-row:1/3;width:40px;height:40px;padding:9px;border-radius:12px;background:color-mix(in srgb,#e47fd0 16%,transparent);color:#e47fd0}
+label.st-device select{grid-column:2;margin-top:4px}
+/* Botões de ação como cartões */
+.st-panel>button.st-action{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:48px;padding:10px 14px;border-radius:14px;text-align:left;font-weight:600}
+.st-panel>button.st-action{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a7abc0' stroke-width='2'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:16px;padding-right:36px}
+.st-panel>button.danger.st-action{justify-content:center;background-image:none;padding-right:14px}
+/* Editar perfil */
+.st-profile label.st-drop{position:relative;display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:96px;padding:14px;border:1.5px dashed color-mix(in srgb,#e47fd0 45%,transparent);border-radius:14px;background:color-mix(in srgb,#e47fd0 6%,transparent);cursor:pointer;text-align:center}
+.st-profile label.st-drop.is-over{background:color-mix(in srgb,#e47fd0 16%,transparent);border-style:solid}
+.st-profile label.st-drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.st-drop-hint{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--v2-dim,#a9a6c3)}
+.st-drop-hint .st-ico{width:28px;height:28px;padding:5px;border-radius:50%;background:#e47fd0;color:#fff}
+.st-profile .rp-avatar-wrap{position:relative}
+.st-profile .rp-avatar-wrap::after{content:"";position:absolute;right:0;bottom:2px;width:24px;height:24px;border-radius:50%;background:#e47fd0 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'%3E%3Cpath d='M4 8h3l2-3h6l2 3h3v11H4z'/%3E%3Ccircle cx='12' cy='13' r='3.5'/%3E%3C/svg%3E") center/14px no-repeat;border:2px solid var(--v2-panel,#1c1b2c);pointer-events:none}
+.st-swatches{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.st-swatch{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;box-shadow:inset 0 0 0 2px #0003}
+.st-swatch[aria-pressed=true]{border-color:#fff;box-shadow:0 0 0 2px #e47fd0}
+.st-profile input[type=color]{width:44px;height:30px;border-radius:8px;padding:0;border:1px solid var(--v2-border,#ffffff22)}
+.st-profile label.field{padding:10px 12px;border:1px solid var(--v2-border,#ffffff14);border-radius:12px;background:color-mix(in srgb,currentColor 3%,transparent)}
+.st-sticky-save{position:sticky;bottom:0;z-index:3;box-shadow:0 -12px 18px -6px var(--v2-panel,#1c1b2c),0 8px 22px -10px #e47fd0}
+@media(max-width:720px){
+ #app-dialog.st-dialog{width:100vw;height:100dvh;border-radius:0}
+ #app-dialog.st-dialog .st-body{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+ .st-nav{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--v2-border,#ffffff14);padding:6px 10px;scrollbar-width:none}
+ .st-tab{flex:none;min-height:36px;padding:6px 10px}.st-tab[aria-selected=true]{box-shadow:inset 0 -2px 0 #e47fd0}
+ .st-panels{padding:4px 12px 20px}.st-panel>div:not(.profile-edit-card){grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){label.st-toggle input,label.st-toggle input::after{transition:none}}
+label.st-toggle input[type=checkbox]{padding:0!important;min-height:0!important;max-height:24px!important;width:42px!important;height:24px!important;border:0!important;box-shadow:none!important;background-image:none}
+label.st-toggle input[type=checkbox]:checked{background:linear-gradient(135deg,#f07fc8,#b86cf2)!important}
+.st-panels input[type=range]{height:6px!important;min-height:0!important;padding:0!important;border:0!important;box-shadow:none!important}
+.st-panel .profile-edit-card{max-width:none;width:100%;margin:0}
+.st-profile .rp-avatar-wrap{width:max-content}
+.st-swatch{flex:none;width:28px!important;height:28px!important;min-width:0!important;min-height:0!important;padding:0!important}
+.st-tab:not([aria-selected=true]) .st-ico{opacity:.7}.st-seg>button{color:inherit}.st-panel section.audio-settings>h3,.st-panel-title{color:inherit}
+body[data-color-mode=light] .st-tab,body[data-color-mode=light] .st-seg>button,body[data-color-mode=light] .st-panel-title{color:#2b2d3d}
+body[data-color-mode=light] .st-tab[aria-selected=true]{color:#1b1c28;background:color-mix(in srgb,#e47fd0 22%,#fff)}
+body[data-color-mode=light] .st-seg>button[aria-checked=true]{background:#fff;color:#1b1c28}
+#app-dialog.st-dialog:not([open]){display:none}

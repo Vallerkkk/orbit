@@ -52,7 +52,7 @@ let browser;
   await page.waitForTimeout(300);const darkLabel=mobile?'mobile':'desktop';await page.screenshot({path:path.join(tmp,'interface-'+darkLabel+'-dark.png')});
   if(mobile){await page.locator('#mobile-menu-btn').click();await page.waitForTimeout(250);}
   // Settings are reachable on desktop and through the channel drawer on mobile.
-  await page.locator('#settings').click();await page.getByLabel('Tema claro ou escuro').selectOption('light');
+  await page.locator('#settings').click();await page.locator('#st-tab-aparencia').click();await page.getByLabel('Tema claro ou escuro').selectOption('light');
   if(await page.locator('body').getAttribute('data-color-mode')!=='light')throw Error('Light theme failed');
   await page.locator('#dialog-close').click();await page.evaluate(()=>document.body.classList.remove('mobile-menu-open'));
   await page.waitForTimeout(350);if(mobile){await page.setViewportSize({width:390,height:500});await page.waitForTimeout(100);const bottom=await page.locator('#message-form').evaluate(e=>e.getBoundingClientRect().bottom);if(bottom>502)throw Error('Keyboard viewport covers composer '+bottom);await page.setViewportSize({width:390,height:844});await page.waitForTimeout(100);}const label=mobile?'mobile':'desktop';await page.screenshot({path:path.join(tmp,'qa-'+label+'.png')});
