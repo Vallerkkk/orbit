@@ -1,3 +1,4 @@
+import {COLLECTIONS,KIND_V2} from './store-collections.js';
 // Pacotes temáticos da Loja da Órbita: tema + animação exclusiva por pacote, molduras de avatar,
 // bordas do perfil completo, temas de servidor. scripts/badges-sql.mjs copia os ids para a validação no banco.
 export const PACKS=[
@@ -14,7 +15,13 @@ export const PACKS=[
 ];
 // Itens derivados de cada pacote: moldura de avatar, borda do perfil, efeito de perfil, tema de servidor e placa.
 export const ITEM_KINDS={frame:'Moldura do avatar',border:'Borda do perfil',effect:'Efeito de perfil',server:'Tema de servidor',plate:'Placa de identificação'};
-export const ITEMS=PACKS.flatMap(p=>Object.keys(ITEM_KINDS).map(kind=>({id:`${p.id}-${kind}`,pack:p.id,kind,name:`${ITEM_KINDS[kind]} ${p.name}`,admin:!!p.admin})));
+Object.assign(ITEM_KINDS,KIND_V2);
+const LEGACY_ITEMS=PACKS.flatMap(p=>['frame','border','effect','server','plate'].map(kind=>({id:`${p.id}-${kind}`,pack:p.id,kind,name:`${ITEM_KINDS[kind]} ${p.name}`,admin:!!p.admin})));
+// Loja v2: coleções com 5 itens cada (nome, descrição e raridade próprios).
+const V2_KINDS=['frame','effect','card_border','name_style','server'];
+const V2_ITEMS=COLLECTIONS.flatMap(p=>V2_KINDS.map((kind,i)=>({id:`${p.id}-${kind}`,pack:p.id,kind,name:p.items[kind][0],desc:p.items[kind][1],rarity:p.rarity[i],admin:!!p.admin,v2:true,tags:p.tags||[]})));
+PACKS.push(...COLLECTIONS);
+export const ITEMS=[...LEGACY_ITEMS,...V2_ITEMS];
 export const itemById=new Map(ITEMS.map(i=>[i.id,i]));
 export const NAME_FONTS=[
   {id:'orbitron',name:'Orbitron',family:'Orbitron',w:'700'},{id:'pressstart',name:'Press Start 2P',family:'Press Start 2P',w:'400',scale:.7},
@@ -33,10 +40,10 @@ export function loadNameFont(id){const f=NAME_FONTS.find(f=>f.id===id);if(!f||lo
 const HEX=/^#[0-9a-f]{6}$/i;
 export function cleanAppearance(raw){const a=raw&&typeof raw==='object'?raw:{};const pick=(k,kind)=>{const i=itemById.get(a[k]);return i&&i.kind===kind?i.id:'';};
   const legacy=k=>/^[a-z0-9-]{1,48}$/.test(a[k]||'')?a[k]:'';
-  return {frame:pick('frame','frame'),legacy_frame:legacy('legacy_frame'),legacy_effect:legacy('legacy_effect'),banner_style:legacy('banner_style'),border:pick('border','border'),effect:pick('effect','effect'),server:pick('server','server'),plate:pick('plate','plate'),
+  return {frame:pick('frame','frame'),legacy_frame:legacy('legacy_frame'),legacy_effect:legacy('legacy_effect'),banner_style:legacy('banner_style'),border:pick('border','border'),card_border:pick('card_border','card_border'),name_style:pick('name_style','name_style'),effect:pick('effect','effect'),server:pick('server','server'),plate:pick('plate','plate'),
     name_font:NAME_FONTS.some(f=>f.id===a.name_font)?a.name_font:'',name_effect:NAME_EFFECTS.some(e=>e.id===a.name_effect)?a.name_effect:'',
     theme:Array.isArray(a.theme)&&a.theme.length===2&&a.theme.every(c=>HEX.test(c))?a.theme:null,
     badges:Array.isArray(a.badges)?a.badges.filter(x=>typeof x==='string').slice(0,3):[]};}
 export function packOf(id){return PACKS.find(p=>p.id===(itemById.get(id)?.pack||id));}
 export function compactAppearance(a){const c=cleanAppearance(a),out={};for(const [k,v] of Object.entries(c))if(Array.isArray(v)?v.length:v)out[k]=v;return out;}
-export function stripAdminOnly(a){const c=cleanAppearance(a);for(const k of ['frame','border','effect','server','plate'])if(ADMIN_ONLY.includes(c[k]))c[k]='';if(ADMIN_ONLY.includes('name:'+c.name_effect))c.name_effect='';return c;}
+export function stripAdminOnly(a){const c=cleanAppearance(a);for(const k of ['frame','border','effect','server','plate','card_border','name_style'])if(ADMIN_ONLY.includes(c[k]))c[k]='';if(ADMIN_ONLY.includes('name:'+c.name_effect))c.name_effect='';return c;}

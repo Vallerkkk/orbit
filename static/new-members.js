@@ -1,7 +1,7 @@
 // Feed "Novos membros": timeline de cadastros (RPC new_members, só campos públicos) e boas-vindas 👋.
 // Toda regra de acesso é do banco (RLS em member_welcomes; RPCs só para authenticated).
 import {cleanAppearance} from './cosmetics.js';
-import {styleName,frameAvatar} from './appearance-runtime.js';
+import {styleName,frameAvatar,cardBorder} from './appearance-runtime.js';
 import {badgeSvg} from './badges-catalog.js';
 
 const DAY=86400000;
@@ -32,7 +32,7 @@ export function createNewMembers(api){
       if(p.following){const {error}=await api.db.from('social_follows').delete().eq('follower_id',me).eq('following_id',p.id);if(error)throw error;p.following=false;}
       else{let {error}=await api.db.from('social_follows').insert({follower_id:me,following_id:p.id});if(error&&error.code!=='23505'){const r=await api.db.from('social_follow_requests').insert({follower_id:me,following_id:p.id});if(r.error&&r.error.code!=='23505')throw r.error;btn.textContent='Solicitado';return;}p.following=true;}
       btn.textContent=p.following?'Seguindo':'Seguir';btn.setAttribute('aria-pressed',String(p.following));},'sf-button nm-act nm-follow');btn.setAttribute('aria-pressed',String(!!p.following));return btn;}
-  function card(p){const a=cleanAppearance(p.appearance||{});const art=el('article','nm-card');art.dataset.userId=p.id;
+  function card(p){const a=cleanAppearance(p.appearance||{});const art=el('article','nm-card');art.dataset.userId=p.id;cardBorder(art,a);
     const banner=el('div','nm-banner');const t=a.theme||[];if(t[0])banner.style.setProperty('--nm1',t[0]);if(t[1])banner.style.setProperty('--nm2',t[1]);
     if(p.banner_url)api.signed(p.banner_url,'orbita-files').then(src=>{if(src&&banner.isConnected){const img=el('img');img.src=src;img.alt='';img.loading='lazy';banner.append(img);}});
     const num=el('span','nm-number','#'+p.member_number);num.dataset.tip='Membro número '+p.member_number;banner.append(num);
