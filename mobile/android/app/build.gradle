@@ -1,0 +1,27 @@
+plugins { id 'com.android.application' }
+def host = 'orbita-8nwu.onrender.com'
+android {
+    namespace 'app.orbita.mobile'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'app.orbita.mobile'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '1.0.0'
+        manifestPlaceholders = [hostName: host, launchUrl: "https://${host}/?source=android"]
+        resValue 'string', 'assetStatements', """[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"web","site":"https://${host}"}}]"""
+    }
+    signingConfigs {
+        release {
+            // Keystore stays OUTSIDE the repository; pass paths via env vars.
+            storeFile file(System.getenv('ORBITA_KEYSTORE') ?: '/workspace/secrets/orbita-release.jks')
+            storePassword System.getenv('ORBITA_KEYSTORE_PASSWORD')
+            keyAlias 'orbita'
+            keyPassword System.getenv('ORBITA_KEYSTORE_PASSWORD')
+        }
+    }
+    buildTypes { release { minifyEnabled true; shrinkResources true; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'); signingConfig signingConfigs.release } }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+dependencies { implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0' }

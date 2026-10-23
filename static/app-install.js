@@ -19,7 +19,23 @@ export async function requestAppInstall() {
   finally { prompting = false; changed(); }
 }
 
+export function detectPlatform(ua = navigator.userAgent, platform = navigator.platform || '', touch = navigator.maxTouchPoints || 0) {
+  if (/android/i.test(ua)) return 'android';
+  if (/iphone|ipad|ipod/i.test(ua) || (platform === 'MacIntel' && touch > 1)) return 'ios';
+  if (/windows/i.test(ua)) return 'windows';
+  return 'other';
+}
+
 if (document.body?.dataset.installPage === 'true') {
+  const os = detectPlatform(), labels = {android:'Detectamos um Android: o APK está em destaque.', ios:'Detectamos um iPhone/iPad: siga os 3 passos no Safari.', windows:'Detectamos o Windows: o instalador está em destaque.', other:'Escolha a plataforma abaixo ou use pelo navegador.'};
+  document.documentElement.dataset.platform = os;
+  const hero = os === 'other' ? 'windows' : os;
+  document.querySelectorAll('.actions .cta').forEach(a => { a.hidden = a.dataset.platform !== hero; });
+  document.querySelector(`[data-card="${hero}"]`)?.classList.add('is-detected');
+  const note = document.getElementById('detected'); if (note) note.textContent = labels[os];
+  const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), {threshold:.12}) : null;
+  document.querySelectorAll('.reveal').forEach(el => io ? io.observe(el) : el.classList.add('in'));
+  document.querySelectorAll('[data-pwa-install]').forEach(b => b.addEventListener('click', () => document.getElementById('install-app').click()));
   const button = document.getElementById('install-app'), status = document.getElementById('install-status');
   function update() {
     button.disabled = prompting || isAppWindow();

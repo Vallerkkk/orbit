@@ -214,6 +214,23 @@ def download_desktop_installer():
         status_code=302, headers={'Cache-Control':'no-store'})
 
 
+ANDROID_PACKAGE = 'app.orbita.mobile'
+ANDROID_CERT_SHA256 = '3C:24:A3:21:66:3F:2B:CF:F9:E7:ED:08:A1:56:0A:FB:2E:25:CD:6D:A4:E6:4C:D7:EC:E0:A9:32:6A:7D:44:18'
+
+
+@app.api_route('/baixar/Orbita.apk', methods=['GET','HEAD'])
+def download_android_apk():
+    return FileResponse(ROOT / 'static' / 'downloads' / 'Orbita.apk', media_type='application/vnd.android.package-archive',
+        filename='Orbita.apk', headers={'Cache-Control':'no-cache'})
+
+
+@app.get('/.well-known/assetlinks.json')
+def android_asset_links():
+    return JSONResponse([{'relation':['delegate_permission/common.handle_all_urls'],
+        'target':{'namespace':'android_app','package_name':ANDROID_PACKAGE,'sha256_cert_fingerprints':[ANDROID_CERT_SHA256]}}],
+        headers={'Cache-Control':'public, max-age=3600'})
+
+
 install(app, current_user, settings, make_token)
 install_features(app, current_user, settings)
 install_media_search(app, current_user)
