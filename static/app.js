@@ -3,6 +3,7 @@ import {chatMedia,renderChatMedia} from './chat-media.js';
 import {createAuthRecovery,isInvalidSessionError} from './auth-recovery.js';
 import './ui-polish.js';
 import {nicknameProblem} from './identity-rules.js';
+import {canEditServer,isSiteAdmin} from './server-permissions.js';
 import {initSocialLogin} from './social-login.js';
 import {initNavigationMotion} from './navigation-motion.js';
 import {DECORATIONS} from './profile-decoration-catalog.js';
@@ -1320,8 +1321,9 @@ let navigationEpoch=0;
 const communityViews=new Map(),communityNodes=new Map();
 function rememberCommunity(){if(!activeCommunity||!session)return;communityViews.delete(activeCommunity);communityViews.set(activeCommunity,{roles:communityRoleList,memberRoles,members:communityMemberList,emojis:communityEmojiList,emojiUrls:communityEmojiUrls,channels:channels.filter(c=>c.community_id===activeCommunity),lastChannel:selected?.community_id===activeCommunity?selected.id:null,expires:Date.now()+300000});while(communityViews.size>8)communityViews.delete(communityViews.keys().next().value);}
 let communities=[],activeCommunity='00000000-0000-4000-8000-000000000001',siteRoles=[],replyTarget=null,friendsFilter='all',extraSubscription;
-const isAdmin=()=>siteRoles.some(r=>r.user_id===session?.user.id);
-const managesCommunity=()=>hasCommunityPermission('manage_channels');
+const isAdmin=()=>isSiteAdmin(siteRoles,session?.user.id);
+const canEditActiveServer=()=>canEditServer({siteRoles,community:communities.find(c=>c.id===activeCommunity),userId:session?.user.id});
+const managesCommunity=()=>canEditActiveServer();
 const roleFor=id=>siteRoles.find(r=>r.user_id===id)?.role;
 const hasCommunityPermission=permission=>isAdmin()||communities.find(c=>c.id===activeCommunity)?.created_by===session?.user.id||memberRoles.some(m=>m.user_id===session?.user.id&&communityRoleList.some(r=>r.id===m.role_id&&r.permissions?.includes(permission)));
 let accessRevision=0;
@@ -1787,6 +1789,7 @@ function applyServerTheme() {
   banner.style.backgroundImage=url?'linear-gradient(#0003,#0007),url('+JSON.stringify(url.href)+')':'';banner.style.backgroundSize='cover';banner.style.backgroundPosition='center';
 }
 function openServerSettings() {
+  if(!canEditActiveServer()){toast('Só o dono do servidor e os ADMs podem alterar as configurações.');return;}
   showDialog('Configurações do servidor', container => {
     const t = loadServerTheme();
     const accent = el('input'); accent.type = 'color'; accent.value = t.accent || '#7c5cff';
@@ -1816,7 +1819,10 @@ setTimeout(() => {
     btn.title = 'Configurações do servidor';
     menu.append(btn);
   }
+  syncServerSettingsButton();
 }, 2000);
+function syncServerSettingsButton(){const btn=document.getElementById('server-settings-btn');if(btn)btn.hidden=!canEditActiveServer();}
+setInterval(syncServerSettingsButton,1500);
 applyServerTheme();
 
 let preferencesFrame;
