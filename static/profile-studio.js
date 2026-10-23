@@ -102,6 +102,7 @@ export function initProfileStudio(ctx){
     for(const id of pinnedOf(state,extra)){const b=badgeById.get(id);const btn=badgeButton(b,levelOf(state,b),{size:22,onClick:()=>openBadges(userId,id)});if(id==='dono')btn.classList.add('is-owner');pill.append(btn);}
     if(!pill.children.length){pill.remove();if(userId===me().session?.user.id)container.append(button('Escolher insígnias',()=>openBadges(userId),'rp-link'));}}
   // Mini insígnia principal ao lado do nome nas mensagens (não altera a altura da linha).
+  async function pinnedBadges(node,userId,max=4){if(!node||!userId)return;try{const state=await badgeState(userId);node.replaceChildren();for(const id of pinnedOf(state).slice(0,max)){const b=badgeById.get(id),lv=levelOf(state,b);const s=el('span','nm-badge');s.innerHTML=badgeSvg(b,lv,{size:26});s.dataset.tip=`${b.name} · ${RARITIES[b.rarity].name}`;s.setAttribute('role','img');s.setAttribute('aria-label','Insígnia: '+b.name);node.append(s);}}catch{}}
   async function miniBadge(node,userId){if(!node||!userId)return;try{const state=await badgeState(userId);const id=pinnedOf(state)[0];node.replaceChildren();if(!id)return;const b=badgeById.get(id),lv=levelOf(state,b);node.innerHTML=badgeSvg(b,lv,{size:16});node.dataset.tip=`${b.name} · ${RARITIES[b.rarity].name}`;node.setAttribute('aria-label','Insígnia: '+b.name);node.setAttribute('role','img');}catch{}}
 
   // ===== Cartão compartilhado =====
@@ -163,5 +164,5 @@ export function initProfileStudio(ctx){
         pane.replaceChildren(head,el('h5','','Vitrine fixada'),vit,cats,button('Abrir coleção completa',()=>openBadges(uid),'ps-btn'));}};
     for(const name of Object.keys(tabFns)){const b=button(name,()=>{for(const x of tabs.children)x.setAttribute('aria-selected',String(x===b));tabFns[name]();},'');b.setAttribute('role','tab');tabs.append(b);}tabs.firstChild.click();
     renderPreview();return s;}
-  return {openStore,openBadges,openEditor,decorateCard,buildCard,badgeState,miniBadge,invalidate:id=>badgeCache.delete(id)};
+  return {openStore,openBadges,openEditor,decorateCard,buildCard,badgeState,miniBadge,pinnedBadges,invalidate:id=>badgeCache.delete(id)};
 }

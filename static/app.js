@@ -174,7 +174,7 @@ async function showSession(next) {
     if(transition===sessionTransition){sessionReady=true;trackVisibleActivity().catch(()=>{});}
   }catch(error){if(transition===sessionTransition){toast('Não foi possível carregar a comunidade: '+errorText(error));sessionRecovery.hidden=false;}}
   finally{if(transition===sessionTransition){sessionInitializing=false;setEntryBusy(false);}}
-  if(transition===sessionTransition){await enhancements.sessionChanged();feed?.deepLink();const publicProfile=new URL(location.href).searchParams.get('profile');if(/^[0-9a-f-]{36}$/i.test(publicProfile||''))feed.open('profile',{author:publicProfile});shareReceiver?.resume();const story=new URL(location.href).searchParams.get('story');if(/^[0-9a-f-]{36}$/i.test(story||'')){const tools=await loadSocialTools();if(transition===sessionTransition)tools.stories(story);}}
+  if(transition===sessionTransition){await enhancements.sessionChanged();feed?.deepLink();showFirstWelcome(transition);const publicProfile=new URL(location.href).searchParams.get('profile');if(/^[0-9a-f-]{36}$/i.test(publicProfile||''))feed.open('profile',{author:publicProfile});shareReceiver?.resume();const story=new URL(location.href).searchParams.get('story');if(/^[0-9a-f-]{36}$/i.test(story||'')){const tools=await loadSocialTools();if(transition===sessionTransition)tools.stories(story);}}
 }
 $('logout').onclick = async () => {
   try { await enhancements?.disablePush(true); } catch {}
@@ -1633,6 +1633,7 @@ const feedContext={
   rooms:()=>channels.filter(c=>c.kind==='voice'&&!c.is_private).map(c=>({...c,participants:publicVoicePresence.filter(p=>p.channel_id===c.id).length})),
   joinRoom:async channel=>{await selectChannel(channel);$('join-call').click();},
   liveIds:()=>new Set(publicVoicePresence.filter(p=>p.channel_id).map(p=>p.id)),
+  studio:()=>loadStudio(),
   roomPeople:id=>publicVoicePresence.filter(p=>p.channel_id===id).map(p=>person(p.id)).filter(Boolean)
 };
 let feedInstance,feedTask,feedNavigation=0;
@@ -1789,6 +1790,10 @@ showProfile = function(p) {
     const uid=session?.user.id;loadStudio().then(s=>{if(session?.user.id===uid&&panel.isConnected)s.decorateCard(panel,p);}).catch(()=>{});}
 };
 let studioTask;
+// Primeira visita depois do cadastro: boas-vindas com mini-tour (a data de cadastro vem do servidor).
+async function showFirstWelcome(transition,force=false){const uid=session?.user.id;if(!uid)return;try{const m=await import('./new-members.js');if(transition!==undefined&&transition!==sessionTransition||uid!==session?.user.id)return;
+  await m.maybeWelcome({el,db,uid,force,showDialog,editProfile:()=>loadStudio().then(s=>s.openEditor()),explore:()=>$('btn-explore-servers')?.click(),feed:()=>feed.open('foryou'),badges:()=>loadStudio().then(s=>s.openBadges(uid))});}catch(error){console.info('welcome',error?.message||error);}}
+window.orbitaShowWelcome=()=>showFirstWelcome(undefined,true);
 function loadStudio(){if(!studioTask)studioTask=import('./profile-studio.js').then(m=>m.initProfileStudio({el,button,toast,errorText,apiFetch,setAvatar,person,appearanceOf,saveAppearance,
   state:()=>({db,session,profile,isAdmin:siteRoles.some(r=>r.user_id===session?.user.id&&['admin','creator'].includes(r.role))}),
   saveProfile:async fields=>{const uid=session.user.id;await checked(db.from('profiles').update(fields).eq('id',uid).select('id'));if(session?.user.id===uid){Object.assign(profile,fields);const cur=peopleById.get(uid);if(cur)Object.assign(cur,fields);}},
