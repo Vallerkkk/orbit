@@ -162,3 +162,34 @@
 .rich-profile.pv2.pk-border::before{inset:0;padding:3px}
 .ne-gradient{filter:drop-shadow(0 1px 2px #0009)}
 .rich-profile.ps-themed .rp-bio,.rich-profile.ps-themed .rp-username,.rich-profile.ps-themed .rp-voice-state{color:#fff!important;text-shadow:0 1px 2px #0007}
+/* Editor v2 */
+.ps-editor{grid-template-columns:300px minmax(0,1fr) 300px}
+.ps-ed-card{border:1px solid #ffffff1f;background:#ffffff06;transition:border-color .18s,background .18s,box-shadow .18s}
+.ps-ed-card:hover{border-color:#ffffff38;background:#ffffff0b}
+.ps-ed-card>button:focus-visible{outline:2px solid var(--v2-accent,#8b6cff);outline-offset:-2px}
+.ps-ed-card.open{border-color:color-mix(in srgb,var(--v2-accent,#8b6cff) 60%,transparent);background:#8b6cff0f;box-shadow:0 0 0 3px #8b6cff1a}
+.ps-ed-card.has-value>button strong::after{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#3ddc84;margin-left:6px;vertical-align:middle}
+.ps-ed-chev{margin-left:auto;width:8px;height:8px;border-right:2px solid #a9a3c2;border-bottom:2px solid #a9a3c2;transform:rotate(-45deg);transition:transform .18s;flex:none}
+.ps-ed-card.open .ps-ed-chev{transform:rotate(45deg)}
+.ps-ed-card>button>span:nth-child(2){min-width:0;flex:1}
+.ps-thumb{border:1px solid #ffffff1a}
+.ps-thumb-icon{color:#d9cffc;background:linear-gradient(135deg,#8b6cff26,#ff4f9a1c)!important}
+.ps-ed-options button{transition:transform .15s,border-color .15s}
+.ps-ed-options button:hover{transform:translateY(-1px);border-color:#ffffff55}
+.ps-ed-options button[aria-pressed=true]{outline:2px solid var(--v2-accent,#8b6cff);outline-offset:2px;border-color:transparent}
+.ps-ed-options button[aria-pressed=true]::before{content:'✓';position:absolute;top:3px;right:4px;z-index:3;width:16px;height:16px;border-radius:50%;background:var(--v2-accent,#8b6cff);font-size:10px;line-height:16px;text-align:center}
+.ps-ed-center{display:flex!important;align-items:center;justify-content:center;padding:28px!important}
+.ps-ed-stage{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;margin:auto}
+.ps-ed-stage-label{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:#a9a3c2}
+.ps-ed-center .ps-card.rich-profile{width:min(440px,100%)!important;max-width:none!important;margin:0!important;border-radius:18px!important}
+.ps-ed-center .ps-card .rp-banner{height:150px!important;position:relative;background-size:cover!important;background-position:center!important}
+.ps-card .rp-banner{position:relative}
+.ps-card .ps-card-actions{position:absolute;top:auto;bottom:10px;right:12px}
+.ps-card .ps-card-actions button{background:#0009;backdrop-filter:blur(6px);border:1px solid #ffffff26}
+.ps-ed-tabs{display:flex;gap:4px;padding:4px!important;border:1px solid #ffffff14!important;border-radius:12px;background:#ffffff06;margin-bottom:12px}
+.ps-ed-tabs button{flex:1;border:0!important;border-radius:9px;padding:8px 6px!important;font-size:.82rem}
+.ps-ed-tabs button[aria-selected=true]{background:var(--v2-accent,#8b6cff);color:#fff}
+.ps-ed-pane{display:flex;flex-direction:column;gap:8px}.ps-ed-pane .ps-mural-item{margin:0}
+@media (max-width:860px){.ps-ed-center{padding:14px!important}.ps-ed-center .ps-card .rp-banner{height:120px!important}}
+.ps-ed-center .ps-card.rich-profile:not(.ps-themed){background:linear-gradient(180deg,#1d1830,#151221)!important}.ps-ed-center .ps-card.rich-profile{border:1px solid #ffffff1a!important;box-shadow:0 30px 70px #000a,0 0 0 1px #ffffff08!important}.ps-ed-center .ps-card .rp-body{padding-bottom:20px!important}
+@media (max-width:860px){.ps-editor{grid-template-columns:1fr!important;height:auto}.ps-ed-center{display:block!important}.ps-ed-stage{margin:0}.ps-ed-left,.ps-ed-right{border:0!important}}
