@@ -1864,3 +1864,18 @@ body[data-color-mode=light] .jump-latest{background:#fff;color:#222333;box-shado
 @media(prefers-reduced-motion:reduce){.luladroid-panel{animation:none}.luladroid-dot.on{animation:none}}
 
 
+/* Lula v2 */
+.luladroid-header{gap:10px}
+.luladroid-avatar{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;flex:0 0 30px;font-size:14px;color:#fff;background:linear-gradient(135deg,#ff4f9a,#9a6bff);box-shadow:0 4px 14px rgba(255,79,154,.28)}
+.luladroid-heading{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.luladroid-heading h3{line-height:1.1}
+.luladroid-statusline{display:flex;align-items:center;gap:6px;min-width:0}
+.luladroid-intro{padding:12px 14px 6px}
+.luladroid-intro strong{display:block;font-size:12.5px;color:var(--text);margin-bottom:3px}
+.luladroid-intro p{margin:0;font-size:11.5px;line-height:1.5;color:var(--text-dim)}
+.luladroid-log:empty::before{content:'Nenhuma pergunta ainda.';margin:auto;font-size:11.5px;color:var(--text-mut)}
+.luladroid-ask{display:flex;gap:6px;padding:10px 12px 0;border-top:1px solid var(--border)}
+.luladroid-ask input{flex:1;min-width:0;height:36px;padding:0 12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--text);font:inherit;font-size:12.5px}
+.luladroid-ask input:focus{outline:none;border-color:rgba(255,79,154,.5);box-shadow:0 0 0 3px rgba(255,79,154,.14)}
+.luladroid-ask button{height:36px;padding:0 14px;border-radius:10px;font-size:12px}
+.luladroid-actions{border-top:0}

@@ -264,18 +264,59 @@ def ai_call_id(value):
         raise HTTPException(400, 'call_id inválido.')
     return call_id
 
+def stt_provider() -> str:
+    """Transcrição de áudio no servidor: Groq Whisper (STT_API_KEY) ou Gemini
+    (GEMINI_API_KEY, que já serve ao diagnóstico). Flatkey não oferece rota de áudio."""
+    if os.getenv("STT_API_KEY", "").strip():
+        return "groq"
+    if os.getenv("GEMINI_API_KEY", "").strip():
+        return "gemini"
+    return ""
+
+
+async def gemini_transcribe(audio: bytes, media: str) -> str:
+    import base64
+    model = os.getenv("GEMINI_STT_MODEL", os.getenv("GEMINI_MODEL", "gemini-2.5-flash")).strip()
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,80}", model):
+        raise HTTPException(503, "Modelo de transcrição inválido.")
+    body = {
+        "contents": [{"role": "user", "parts": [
+            {"text": "Transcreva literalmente a fala deste áudio em português do Brasil. Responda só com o texto falado; se não houver fala, responda vazio."},
+            {"inline_data": {"mime_type": media, "data": base64.b64encode(audio).decode()}},
+        ]}],
+        "generationConfig": {"temperature": 0, "maxOutputTokens": 400},
+    }
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(40.0, connect=8.0)) as client:
+            response = await client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+                headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"].strip()}, json=body)
+    except httpx.HTTPError:
+        raise HTTPException(503, "Serviço de transcrição indisponível.") from None
+    if response.status_code == 429:
+        raise HTTPException(429, "Limite de transcrição atingido.")
+    if response.status_code != 200:
+        raise HTTPException(502, "Não foi possível transcrever o áudio.")
+    try:
+        parts = response.json()["candidates"][0]["content"].get("parts", [])
+        return " ".join(str(p.get("text") or "") for p in parts).strip()[:2000]
+    except (ValueError, KeyError, IndexError, AttributeError, TypeError):
+        return ""
+
+
 @app.get("/api/ai/status")
 async def ai_status():
-    return {"enabled": ai_enabled(), "stt": "server-audio" if os.getenv("STT_API_KEY", "").strip() else "browser-speech-recognition", "llm": "flatkey" if os.getenv("FLATKEY_API_KEY", "").strip() else "not-configured"}
+    return {"enabled": ai_enabled(), "stt": "server-audio" if stt_provider() else "browser-speech-recognition", "stt_provider": stt_provider() or "none", "llm": "flatkey" if os.getenv("FLATKEY_API_KEY", "").strip() else "not-configured"}
 
 @app.post("/api/ai/transcribe-audio")
 async def ai_transcribe_audio(request: Request, identity=Depends(current_user)):
     """Desktop fallback: transcribe audio via a separately configured STT service."""
     if not ai_enabled():
         raise HTTPException(503, "IA de chamadas desativada.")
+    provider = stt_provider()
+    if not provider:
+        raise HTTPException(503, "A transcrição por voz não está disponível no app de PC. Digite sua pergunta ao Lula ou use o navegador.")
     key = os.getenv("STT_API_KEY", "").strip()
-    if not key:
-        raise HTTPException(503, "Configure STT_API_KEY no servidor para transcrição no desktop.")
     if request.headers.get("content-type", "").split(";")[0] not in ("audio/webm", "audio/ogg", "audio/mp4"):
         raise HTTPException(415, "Formato de áudio não suportado.")
     if request.headers.get("content-length", "").isdigit() and int(request.headers["content-length"]) > 4_000_000:
@@ -285,6 +326,8 @@ async def ai_transcribe_audio(request: Request, identity=Depends(current_user)):
         raise HTTPException(413, "Áudio vazio ou grande demais.")
     media = request.headers["content-type"].split(";")[0]
     suffix = {"audio/webm": "webm", "audio/ogg": "ogg", "audio/mp4": "mp4"}[media]
+    if provider == "gemini":
+        return {"text": await gemini_transcribe(audio, media)}
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(40.0, connect=8.0)) as client:
             response = await client.post(

@@ -19,7 +19,7 @@ export function initLuladroid(ctx) {
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   let active = false, muted = false, recognition = null, closed = false;
   let recorder = null, micStream = null, recorderTimer = null, sendingAudio = false, useRecorder = false;
-  let callId = '', log = [], lastFinal = '', lastFinalAt = 0;
+  let callId = '', log = [], lastFinal = '', lastFinalAt = 0, serverStt = null;
 
   const panel = el('aside', 'luladroid-panel');
   panel.id = 'luladroid-panel';
@@ -28,14 +28,21 @@ export function initLuladroid(ctx) {
 
   const header = el('header', 'luladroid-header');
   const title = el('h3', '', 'Lula');
+  const badge = el('span', 'luladroid-avatar', '✦');
+  badge.setAttribute('aria-hidden', 'true');
   const dot = el('span', 'luladroid-dot');
   const status = el('span', 'luladroid-status', 'Assistente de voz');
   status.setAttribute('role', 'status');
   const close = button('×', () => setOpen(false), 'luladroid-close');
   close.setAttribute('aria-label', 'Fechar Lula');
-  header.append(title, dot, status, close);
+  const heading = el('div', 'luladroid-heading');
+  const statusLine = el('div', 'luladroid-statusline');
+  statusLine.append(dot, status);
+  heading.append(title, statusLine);
+  header.append(badge, heading, close);
 
-  const intro = el('p', 'luladroid-intro', 'Diga “eai Lula” e faça a pergunta. A resposta é falada nesta chamada.');
+  const intro = el('div', 'luladroid-intro');
+  intro.append(el('strong', '', 'Pergunte sobre a chamada'), el('p', '', 'Diga “eai Lula” e a pergunta, ou digite abaixo. A resposta aparece aqui e é falada só no seu dispositivo.'));
   const logBox = el('div', 'luladroid-log');
   logBox.setAttribute('role', 'log');
   logBox.setAttribute('aria-live', 'polite');
@@ -50,8 +57,24 @@ export function initLuladroid(ctx) {
   const transcripts = button('Transcrições', () => showTranscripts(), 'soft-button');
   actions.append(listen, stopButton, mute, transcripts);
 
-  const note = el('p', 'luladroid-note', 'A transcrição usa o reconhecimento do navegador ou, no desktop, o serviço de transcrição configurado no servidor. O áudio não é armazenado pela Órbita.');
-  panel.append(header, intro, logBox, actions, note);
+  const askForm = el('form', 'luladroid-ask');
+  const askInput = el('input');
+  askInput.type = 'text'; askInput.maxLength = 300; askInput.placeholder = 'Pergunte ao Lula…';
+  askInput.setAttribute('aria-label', 'Pergunta para o Lula');
+  const askSend = el('button', 'primary', 'Enviar');
+  askSend.type = 'submit';
+  askForm.append(askInput, askSend);
+  askForm.onsubmit = event => {
+    event.preventDefault();
+    const question = askInput.value.trim();
+    if (!question) return;
+    if (!current() || !inRoom()) return toast('Entre na chamada para conversar com o Lula.');
+    askInput.value = '';
+    add('you', question);
+    ask(question);
+  };
+  const note = el('p', 'luladroid-note', 'O áudio não é armazenado pela Órbita. Sem reconhecimento de voz disponível, você ainda pode digitar.');
+  panel.append(header, intro, logBox, askForm, actions, note);
 
   const toggle = button('Lula', () => setOpen(panel.hidden), 'soft-button');
   toggle.id = 'luladroid-toggle';
@@ -66,6 +89,24 @@ export function initLuladroid(ctx) {
     const selected = state().selected;
     return selected ? (selected.private ? 'direct-' : 'channel-') + selected.id : '';
   };
+
+  async function checkServerStt() {
+    if (serverStt !== null) return serverStt;
+    try {
+      const response = await apiFetch('/api/ai/status');
+      const data = await response.json();
+      serverStt = data.stt === 'server-audio';
+    } catch { serverStt = false; }
+    return serverStt;
+  }
+
+  function typedMode() {
+    active = false; stopRecognition(); stopRecorder();
+    listen.hidden = false; stopButton.hidden = true;
+    setStatus('Voz indisponível aqui · digite sua pergunta');
+    toast('O reconhecimento de voz não está disponível neste app. Você pode digitar sua pergunta ao Lula.');
+    requestAnimationFrame(() => askInput.focus({ preventScroll: true }));
+  }
 
   function setOpen(open) {
     panel.hidden = !open;
@@ -110,6 +151,7 @@ export function initLuladroid(ctx) {
 
   async function startRecorder() {
     if (!active || !current() || !inRoom() || recorder || micStream) return;
+    if (!(await checkServerStt())) return typedMode();
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
       setStatus('Captura de áudio não disponível');
       return toast('Este dispositivo não suporta captura de áudio para transcrição.');
@@ -142,9 +184,7 @@ export function initLuladroid(ctx) {
               if (data.text?.trim() && active) await handle(data.text.trim());
             }
           } catch (error) {
-            setStatus('Transcrição do PC indisponível');
-            toast(error.message || 'Verifique a configuração de STT no servidor.');
-            active = false; listen.hidden = false; stopButton.hidden = true; stopRecorder();
+            serverStt = false; typedMode();
           } finally {
             sendingAudio = false;
             if (active && micStream) capture();
@@ -227,6 +267,12 @@ export function initLuladroid(ctx) {
     } catch { toast('Não foi possível guardar esta fala no histórico.'); }
     const question = wakeQuestion(text);
     if (question === null) return;
+    await ask(question);
+  }
+
+  async function ask(question) {
+    const id = callId || (callId = scope());
+    if (!id) return;
     setStatus('Pensando…', true);
     try {
       const response = await apiFetch('/api/ai/opinion', {
@@ -236,7 +282,7 @@ export function initLuladroid(ctx) {
       const data = await response.json();
       const answer = String(data.answer || '').trim();
       if (!current()) return;
-      if (answer) { add('ai', answer); speak(answer); setStatus('Escuta ativa', true); }
+      if (answer) { add('ai', answer); speak(answer); setStatus(active ? 'Escuta ativa' : 'Pronto', active); }
       else setStatus('Sem resposta');
     } catch (error) {
       setStatus('Não foi possível responder');
