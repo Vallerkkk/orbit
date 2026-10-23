@@ -1,3 +1,4 @@
+import {configureUiSounds,uiSoundsEnabled,setUiSoundsEnabled,uiSound} from './ui-sounds.js';
 import {createAuthRecovery,isInvalidSessionError} from './auth-recovery.js';
 import './ui-polish.js';
 import {initSocialLogin} from './social-login.js';
@@ -7,6 +8,7 @@ import {initShareReceiver} from './share-target.js';
 import {initThemeAccessibility,foreground} from './theme-accessibility.js';
 import {initAppUpdates} from './app-updates.js';
 import {loadStyle} from './lazy-assets.js';
+import {initSettingsLayout} from './settings-layout.js';
 import {initAudioControls} from './audio-controls.js';
 import {initCallReactions} from './call-reactions.js';
 import { initCommunityUX } from './community-ux.js';
@@ -82,6 +84,7 @@ function errorText(error) {
   if(error?.name==='TimeoutError')return 'A conexão demorou demais. Tente novamente.';
   if (error?.name === 'NotAllowedError') return 'Permissão recusada. Autorize o dispositivo no navegador.';
   if (error?.name === 'NotFoundError') return 'Nenhum dispositivo compatível foi encontrado.';
+  if(error?.code==='42501'||/permission denied/i.test(error?.message||''))return 'Sem permissão no banco para esta ação ('+(error?.message||'42501')+'). Aplique a migração de permissões do Supabase (docs/CORRECAO-ENVIO-MENSAGENS.md).';
   if (error?.message === 'Invalid login credentials') return 'E-mail ou senha incorretos.';
   if(error?.message==='Database error saving new user')return 'Não foi possível criar a conta. Tente outro nickname; ele pode já estar em uso.';
   if (error?.message === 'Email not confirmed') return 'Confirme seu e-mail antes de entrar.';
@@ -191,13 +194,14 @@ function renderChannels() {
     node.setAttribute('aria-pressed', String(selected?.id === channel.id && !home));
     (channel.kind === 'text' ? text : voice).push(node);
     if (channel.kind === 'voice') {
-      const peers = publicVoicePresence.filter(p => p.channel_id === channel.id), signature = JSON.stringify(peers.map(info => [info, person(info.id).display_name, person(info.id).avatar_src]));
+      const peers = publicVoicePresence.filter(p => p.channel_id === channel.id), signature = JSON.stringify(peers.map(info => [info.id, person(info.id).display_name, person(info.id).avatar_src]));
       let tree = voiceTrees.get(channel.id);
       if (!tree || tree.dataset.signature !== signature) {
         tree = el('div', 'voice-tree-live'); tree.dataset.signature = signature;
-        for (const info of peers) { const p = person(info.id), row = el('div', 'voice-tree-person'), avatar = el('span', 'avatar'); setAvatar(avatar, p); row.append(avatar, el('span', '', p.display_name), el('small', '', info.screen ? 'AO VIVO' : info.microphone ? '◖' : '🔇')); tree.append(row); }
+        for (const info of peers) { const p = person(info.id), row = el('div', 'voice-tree-person'), avatar = el('span', 'avatar'); row.dataset.uid = info.id; setAvatar(avatar, p); row.append(avatar, el('span', 'vt-name', p.display_name), el('span', 'vt-icons')); tree.append(row); }
         voiceTrees.set(channel.id, tree);
       }
+      paintVoiceTree(tree, channel.id);
       if (tree.children.length) voice.push(tree);
     }
   }
@@ -539,6 +543,7 @@ function onTrack(track, participant, publication) {
   if (previous?.track === track) { previous.publication = publication || previous.publication;if(track.kind==='audio')applyRemoteVolume(previous);syncCallMedia();return; }
   if (previous) disposeMedia(previous);
   const media = track.attach(), sid = publication?.trackSid || track.sid;
+  if(track.kind==='video'){if(!participant.isLocal)media.orbitaPublication=publication;const mst=track.mediaStreamTrack;if(mst&&'contentHint' in mst&&!mst.contentHint)mst.contentHint=source==='screen_share'?'detail':'motion';}
   if (sid) media.dataset.track = sid;
   const entry = {key, track, media, publication, participantId:participant.identity,source:track.kind==='audio'?audioSource(source):source, cleanups:[]};
   callMedia.set(key, entry);
@@ -551,6 +556,7 @@ function onTrack(track, participant, publication) {
     const figure = el('figure', 'media-tile' + (isScreen ? ' media-screen' : '')); if(sid)figure.dataset.track=sid;figure.dataset.participantId=participant.identity;entry.tile=figure;
     media.muted = true; media.playsInline = true;
     const caption = el('figcaption');
+    if(isScreen){const pill=el('span','tile-live-pill','Compartilhando tela');figure.append(pill);}
     caption.append(el('span', '', (peopleById.get(participant.identity)?.display_name || participant.name || 'Participante') + (isScreen ? ' · Tela' : ' · Câmera')));
     const expand = el('button', 'expand-video', 'Tela cheia');
     expand.type = 'button'; expand.setAttribute('aria-label', `Ver ${isScreen ? 'tela' : 'câmera'} de ${peopleById.get(participant.identity)?.display_name || participant.name || 'Participante'} em tela cheia`);
@@ -599,14 +605,14 @@ function updateCallUI() {
   $('participants').hidden = !here; $('media-grid').hidden = !here;
   if(participantRoom!==room){participantCards.clear();participantRoom=room;}const participantNodes=[];
   $('voice-stage').setAttribute('aria-label',here?'Chamada conectada':'Sala de voz');
-  publishVoicePresence().catch(()=>{});
+  publishVoicePresence().catch(()=>{});refreshVoiceTrees();
   if (room) {
     const participants = [room.localParticipant, ...room.remoteParticipants.values()];
     for (const participant of participants) {
       let card=participantCards.get(participant.identity);
       if(!card){card=el('div','participant');card.dataset.participantId=participant.identity;card.append(el('span','avatar'),el('strong','participant-name'),el('small','participant-status'));
         participantCards.set(participant.identity,card);}
-      card.classList.toggle('speaking',!!participant.isSpeaking);const name=peopleById.get(participant.identity)?.display_name||participant.name||'Participante';card.querySelector('.avatar').textContent=initials(name);card.querySelector('.participant-name').textContent=name;
+      card.classList.toggle('speaking',!!participant.isSpeaking);const name=peopleById.get(participant.identity)?.display_name||participant.name||'Participante';setAvatar(card.querySelector('.avatar'),{...person(participant.identity),display_name:name});card.querySelector('.participant-name').textContent=name;
       card.dataset.mic=participant.isMicrophoneEnabled?'on':'off';card.querySelector('.participant-status').textContent=`${participant.isMicrophoneEnabled?'Microfone ligado':'Microfone desligado'} · ${qualityText(participant.connectionQuality)}`;
       for(const slider of card.querySelectorAll('input[data-audio-source]')){
         const source=slider.dataset.audioSource;slider.setAttribute('aria-label',(source==='microphone'?'Volume do microfone de ':'Volume da transmissão de ')+name);
@@ -622,7 +628,40 @@ function updateCallUI() {
   const activeIds=new Set(participantNodes.map(node=>node.dataset.participantId));for(const id of participantCards.keys())if(!activeIds.has(id))participantCards.delete(id);reconcileNodes($('participants'),participantNodes);
   renderChannels();
 }
+const VT_ICON={
+  muted:'<svg viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 5.2 2"/><path d="M15 9.5V6a3 3 0 0 0-.9-2.1M19 11a7 7 0 0 1-1.1 3.7M5 11a7 7 0 0 0 11 5.7M12 18v3"/><path class="vt-slash" d="M4 4l16 16"/></svg>',
+  deaf:'<svg viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 13.7-5.6M20 12v3"/><path d="M4 15h3v5H5a1 1 0 0 1-1-1zM20 15h-3v5h2a1 1 0 0 0 1-1z"/><path class="vt-slash" d="M4 4l16 16"/></svg>',
+  camera:'<svg viewBox="0 0 24 24"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3z"/></svg>'};
+function voiceStateFor(info, channelId){
+  const st={muted:!info.microphone,deaf:!!info.deafened,camera:!!info.camera,screen:!!info.screen,speaking:false};
+  if(room&&callChannel?.id===channelId){
+    const local=info.id===session?.user?.id, part=local?room.localParticipant:[...room.remoteParticipants.values()].find(p=>p.identity===info.id);
+    if(part){st.muted=!part.isMicrophoneEnabled;st.camera=!!part.isCameraEnabled;st.screen=!!part.isScreenShareEnabled;st.speaking=!!part.isSpeaking&&part.isMicrophoneEnabled;}
+    if(local)st.deaf=deafened;
+  }
+  if(st.deaf)st.speaking=false;
+  return st;
+}
+function paintVoiceTree(tree, channelId){
+  for(const row of tree.querySelectorAll('.voice-tree-person')){
+    const info=publicVoicePresence.find(p=>p.id===row.dataset.uid&&p.channel_id===channelId)||{id:row.dataset.uid};
+    const st=voiceStateFor(info,channelId), box=row.querySelector('.vt-icons');
+    row.classList.toggle('speaking',st.speaking);
+    const want=[st.deaf?'deaf':st.muted?'muted':null,st.camera?'camera':null,st.screen?'live':null].filter(Boolean);
+    for(const node of [...box.children]){if(!want.includes(node.dataset.k)&&!node.classList.contains('vt-out')){node.classList.add('vt-out');setTimeout(()=>node.remove(),reducedMotion()?0:180);}}
+    for(const k of want){
+      let node=box.querySelector(`[data-k="${k}"]:not(.vt-out)`);if(node)continue;
+      node=el('span',`vt-icon vt-${k}`);node.dataset.k=k;
+      if(k==='live'){node.textContent='AO VIVO';node.title='Compartilhando tela';}else{node.innerHTML=VT_ICON[k];node.title=k==='deaf'?'Áudio desativado':k==='muted'?'Microfone desativado':'Câmera ligada';}
+      node.setAttribute('aria-label',node.title);
+      const after=box.querySelector(`[data-k="${want[want.indexOf(k)+1]}"]`);box.insertBefore(node,after||null);
+    }
+  }
+}
+function reducedMotion(){return matchMedia('(prefers-reduced-motion: reduce)').matches;}
+function refreshVoiceTrees(){for(const [id,tree] of voiceTrees)paintVoiceTree(tree,id);}
 function updateSpeakingUI() {
+  refreshVoiceTrees();
   if(!room)return;
   const speaking=new Set([room.localParticipant,...room.remoteParticipants.values()].filter(p=>p.isSpeaking).map(p=>p.identity));
   for(const card of participantCards.values())card.classList.toggle('speaking',speaking.has(card.dataset.participantId));
@@ -669,12 +708,11 @@ $('join-call').onclick = async () => {
         videoCodec:'vp8',
         videoEncoding:media.cameraPublish.videoEncoding,
         screenShareEncoding:media.screenPublish.screenShareEncoding,
-        videoSimulcastLayers:media.mode==='economia'?[VideoPresets.h180,VideoPresets.h360]:[VideoPresets.h360,VideoPresets.h720],
+        // As camadas simulcast ficam abaixo da camada principal (videoEncoding); repetir 720p desperdiçava banda.
+        videoSimulcastLayers:media.mode==='economia'?[VideoPresets.h180]:[VideoPresets.h180,VideoPresets.h360],
         screenShareSimulcastLayers:media.mode==='economia'
-          ?[ScreenSharePresets.h360fps15,ScreenSharePresets.h720fps15]
-          :media.mode==='equilibrada'
-            ?[ScreenSharePresets.h720fps15,ScreenSharePresets.h1080fps15]
-            :[ScreenSharePresets.h720fps30,ScreenSharePresets.h1080fps30],
+          ?[ScreenSharePresets.h360fps15]
+          :[ScreenSharePresets.h720fps15],
       },
     }); audioTools.bind(connected);room = connected; callChannel = target;
     connected.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {if(room!==connected)return;onTrack(track, participant, publication);updateCallUI();})
@@ -682,15 +720,19 @@ $('join-call').onclick = async () => {
       .on(RoomEvent.TrackUnpublished, (publication, participant) => {if(room!==connected)return;removeTrack(publication.track,publication,participant);updateCallUI();})
       .on(RoomEvent.LocalTrackPublished, publication => { if(room!==connected)return;if(publication.track?.kind==='audio')audioTools?.sync(connected).catch(()=>{});if(publication.track?.kind==='video')onTrack(publication.track,connected.localParticipant,publication);updateCallUI(); })
       .on(RoomEvent.LocalTrackUnpublished, publication => {if(room!==connected)return;removeTrack(publication.track,publication,connected.localParticipant);updateCallUI();});
+    connected.on(RoomEvent.ParticipantConnected,()=>{if(room===connected)uiSound('peerJoin',{gap:400});}).on(RoomEvent.ParticipantDisconnected,()=>{if(room===connected)uiSound('peerLeave',{gap:400});});
+    // Sons de chamada: reconexão, tela compartilhada por outra pessoa e queda inesperada.
+    connected.on(RoomEvent.Reconnecting,()=>{if(room===connected)uiSound('off',{gap:1000});}).on(RoomEvent.Reconnected,()=>{if(room===connected)uiSound('on',{gap:1000});}).on(RoomEvent.TrackPublished,publication=>{if(room===connected&&publication?.source==='screen_share')uiSound('open',{gap:600});});
     for (const event of [RoomEvent.ParticipantConnected, RoomEvent.ParticipantDisconnected, RoomEvent.TrackMuted, RoomEvent.TrackUnmuted]) connected.on(event, updateCallUI);
     connected.on(RoomEvent.ActiveSpeakersChanged,updateSpeakingUI);
     connected.on(RoomEvent.DataReceived,receiveCallData);
     connected.on(RoomEvent.ConnectionQualityChanged,updateCallUI);
     connected.on(RoomEvent.Reconnecting, () => { $('call-status').textContent = 'Reconectando à sala…'; });
     connected.on(RoomEvent.Reconnected, updateCallUI);
-    connected.on(RoomEvent.Disconnected, () => { if (room === connected) { leaveCall(); toast('Você saiu da chamada.'); } });
+    connected.on(RoomEvent.Disconnected, () => { if (room === connected) { uiSound('leave');leaveCall(); toast('Você saiu da chamada.'); } });
     await connected.connect(result.url, result.token);
     if (!current() || room !== connected) { await connected.disconnect(); return; }
+    uiSound('join');
     try { await connected.startAudio(); } catch { toast('A chamada entrou. Toque na tela para liberar o áudio neste navegador.'); }
     if(!current()||room!==connected){await connected.disconnect();return;}
     enhancements.connected(connected,RoomEvent,result);
@@ -799,6 +841,7 @@ let noise = localStorage.getItem('orbita-noise') !== 'false';
 let echoCancellation = localStorage.getItem('orbita-echo') !== 'false';
 let autoGainControl = localStorage.getItem('orbita-agc') !== 'false';
 let deafened = false;
+configureUiSounds({muted:()=>deafened});
 const audioCapture = () => ({
   noiseSuppression: noise,
   echoCancellation: echoCancellation,
@@ -866,7 +909,7 @@ async function loadSocial() {
     checked(db.from('friendships').select('*')),
     checked(db.from('conversations').select('*').order('created_at',{ascending:false}))]);
   if(session?.user.id!==userId||revision!==socialRevision)return;[people,friendships,conversations]=results;peopleById=new Map(people.map(p=>[p.id,p]));peopleByUsername=new Map(people.map(p=>[p.username?.toLowerCase(),p]));
-  profile=person(session.user.id);await hydrateProfileMedia();if(session?.user.id!==userId||revision!==socialRevision)return;$('user-name').textContent=profile.display_name;
+  profile=person(session.user.id);await hydrateProfileMedia();if(session?.user.id!==userId||revision!==socialRevision)return;$('user-name').textContent=profile.display_name;setSelfHandle(profile.username);
   setAvatar($('user-avatar'),profile);
   renderSocial();renderMembers();if(home)renderFriends();if(room)updateCallUI();
 }
@@ -877,7 +920,21 @@ async function hydrateProfileMedia(){
   while(profileMediaUrls.size>256)profileMediaUrls.delete(profileMediaUrls.keys().next().value);
   for(const p of profiles){p.avatar_src=profileMediaUrls.get(p.avatar_url)?.url||'';p.banner_src=profileMediaUrls.get(p.banner_url)?.url||'';}
 }
-function setAvatar(node,p){node.dataset.userId=p?.id||'';node.textContent=initials(p?.display_name);node.style.backgroundColor=p?.avatar_color||'#8b80ff';node.style.color=p?.avatar_src?'transparent':foreground(p?.avatar_color||'#8b80ff');node.style.backgroundImage=p?.avatar_src?`url("${p.avatar_src.replaceAll('"','%22')}")`:'';node.classList.toggle('has-photo',!!p?.avatar_src);}
+function setAvatar(node,p){
+  // Foto como <img> real (object-fit: cover, centralizada) com as iniciais por baixo como fallback.
+  // Antes era background-image: quadros de decoração com `background:` resetavam o background-size (zoom/recorte)
+  // e URLs assinadas expiradas deixavam um círculo vazio.
+  const src=p?.avatar_src||'',color=p?.avatar_color||'#8b80ff';node.dataset.userId=p?.id||'';node.style.backgroundColor=color;node.style.backgroundImage='';
+  let label=node.querySelector(':scope>.avatar-initials'),img=node.querySelector(':scope>img.avatar-img');
+  if(!label||[...node.childNodes].some(n=>n!==label&&n!==img)){node.replaceChildren();label=el('span','avatar-initials');node.append(label);img=null;}
+  label.textContent=initials(p?.display_name);node.style.color=foreground(color);
+  if(!src||avatarFailed.has(src)){img?.remove();node.classList.remove('has-photo');return;}
+  if(!img){img=el('img','avatar-img');img.alt='';img.decoding='async';img.draggable=false;node.append(img);}
+  img.onerror=()=>{avatarFailed.add(src);img.remove();node.classList.remove('has-photo');node.style.color=foreground(color);refreshAvatarUrls(p);};
+  if(img.getAttribute('src')!==src)img.src=src;node.classList.add('has-photo');
+}
+const avatarFailed=new Set();let avatarRefreshTimer=0;
+function refreshAvatarUrls(p){if(p?.avatar_url)profileMediaUrls.delete(p.avatar_url);if(avatarRefreshTimer)return;avatarRefreshTimer=setTimeout(async()=>{avatarRefreshTimer=0;try{await hydrateProfileMedia();}catch{}for(const node of document.querySelectorAll('.avatar-initials'))if(!node.parentElement.classList.contains('has-photo')){const id=node.parentElement.dataset.userId,q=id&&peopleById.get(id);if(q?.avatar_src&&!avatarFailed.has(q.avatar_src))setAvatar(node.parentElement,q);}},1500);}
 async function initSocial() {
   const transition=sessionTransition,uid=session?.user.id,current=()=>sessionTransition===transition&&session?.user.id===uid;
   await loadSocial();
@@ -899,7 +956,7 @@ async function initSocial() {
   if(presenceChannel) await db.removeChannel(presenceChannel);
   if(!current())return;
   presenceChannel=db.channel('community:main',{config:{private:true,presence:{key:uid}}});
-  presenceChannel.on('presence',{event:'sync'},()=>{publicVoicePresence=Object.entries(presenceChannel.presenceState()).flatMap(([id,metas])=>metas.map(meta=>({...meta,id})));online=new Set(Object.keys(presenceChannel.presenceState()));renderMembers();renderChannels();if(home)renderFriends();});
+  presenceChannel.on('presence',{event:'sync'},()=>{publicVoicePresence=Object.entries(presenceChannel.presenceState()).flatMap(([id,metas])=>metas.map(meta=>({...meta,id})));window.dispatchEvent(new Event('orbita:presence'));online=new Set(Object.keys(presenceChannel.presenceState()));renderMembers();renderChannels();if(home)renderFriends();requestAnimationFrame(applyDecorations);});
   presenceChannel.subscribe(async status=>{if(status==='SUBSCRIBED')await publishVoicePresence(true);});
 }
 const memberNodes=new Map();
@@ -997,13 +1054,7 @@ function showProfile(p) {
     }
     body.append(actions);
     if (own) {
-      const quick = el('div', 'rp-quick');
-      for (const [id, label] of [['up-mic-btn', 'Microfone'], ['up-deafen-btn', 'Fones de ouvido'], ['settings', 'Configurações de áudio']]) {
-        const original = $(id); if (!original) continue;
-        const b = button('', () => { if (id === 'settings') { openAudioPanel(); return; } original.click(); quick.querySelectorAll('button').forEach((n, i) => n.classList.toggle('active', [$('up-mic-btn'), $('up-deafen-btn')][i]?.classList.contains('active') || false)); });
-        b.innerHTML = original.querySelector('svg')?.outerHTML || ''; b.setAttribute('aria-label', label); b.title = label; quick.append(b);
-      }
-      body.append(quick);
+      // Microfone, fones e áudio já ficam no painel do usuário (1 controle por função).
     }
     const more=el('details','rp-more'),moreBody=el('div','rp-more-body');more.append(el('summary','','Mais do perfil'),moreBody);
     if(p.created_at)moreBody.append(el('div','rp-username','Membro desde '+new Date(p.created_at).toLocaleDateString('pt-BR',{day:'numeric',month:'short',year:'numeric'})));
@@ -1047,11 +1098,13 @@ $('private-call').onclick=()=>{
 };
 function incomingCall(event){
   if(event.caller_id===session?.user.id||Date.now()-Date.parse(event.created_at)>60000)return;
-  const p=person(event.caller_id);$('incoming-name').textContent=p.display_name+' está chamando…';$('incoming-call').hidden=false;
+  const p=person(event.caller_id);$('incoming-name').textContent=p.display_name+' está chamando…';$('incoming-call').hidden=false;ringIncoming();
   $('answer-call').onclick=async()=>{try{const c=await checked(db.from('conversations').select('*').eq('id',event.conversation_id).single());$('incoming-call').hidden=true;await openConversation(c,true);$('join-call').click();}catch(e){toast(errorText(e));}};
   setTimeout(()=>{$('incoming-call').hidden=true;},30000);
 }
 $('decline-call').onclick=()=>{$('incoming-call').hidden=true;};
+// Toque de chamada recebida: repete o chime até atender, recusar ou expirar (30 s).
+let ringTimer=0;function ringIncoming(){clearInterval(ringTimer);const started=Date.now();const ring=()=>{if($('incoming-call').hidden||Date.now()-started>30000){clearInterval(ringTimer);return;}uiSound('chime',{gap:1500});};ring();ringTimer=setInterval(ring,2500);}
 $('friends-nav').onclick=showFriends;
 $('settings').onclick=()=>showDialog('Seu perfil e áudio',container=>{
   const card = el('div', 'profile-edit-card');
@@ -1088,14 +1141,15 @@ function openAudioPanel(){showDialog('Configurações de Áudio',container=>{
   const echoCheck=audioRow('Cancelamento de Eco','Reduz eco do seu microfone.',echoCancellation,'Cancelamento de eco');
   const agcCheck=audioRow('Controle Automático de Ganho (AGC)','Ajusta o volume do microfone automaticamente.',autoGainControl,'Controle automático de ganho');
   const ptt=audioRow('Pressionar para Falar','Microfone fechado até você segurar Espaço ou o botão Falar.',pushToTalk,'Pressionar para falar');
+  const sfxCheck=audioRow('Efeitos Sonoros','Sons bem discretos na interface: canais, abas, janelas, envio, reações, curtidas, chamadas e decorações.',uiSoundsEnabled(),'Efeitos sonoros');
   const sensWrap=el('div','audio-sensitivity'),sensHead=el('strong','audio-row-title','Sensibilidade do Microfone'),info=el('span','audio-row-info','i'),sensRow=el('span','audio-sens-row'),sens=el('input'),sensOut=el('output','audio-sens-value');info.setAttribute('aria-hidden','true');sensHead.append(info);sens.type='range';sens.min='10';sens.max='100';sens.value=localStorage.getItem('orbita-mic-sensitivity')||'50';sens.setAttribute('aria-label','Sensibilidade do microfone');const paint=()=>{sensOut.value=sens.value+'%';sens.style.setProperty('--fill',((sens.value-10)/90*100)+'%');};paint();sens.oninput=paint;sensRow.append(sens,sensOut);sensWrap.append(sensHead,sensRow,el('small','audio-row-desc','Arraste para ajustar a sensibilidade do seu microfone.'));form.append(sensWrap);
   const more=el('button','audio-devices-link','Entrada, saída e redução de ruído avançada');more.type='button';more.onclick=()=>audioTools?.open();form.append(more);
-  const actions=el('div','audio-actions'),reset=el('button','audio-reset','Redefinir'),apply=el('button','primary audio-apply','Aplicar');reset.type='button';apply.type='submit';reset.onclick=()=>{noiseCheck.checked=true;echoCheck.checked=true;agcCheck.checked=true;ptt.checked=false;sens.value='50';paint();};actions.append(reset,apply);form.append(actions);
+  const actions=el('div','audio-actions'),reset=el('button','audio-reset','Redefinir'),apply=el('button','primary audio-apply','Aplicar');reset.type='button';apply.type='submit';reset.onclick=()=>{noiseCheck.checked=true;echoCheck.checked=true;agcCheck.checked=true;ptt.checked=false;sfxCheck.checked=true;sens.value='50';paint();};actions.append(reset,apply);form.append(actions);
   form.onsubmit=async event=>{event.preventDefault();apply.disabled=true;try{
     noise=noiseCheck.checked;localStorage.setItem('orbita-noise',String(noise));
     echoCancellation=echoCheck.checked;localStorage.setItem('orbita-echo',String(echoCancellation));
     autoGainControl=agcCheck.checked;localStorage.setItem('orbita-agc',String(autoGainControl));
-    pushToTalk=ptt.checked;localStorage.setItem('orbita-push-to-talk',String(pushToTalk));localStorage.setItem('orbita-mic-sensitivity',sens.value);
+    pushToTalk=ptt.checked;localStorage.setItem('orbita-push-to-talk',String(pushToTalk));setUiSoundsEnabled(sfxCheck.checked);localStorage.setItem('orbita-mic-sensitivity',sens.value);
     if(room){for(const pub of room.localParticipant.audioTrackPublications.values())if(pub.track?.source==='microphone')await pub.track.restartTrack(audioCapture());await audioTools?.sync(room);talkHeld=false;if(pushToTalk||deafened)await microphoneSwitch.set(room.localParticipant,false);}
     if(form.isConnected)$('app-dialog').close();toast('Configurações de áudio aplicadas.');
   }catch(e){toast(errorText(e));}finally{apply.disabled=false;}};
@@ -1125,7 +1179,7 @@ $('pins-toggle').onclick=()=>{pinsOnly=!pinsOnly;$('pins-toggle').setAttribute('
 $('back-to-call').onclick=()=>{if(callChannel)selectChannel(callChannel);};
 $('dock-leave').onclick=()=>leaveCall();
 let microphoneBeforeDeafen=false;
-$('deafen').onclick=()=>{if(!deafened)microphoneBeforeDeafen=!!room?.localParticipant.isMicrophoneEnabled;deafened=!deafened;syncRemoteVolumes();$('deafen').setAttribute('aria-pressed',String(deafened));if(room){talkHeld=false;microphoneSwitch.set(room.localParticipant,!deafened&&microphoneBeforeDeafen&&!pushToTalk&&room.localParticipant.permissions?.canPublish!==false);}updateCallUI();};
+$('deafen').onclick=()=>{if(!deafened)microphoneBeforeDeafen=!!room?.localParticipant.isMicrophoneEnabled;deafened=!deafened;publishVoicePresence().catch(()=>{});refreshVoiceTrees();syncRemoteVolumes();$('deafen').setAttribute('aria-pressed',String(deafened));if(room){talkHeld=false;microphoneSwitch.set(room.localParticipant,!deafened&&microphoneBeforeDeafen&&!pushToTalk&&room.localParticipant.permissions?.canPublish!==false);}updateCallUI();};
 async function refreshMessages(){return loadMessages(generation,true);}
 async function refreshMessage(id,target={...selected}){
   const user=session?.user.id,key=conversationKey(user,target),version=generation;
@@ -1383,6 +1437,8 @@ $('up-profile-btn').onclick=()=>{
 };
 document.querySelectorAll('.sp-opt').forEach(opt=>opt.onclick=async()=>{try{const value=opt.dataset.status==='offline'?'invisible':opt.dataset.status||'online';await checked(db.from('profiles').update({presence_status:['online','idle','dnd','invisible'].includes(value)?value:'online'}).eq('id',session.user.id));$('status-popover').classList.add('hidden');await loadSocial();if(presenceChannel){if(value==='invisible')await presenceChannel.untrack();else await publishVoicePresence(true);}updateSelfStatus();}catch(e){toast(errorText(e));}});
 $('save-custom-status-btn').onclick=async()=>{try{await checked(db.from('profiles').update({custom_status:$('custom-status-input').value.trim().slice(0,80)}).eq('id',session.user.id));await loadSocial();updateSelfStatus();$('status-popover').classList.add('hidden');}catch(e){toast(errorText(e));}};
+// @handle no painel do usuário (abaixo do nome, truncado).
+function setSelfHandle(u){const info=$('user-name')?.parentElement;if(!info)return;let h=$('user-handle');if(!h){h=el('span','up-handle');h.id='user-handle';info.insertBefore(h,$('self-status-text'));}h.textContent=u?'@'+u:'';h.hidden=!u;}
 function updateSelfStatus(){if(!profile)return;$('self-status-text').textContent=profile.custom_status||({online:'Disponível',idle:'Ausente',dnd:'Não perturbar',invisible:'Invisível'}[profile.presence_status]||'Disponível');$('self-status-dot').style.background=({online:'var(--online)',idle:'var(--idle)',dnd:'var(--dnd)',invisible:'var(--offline)'}[profile.presence_status]);}
 const baseLoadSocial=loadSocial;loadSocial=async()=>{await baseLoadSocial();updateSelfStatus();};
 const baseSettings=$('settings').onclick;
@@ -1437,7 +1493,7 @@ window.addEventListener('pagehide',()=>{if(extraSubscription)db?.removeChannel(e
 async function publishVoicePresence(force=false){
   if(!presenceChannel||!session||!profile)return;
   if(profile.presence_status==='invisible'){if(force)await presenceChannel.untrack();return;}
-  const value={status:enhancements?.presenceStatus()||profile.presence_status||'online',channel_id:room&&!callChannel?.private&&!callChannel?.is_private&&!communities.find(c=>c.id===callChannel?.community_id)?.invite_only?callChannel?.id:null,microphone:!!room?.localParticipant.isMicrophoneEnabled,screen:!!room?.localParticipant.isScreenShareEnabled};
+  const value={status:enhancements?.presenceStatus()||profile.presence_status||'online',channel_id:room&&!callChannel?.private&&!callChannel?.is_private&&!communities.find(c=>c.id===callChannel?.community_id)?.invite_only?callChannel?.id:null,microphone:!!room?.localParticipant.isMicrophoneEnabled,deafened:!!room&&deafened,camera:!!room?.localParticipant.isCameraEnabled,screen:!!room?.localParticipant.isScreenShareEnabled,deco:ownDeco()};
   const signature=JSON.stringify(value);if(!force&&signature===lastPresenceSignature)return;lastPresenceSignature=signature;await presenceChannel.track(value);
 }
 
@@ -1568,7 +1624,9 @@ const feedContext={
   menu:()=>{document.body.classList.add('mobile-menu-open');document.querySelectorAll('.mobile-nav-btn').forEach(node=>node.setAttribute('aria-expanded','true'));},
   closeMenu:closeMobileMenu,
   rooms:()=>channels.filter(c=>c.kind==='voice'&&!c.is_private).map(c=>({...c,participants:publicVoicePresence.filter(p=>p.channel_id===c.id).length})),
-  joinRoom:async channel=>{await selectChannel(channel);$('join-call').click();}
+  joinRoom:async channel=>{await selectChannel(channel);$('join-call').click();},
+  liveIds:()=>new Set(publicVoicePresence.filter(p=>p.channel_id).map(p=>p.id)),
+  roomPeople:id=>publicVoicePresence.filter(p=>p.channel_id===id).map(p=>person(p.id)).filter(Boolean)
 };
 let feedInstance,feedTask,feedNavigation=0;
 const feedNav=el('button','server-icon action-rail','◈');feedNav.id='feed-nav';feedNav.title='Feed da Órbita';feedNav.setAttribute('aria-label',feedNav.title);$('friends-nav').after(feedNav);
@@ -1581,13 +1639,17 @@ boot();
 
 // === Profile customization (Discord-like) ===
 const PROFILE_PREFS_KEY = 'orbita-profile-prefs';
+// Decorações dos outros participantes chegam pela presença (só ids do catálogo, validados aqui).
+function ownDeco(){const p=loadProfilePrefs();return {frame:String(p.frame||''),effect:String(p.profileEffect||'')};}
+function decoFor(id){if(!id)return {};const raw=id===session?.user.id?ownDeco():publicVoicePresence.find(m=>m.id===id)?.deco||{};
+  const ok=(type,v)=>DECORATIONS.find(d=>d.type===type&&d.id===v&&d.css);return {frame:ok('frame',raw.frame),effect:ok('effect',raw.effect)};}
 function loadProfilePrefs() {
   try { return JSON.parse(localStorage.getItem(PROFILE_PREFS_KEY+':'+(session?.user.id||'guest')) || '{}') || {}; }
   catch { return {}; }
 }
 function saveProfilePrefs(prefs) {
   localStorage.setItem(PROFILE_PREFS_KEY+':'+(session?.user.id||'guest'), JSON.stringify(prefs));
-  applyProfileStyles();
+  applyProfileStyles();publishVoicePresence().catch(()=>{});
 }
 function applyProfileStyles() {
   const prefs = loadProfilePrefs();
@@ -1672,14 +1734,16 @@ preferencesObserver.observe($('app-view'),{childList:true,subtree:true,attribute
 
 function applyDecorations() {
   const prefs = loadProfilePrefs();
-  document.querySelectorAll('.rp-avatar, .up-avatar, .avatar').forEach(av => {
+  document.querySelectorAll('.rp-avatar, .up-avatar, .avatar, #user-avatar, .participant-avatar, .tile-avatar').forEach(av => {
     DECORATIONS.filter(d => d.type === 'frame'&&d.css).forEach(d => av.classList.remove(d.css));
-    const owner=av.dataset.userId||av.querySelector('[data-user-id]')?.dataset.userId||av.closest('[data-user-id],[data-participant-id]')?.dataset.userId||av.closest('[data-participant-id]')?.dataset.participantId;
-    if (prefs.frame&&owner===session?.user.id) {
-      const frame = DECORATIONS.find(d => d.id === prefs.frame);
-      if (frame?.css&&frame.type==='frame') av.classList.add(frame.css);
-    }
+    const owner=av.dataset.userId||av.querySelector('[data-user-id]')?.dataset.userId||av.closest('[data-user-id],[data-participant-id]')?.dataset.userId||av.closest('[data-participant-id]')?.dataset.participantId||messages.get(av.closest('[data-message-id]')?.dataset.messageId)?.author_id;
+    // Quadros só no cartão de perfil e nos tiles da chamada; listas laterais e chat ficam com avatar simples.
+    const roomy=av.matches('.rp-avatar, #voice-view .participant .avatar');const frame=roomy&&decoFor(owner).frame;if(frame)av.classList.add(frame.css);
   });
+  document.querySelectorAll('#voice-view .participant[data-participant-id], #voice-view .media-tile[data-participant-id]:not(.media-screen)').forEach(tile=>{
+    const fx=decoFor(tile.dataset.participantId).effect;let layer=tile.querySelector(':scope>.call-deco-fx');
+    if(!fx){layer?.remove();return;}if(!layer){layer=document.createElement('span');layer.setAttribute('aria-hidden','true');tile.prepend(layer);}
+    const cls='call-deco-fx '+fx.css;if(layer.className!==cls)layer.className=cls;});
   document.querySelectorAll('.rich-profile').forEach(p => {
     DECORATIONS.filter(d => d.type === 'effect').forEach(d => p.classList.remove(d.css));
     if (prefs.profileEffect&&p.dataset.userId===session?.user.id) {
@@ -1698,6 +1762,8 @@ showProfile = function(p) {
   applyDecorations();
 };
 setTimeout(applyDecorations, 1000);
+// Reaplica quadros/efeitos quando chat, membros, perfil ou chamada renderizam novos avatares.
+{let decoFrame=0;new MutationObserver(records=>{if(decoFrame||!records.some(r=>r.addedNodes.length))return;decoFrame=requestAnimationFrame(()=>{decoFrame=0;applyDecorations();applyProfileStyles();});}).observe(document.body,{childList:true,subtree:true});}
 
 // The status selector stays reachable when the mobile navigation drawer closes.
 document.body.append($('status-popover'));
@@ -1849,3 +1915,31 @@ const authRecovery=createAuthRecovery({auth:()=>db.auth,currentUser:()=>session?
 let resumeAuth;
 function checkResumedSession(){clearTimeout(resumeAuth);if(!session||sessionInitializing||document.hidden)return;const account=session.user.id;resumeAuth=setTimeout(()=>{if(session?.user.id===account)authRecovery.get(account).catch(error=>{if(error?.name!=='AbortError'&&session?.user.id===account)toast('Não foi possível verificar a sessão. Confira sua conexão e tente novamente.');});},200);}
 window.addEventListener('focus',checkResumedSession);window.addEventListener('online',checkResumedSession);window.addEventListener('pageshow',checkResumedSession);document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkResumedSession();});
+
+// Call control toggle feedback: pop/ripple + soft sounds, driven by aria-pressed changes.
+(()=>{
+  const sounds={mic:['unmute','mute'],deafen:['deafen','undeafen'],camera:['on','off'],screen:['on','off']};
+  const ripple=btn=>{btn.classList.remove('tg-pop');void btn.offsetWidth;btn.classList.add('tg-pop');if(reducedMotion())return;const r=el('span','tg-ripple');btn.append(r);setTimeout(()=>r.remove(),520);};
+  for(const id of Object.keys(sounds)){const btn=$(id);if(!btn)continue;let last=btn.getAttribute('aria-pressed');
+    new MutationObserver(()=>{const now=btn.getAttribute('aria-pressed');if(now===last)return;const was=last;last=now;if(was==null)return;ripple(btn);uiSound(sounds[id][now==='true'?0:1],{gap:120,force:id==='deafen'});}).observe(btn,{attributes:true,attributeFilter:['aria-pressed']});}
+  $('leave-call')?.addEventListener('click',()=>{if(room){ripple($('leave-call'));uiSound('leave');}},true);
+})();
+
+// Sons sutis da interface (respeitam 'Efeitos Sonoros'; gap evita repetição em cliques/hover rápidos).
+{
+  document.addEventListener('click',event=>{const t=event.target instanceof Element?event.target:null;if(!t)return;
+    if(t.closest('.reaction,.vc-reaction,.emoji-picker button'))return uiSound('react',{gap:150});
+    if(t.closest('.sf-like,[data-feed-like]'))return uiSound('like',{gap:200});
+    if(t.closest('.sf-repost,.sf-save'))return uiSound('react',{gap:200});
+    if(t.closest('[data-channel-id],.server-rail button,.community-button,.dg-tab,[role="tab"]'))return uiSound('tab',{gap:140});
+    if(t.closest('.primary-button,button[type="submit"],.primary'))return uiSound('tap',{gap:180});
+  },true);
+  $('message-form')?.addEventListener('submit',()=>{if($('message-input').value.trim())uiSound('send',{gap:250});},true);
+  const watchDialog=d=>{if(d.dataset.sfx)return;d.dataset.sfx='1';new MutationObserver(()=>uiSound(d.open?'open':'close',{gap:120})).observe(d,{attributes:true,attributeFilter:['open']});};
+  document.querySelectorAll('dialog').forEach(watchDialog);
+  new MutationObserver(rs=>{for(const r of rs)for(const n of r.addedNodes)if(n instanceof HTMLDialogElement)watchDialog(n);}).observe(document.body,{childList:true});
+}
+
+// 'Estado da conexão' não tinha ação: abre os detalhes de conexão (mesma janela do botão da chamada).
+$('btn-free-setup')?.addEventListener('click',()=>$('connection-info')?.click());
+initSettingsLayout();
