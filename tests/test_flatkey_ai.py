@@ -1,4 +1,4 @@
-"""LulaDroid NVIDIA NIM unit tests. No real credentials or network needed."""
+"""Lula (Flatkey) unit tests. No real credentials or network needed."""
 import os
 import unittest
 from unittest.mock import patch
@@ -9,7 +9,7 @@ from ai_call import generate_answer
 
 class NvidiaNimAnswerTests(unittest.IsolatedAsyncioTestCase):
     async def test_missing_key_fails_closed(self):
-        with patch.dict(os.environ, {"NVIDIA_API_KEY": ""}):
+        with patch.dict(os.environ, {"FLATKEY_API_KEY": ""}):
             with self.assertRaises(HTTPException) as error:
                 await generate_answer([], "O que aconteceu?")
         self.assertEqual(error.exception.status_code, 503)
@@ -32,31 +32,30 @@ class NvidiaNimAnswerTests(unittest.IsolatedAsyncioTestCase):
                 return None
 
             async def post(self, url, **kwargs):
-                assert url == "https://integrate.api.nvidia.com/v1/chat/completions"
+                assert url == "https://router.flatkey.ai/v1/chat/completions"
                 assert kwargs["headers"]["Authorization"] == "Bearer test-secret"
                 body = kwargs["json"]
-                assert body["model"] == "nvidia/nemotron-3-ultra-550b-a55b"
+                assert body["model"] == "MiniMax-H3"
                 assert body["stream"] is False
-                assert body["reasoning_effort"] == "none"
                 assert "Ana: reunião na sexta" in body["messages"][1]["content"]
                 return FakeResponse()
 
         with patch.dict(os.environ, {
-            "NVIDIA_API_KEY": "test-secret",
-            "NVIDIA_NIM_MODEL": "nvidia_nim/nvidia/nemotron-3-ultra-550b-a55b",
+            "FLATKEY_API_KEY": "test-secret",
+            "FLATKEY_MODEL": "MiniMax-H3",
         }), patch("ai_call.httpx.AsyncClient", FakeClient):
             answer = await generate_answer(
                 [{"display_name": "Ana", "text": "reunião na sexta"}],
                 "Quando é a reunião?",
             )
-        self.assertEqual(answer["source"], "nvidia-nim")
-        self.assertEqual(answer["model"], "nvidia/nemotron-3-ultra-550b-a55b")
+        self.assertEqual(answer["source"], "flatkey")
+        self.assertEqual(answer["model"], "MiniMax-H3")
         self.assertIn("sexta-feira", answer["answer"])
 
     async def test_invalid_model_fails_before_network(self):
         with patch.dict(os.environ, {
-            "NVIDIA_API_KEY": "test-secret",
-            "NVIDIA_NIM_MODEL": "bad model",
+            "FLATKEY_API_KEY": "test-secret",
+            "FLATKEY_MODEL": "bad model",
         }):
             with self.assertRaises(HTTPException) as error:
                 await generate_answer([], "Olá")
@@ -76,7 +75,7 @@ class NvidiaNimAnswerTests(unittest.IsolatedAsyncioTestCase):
             async def post(self, *args, **kwargs):
                 return FakeResponse()
 
-        with patch.dict(os.environ, {"NVIDIA_API_KEY": "test-secret"}):
+        with patch.dict(os.environ, {"FLATKEY_API_KEY": "test-secret"}):
             with patch("ai_call.httpx.AsyncClient", FakeClient):
                 with self.assertRaises(HTTPException) as error:
                     await generate_answer([], "Olá")
@@ -98,7 +97,7 @@ class NvidiaNimAnswerTests(unittest.IsolatedAsyncioTestCase):
             async def post(self, *args, **kwargs):
                 return FakeResponse()
 
-        with patch.dict(os.environ, {"NVIDIA_API_KEY": "test-secret"}):
+        with patch.dict(os.environ, {"FLATKEY_API_KEY": "test-secret"}):
             with patch("ai_call.httpx.AsyncClient", FakeClient):
                 with self.assertRaises(HTTPException) as error:
                     await generate_answer([], "Olá")
