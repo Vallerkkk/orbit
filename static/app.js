@@ -87,7 +87,7 @@ function errorText(error) {
   if(error?.name==='TimeoutError')return 'A conexão demorou demais. Tente novamente.';
   if (error?.name === 'NotAllowedError') return 'Permissão recusada. Autorize o dispositivo no navegador.';
   if (error?.name === 'NotFoundError') return 'Nenhum dispositivo compatível foi encontrado.';
-  if(error?.code==='42501'||/permission denied/i.test(error?.message||''))return 'Sem permissão no banco para esta ação ('+(error?.message||'42501')+'). Aplique a migração de permissões do Supabase (docs/CORRECAO-ENVIO-MENSAGENS.md).';
+  if(error?.code==='42501'||/permission denied/i.test(error?.message||'')){console.warn('[orbita] 42501',error);return /exclusivo dos administradores/i.test(error?.message||'')?error.message:'Você não tem permissão para fazer essa alteração. Se o problema continuar, avise um administrador.';}
   if (error?.message === 'Invalid login credentials') return 'E-mail ou senha incorretos.';
   if(error?.message==='Database error saving new user')return 'Não foi possível criar a conta. Tente outro nickname; ele pode já estar em uso.';
   if (error?.message === 'Email not confirmed') return 'Confirme seu e-mail antes de entrar.';
