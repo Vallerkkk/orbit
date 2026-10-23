@@ -973,7 +973,7 @@ function renderMembers() {
     const content=el('div'),name=el('strong','',p.display_name),assigned=memberRoles.filter(r=>r.user_id===p.id).map(m=>communityRoleList.find(r=>r.id===m.role_id)).filter(Boolean).sort((x,y)=>y.position-x.position);
     if(assigned[0]){name.style.color=assigned[0].color;name.append(el('span','role-badge',assigned[0].name));}
     content.append(name,el('small','',p.custom_status||p.presence_activity|| (online.has(p.id)?'● Disponível':'Offline')));
-    row.append(a,content);row.onclick=()=>showProfile(p);row.tabIndex=0;row.setAttribute('role','button');row.setAttribute('aria-label','Abrir perfil de '+p.display_name);row.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();showProfile(p);}};nodes.push(row);memberNodes.set(p.id,{signature,node:row});
+    row.append(a,content);row.onclick=()=>showProfile(person(p.id));row.tabIndex=0;row.setAttribute('role','button');row.setAttribute('aria-label','Abrir perfil de '+p.display_name);row.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();showProfile(person(p.id));}};nodes.push(row);memberNodes.set(p.id,{signature,node:row});
   }
   for(const id of memberNodes.keys())if(!keep.has(id))memberNodes.delete(id);reconcileNodes($('member-list'),nodes);
   $('online-count').textContent=visible.filter(p=>online.has(p.id)).length+' online';
@@ -1032,8 +1032,11 @@ function showProfile(p) {
     const body = el('div', 'rp-body');
     const nameRow = el('div', 'rp-name-row'), nameEl = el('h3', 'rp-name', p.display_name || 'Participante');
     const tag=el('span', 'rp-tag', '@' + (p.username || 'user'));nameRow.append(nameEl, tag);body.append(nameRow);
-    const bioText=[p.custom_status,p.bio].filter(Boolean).join(' · ')||p.presence_activity||(p.pronouns?p.pronouns:'Explorando a Órbita.');
-    body.append(el('p', 'rp-bio', bioText),el('hr','rp-divider'));
+    // "Sobre você" (profiles.bio) sempre lido do banco: o cartão busca a linha atual ao abrir,
+    // para não depender da lista em memória nem do realtime ter chegado.
+    const bioFor=x=>[x.custom_status,x.bio].filter(Boolean).join(' · ')||x.presence_activity||(x.pronouns?x.pronouns:'Explorando a Órbita.');
+    const bioEl=el('p', 'rp-bio', bioFor(p));body.append(bioEl,el('hr','rp-divider'));
+    if(!own&&p.id&&db)db.from('profiles').select('id,bio,custom_status,presence_activity,pronouns,display_name').eq('id',p.id).maybeSingle().then(({data})=>{if(!data||data.id!==p.id)return;const cur=peopleById.get(p.id);if(cur)Object.assign(cur,data);Object.assign(p,data);if(bioEl.isConnected)bioEl.textContent=bioFor(p);}).catch(()=>{});
     const voiceSec = el('div', 'rp-voice');
     const inCall=!!(room&&(p.id===room.localParticipant.identity||room.remoteParticipants.has(p.id)));
     const voiceHead=el('div','rp-voice-head');voiceHead.append(el('span','rp-section-title','Status de Voz'),el('span','rp-voice-state'+(inCall?' on':''),inCall?'Conectado':'Desconectado'));
