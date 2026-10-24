@@ -559,3 +559,48 @@ body.realtime-ok #btn-free-setup{display:none}
 .sp-watch,.sp-stop{border:0;border-radius:6px;padding:7px 14px;font:600 13px/1 inherit;cursor:pointer}.sp-watch{background:var(--ac);color:#fff}.sp-watch:hover{filter:brightness(1.1)}
 .sp-stop{background:#000a;color:#fff;margin-left:auto;opacity:0;transition:opacity .15s}.media-tile:hover .sp-stop,.media-tile:focus-within .sp-stop{opacity:1}.sp-stop:hover{background:#f23f43}
 @media (pointer:coarse){.sp-stop{opacity:1}}
+/* Perfil (Edição · Loja · Insígnias): moldura, cabeçalho, cartões e grades unificados */
+.ps-overlay .ps-sheet{background:var(--s1)!important;border:1px solid var(--bd)!important;border-radius:16px!important;box-shadow:0 24px 64px #000a!important;overflow:hidden}
+.ps-overlay .ps-head{padding:14px 18px!important;gap:10px;background:var(--s1);border-bottom:1px solid var(--bd)!important}
+.ps-overlay .ps-head h2{font-size:1.05rem!important;font-weight:700;letter-spacing:-.01em;display:flex;align-items:baseline;gap:8px}
+.ps-overlay .ps-head .ps-sub{margin:0!important;font-size:.8rem;color:var(--t3)}
+.ps-overlay .ps-close{width:32px;height:32px;border-radius:8px!important;border:0!important;background:transparent!important;color:var(--t2)!important;font-size:20px;line-height:1;box-shadow:none!important;outline:0}
+.ps-overlay .ps-close:hover{background:var(--s3)!important;color:var(--t1)!important}.ps-overlay .ps-close:focus-visible{box-shadow:0 0 0 2px var(--ac)!important}
+.ps-overlay .ps-close:focus:not(:focus-visible){box-shadow:none!important}
+.ps-overlay .ps-tabs{gap:2px!important;padding:0 14px!important;border-bottom:1px solid var(--bd)!important;overflow-x:auto;scrollbar-width:none}
+.ps-overlay .ps-tabs button{padding:11px 12px!important;border-radius:0;color:var(--t3)!important;font-size:.88rem;white-space:nowrap;background:none!important;box-shadow:none!important;border-bottom:2px solid transparent!important}
+.ps-overlay .ps-tabs button:hover{color:var(--t1)!important}
+.ps-overlay .ps-tabs button[aria-selected=true]{color:var(--t1)!important;border-bottom-color:var(--ac)!important}
+.ps-overlay .ps-ed-tabs{padding:4px!important;border:1px solid var(--bd)!important;border-radius:10px;background:var(--s2)}
+.ps-overlay .ps-ed-tabs button{border-radius:7px!important;border:0!important;padding:7px 10px!important}
+.ps-overlay .ps-ed-tabs button[aria-selected=true]{background:var(--s3)!important;box-shadow:none!important}
+.ps-overlay .ps-body{padding:18px!important}
+.ps-overlay input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color]),.ps-overlay select,.ps-overlay textarea{background:var(--s2)!important;border:1px solid var(--bd)!important;border-radius:8px!important;color:var(--t1)!important;padding:8px 10px!important;font:inherit;font-size:.88rem;min-height:36px}
+.ps-overlay input:focus,.ps-overlay select:focus,.ps-overlay textarea:focus{border-color:var(--ac)!important;outline:0;box-shadow:0 0 0 3px var(--acs)!important}
+.ps-overlay .ps-ed-card,.ps-overlay .ps-ed-left,.ps-overlay .ps-ed-right .ps-ed-pane>*{border-radius:12px!important}
+.ps-overlay .ps-ed-card{background:var(--s2)!important;border:1px solid var(--bd)!important;transition:border-color .15s,background .15s}
+.ps-overlay .ps-ed-card:hover{border-color:var(--bdh)!important}
+.ps-overlay .ps-ed-stage{background:radial-gradient(120% 80% at 50% 0%,var(--acs),transparent 60%),var(--bg,#111214)}
+.ps-overlay .ps-ed-stage-label{font-size:.7rem;letter-spacing:.08em;color:var(--t3)}
+.ps-overlay .ps-ed-foot{padding:12px 18px!important;border-top:1px solid var(--bd)!important;background:var(--s1);gap:8px}
+.ps-overlay button.primary,.ps-overlay .ps-ed-foot button:last-child{background:var(--ac)!important;color:#fff!important;border:0!important;border-radius:8px!important;padding:9px 16px!important;font-weight:600}
+.ps-overlay .ps-ed-foot button:not(:last-child){background:var(--s3)!important;color:var(--t1)!important;border:0!important;border-radius:8px!important;padding:9px 16px!important}
+.ps-overlay button:disabled{opacity:.45;cursor:not-allowed}
+.ps-overlay .ps-item-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))!important;gap:12px!important}
+.ps-overlay .ps-item{background:var(--s2)!important;border:1px solid var(--bd)!important;border-radius:12px!important;transition:border-color .15s,transform .15s}
+.ps-overlay .ps-item:hover{border-color:var(--bdh)!important;transform:translateY(-2px)}
+.ps-overlay .ps-item-meta{padding:10px 12px!important;gap:4px}
+.ps-overlay .ps-badges{gap:18px}
+.ps-overlay .ps-badges-right{background:var(--s2)!important;border-left:1px solid var(--bd)!important}
+.ps-overlay .ps-badge-grid{grid-template-columns:repeat(auto-fill,minmax(68px,1fr))!important;gap:8px!important}
+.ps-overlay .ps-badge-grid button{border-radius:12px!important;background:var(--s2)!important;border:1px solid var(--bd)!important;transition:border-color .15s,background .15s}
+.ps-overlay .ps-badge-grid button:hover{border-color:var(--bdh)!important;background:var(--s3)!important}
+.ps-overlay .ps-badge-grid button.selected{border-color:var(--ac)!important;background:var(--acs)!important}
+.ps-overlay .ps-badge-grid button.locked.new::after{display:none}
+.ps-overlay .ps-badge-grid button.locked{opacity:.55}
+.ps-overlay .ps-note-label{font-size:.72rem!important;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)!important;font-weight:700}
+@media (max-width:640px){.ps-overlay{padding:0!important}.ps-overlay .ps-sheet{border-radius:0!important;border:0!important;width:100vw!important;height:100dvh!important;max-height:none!important}.ps-overlay .ps-body{padding:14px!important}.ps-overlay .ps-item-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.ps-overlay .ps-badge-grid{grid-template-columns:repeat(auto-fill,minmax(56px,1fr))!important}}
+
+.ps-overlay .ps-head .ps-close.ps-close{border:0!important;outline:none!important;box-shadow:none!important}.ps-overlay .ps-head .ps-close.ps-close:focus-visible{box-shadow:0 0 0 2px var(--ac)!important}
+.ps-overlay .ps-tabs:not(.ps-ed-tabs) button[aria-selected=true]{background:none!important;border-radius:0!important}
+@media (max-width:640px){.ps-overlay .ps-head .ps-sub{display:none}.ps-overlay .ps-head h2{font-size:1rem!important}}
