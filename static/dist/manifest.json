@@ -1,8 +1,8 @@
 {
-  "version": "69745b2b3813e8da",
-  "entry": "/static/dist/app-H5BZSQH4.js",
+  "version": "1e09d95e9285650e",
+  "entry": "/static/dist/app-2GQYORS5.js",
   "files": [
-    "/static/dist/app-H5BZSQH4.js",
+    "/static/dist/app-2GQYORS5.js",
     "/static/dist/call-layout-41217c9121da3858.css",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js",
@@ -37,7 +37,7 @@
     "/static/dist/community-ux-f1d2cee68ca44291.css",
     "/static/dist/enhancements-bae842f815459588.css",
     "/static/dist/fluency-e8bd643cf9fd04e1.css",
-    "/static/dist/grafite-99d525170c4d2de0.css",
+    "/static/dist/grafite-004105246256b414.css",
     "/static/dist/identity-fd4b34a93e86c63c.css",
     "/static/dist/interface-873e50655c276577.css",
     "/static/dist/modern-dfbf9772c6bc459c.css",
@@ -62,10 +62,10 @@
     "/static/orbita-v2.css": "/static/dist/orbita-v2-0cb77913a83177eb.css",
     "/static/profile-studio.css": "/static/dist/profile-studio-2945f3cd485c28f5.css",
     "/static/store-v2.css": "/static/dist/store-v2-497d86db13d87b1a.css",
-    "/static/grafite.css": "/static/dist/grafite-99d525170c4d2de0.css"
+    "/static/grafite.css": "/static/dist/grafite-004105246256b414.css"
   },
   "integrity": {
-    "/static/dist/app-H5BZSQH4.js": "01a2b2c88d1d3f7131bb118ee44b8cf37f2fc3b0459651d75713e931f94e4616",
+    "/static/dist/app-2GQYORS5.js": "a5c8f35432b92492ba002c4969cd498aa9cb87c5dc8d4f32b3f807aab0e76572",
     "/static/dist/call-layout-41217c9121da3858.css": "41217c9121da385886b24e21b88d59a06c04e575277db89d6c1901b1a99d41da",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js": "20cfee0fc731efe53611da92202bd240b2f9d28e6b3115691ed50fc718851ee0",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js": "db2508c2c9152fbe631806e53dd148bd67a8b3695a0094caa6145d906b978027",
@@ -100,7 +100,7 @@
     "/static/dist/community-ux-f1d2cee68ca44291.css": "f1d2cee68ca44291d6840a4c9869d718e48b64f9de9e12b578689eb124b89b01",
     "/static/dist/enhancements-bae842f815459588.css": "bae842f81545958813f23a617dd8b9843815de1fc3e0f0f8ad13d6a0a0ae41f3",
     "/static/dist/fluency-e8bd643cf9fd04e1.css": "e8bd643cf9fd04e1f6d96f9f981948f6be5c4f390becdb2db5c2ee41960774ce",
-    "/static/dist/grafite-99d525170c4d2de0.css": "99d525170c4d2de0d956200bde647f91fae8405bbba8c01dfd4cf5cd66fb7391",
+    "/static/dist/grafite-004105246256b414.css": "004105246256b414d40f6e6066881caaf4e8e0e37d9775d617cdcf386cb79f8c",
     "/static/dist/identity-fd4b34a93e86c63c.css": "fd4b34a93e86c63c15775b8c4f65b026abbb2f5cfebf3d9f837c71554049638d",
     "/static/dist/interface-873e50655c276577.css": "873e50655c2765774b8ac2608bc75db554235c95bfca9420fdecf5021c2419b7",
     "/static/dist/modern-dfbf9772c6bc459c.css": "dfbf9772c6bc459cf02777db2a4552b159ad6db43b2be1f7969b7d686c52a25a",

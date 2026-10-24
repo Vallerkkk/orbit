@@ -762,13 +762,13 @@ $('join-call').onclick = async () => {
           ?[ScreenSharePresets.h360fps15]
           :[ScreenSharePresets.h720fps15],
       },
-    }); audioTools.bind(connected);room = connected; callChannel = target;
-    connected.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {if(room!==connected)return;if(!screenWatch.accept(track,publication,participant)){updateCallUI();return;}onTrack(track, participant, publication);updateCallUI();})
-      .on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {if(room!==connected)return;removeTrack(track, publication, participant);updateCallUI();})
+    }); audioTools.bind(connected);room = connected; callChannel = target;streamViewers.clear();watchingNow.clear();
+    connected.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {if(room!==connected)return;if(!screenWatch.accept(track,publication,participant)){updateCallUI();return;}if(publication?.source==='screen_share'&&!participant.isLocal){watchingNow.add(participant.identity);announceWatch(participant.identity,true);}onTrack(track, participant, publication);updateCallUI();})
+      .on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {if(room!==connected)return;if(publication?.source==='screen_share'&&watchingNow.delete(participant.identity))announceWatch(participant.identity,false);removeTrack(track, publication, participant);updateCallUI();})
       .on(RoomEvent.TrackUnpublished, (publication, participant) => {if(room!==connected)return;screenWatch.unpublished(publication,participant);removeTrack(publication.track,publication,participant);updateCallUI();})
       .on(RoomEvent.LocalTrackPublished, publication => { if(room!==connected)return;if(publication.track?.kind==='audio')audioTools?.sync(connected).catch(()=>{});if(publication.track?.kind==='video')onTrack(publication.track,connected.localParticipant,publication);updateCallUI(); })
       .on(RoomEvent.LocalTrackUnpublished, publication => {if(room!==connected)return;removeTrack(publication.track,publication,connected.localParticipant);updateCallUI();});
-    connected.on(RoomEvent.ParticipantConnected,()=>{if(room===connected)uiSound('peerJoin',{gap:400});}).on(RoomEvent.ParticipantDisconnected,participant=>{if(room===connected){screenWatch.left(participant);uiSound('peerLeave',{gap:400});}});
+    connected.on(RoomEvent.ParticipantConnected,()=>{if(room===connected){uiSound('peerJoin',{gap:400});for(const t of watchingNow)announceWatch(t,true);}}).on(RoomEvent.ParticipantDisconnected,participant=>{if(room===connected){screenWatch.left(participant);streamViewers.delete(participant.identity);watchingNow.delete(participant.identity);for(const set of streamViewers.values())set.delete(participant.identity);paintViewers();uiSound('peerLeave',{gap:400});}});
     if(RoomEvent.TrackPublished)connected.on(RoomEvent.TrackPublished,(publication,participant)=>{if(room===connected)screenWatch.apply(publication,participant);});
     // Sons de chamada: reconexão, tela compartilhada por outra pessoa e queda inesperada.
     connected.on(RoomEvent.Reconnecting,()=>{if(room===connected)uiSound('off',{gap:1000});}).on(RoomEvent.Reconnected,()=>{if(room===connected)uiSound('on',{gap:1000});}).on(RoomEvent.TrackPublished,publication=>{if(room===connected&&publication?.source==='screen_share')uiSound('open',{gap:600});});
@@ -1656,7 +1656,15 @@ $('dd-boost-btn').onclick=openCloud;$('banner-action-btn').onclick=openCloud;$('
 $('up-mic-btn').onclick=()=>$('mic').click();$('up-deafen-btn').onclick=()=>$('deafen').click();$('vb-mic').onclick=()=>$('mic').click();$('vb-video').onclick=()=>$('camera').click();$('vb-screen').onclick=()=>$('screen').click();$('dock-name').onclick=()=>{if(callChannel)selectChannel(callChannel);};
 $('back-to-call').onclick=()=>{if(selected?.private){const c=conversations.find(c=>c.id===selected.id);if(c)openConversation(c);}else{const c=channels.find(c=>c.community_id===activeCommunity&&c.kind==='text');if(c)selectChannel(c);}};
 $('connection-info').onclick=()=>showDialog('Conexão da chamada',container=>{container.append(el('p','',room?'Estado: '+room.state:'Você ainda não está em uma chamada.'));if(room){container.append(el('p','','Qualidade local: '+room.localParticipant.connectionQuality));for(const p of room.remoteParticipants.values())container.append(el('p','',(p.name||'Participante')+' · '+p.connectionQuality));}container.append(el('p','muted',`Vídeo adaptativo: perfil ${mediaSettings().mode}. O navegador ajusta a recepção à rede; áudio da tela só é liberado em abas e navegadores compatíveis.`));});
-function receiveCallData(...args){callReactions?.receive(...args);}
+// Quem assiste cada transmissão: cada um anuncia (dados LiveKit, tópico orbita-watch) quando assina/solta uma tela.
+const streamViewers=new Map(),watchingNow=new Set();
+function announceWatch(target,on){try{room?.localParticipant.publishData(new TextEncoder().encode(JSON.stringify({type:'watching',target,on})),{reliable:true,topic:'orbita-watch'})?.catch?.(()=>{});}catch{}}
+function setViewer(target,viewer,on){let set=streamViewers.get(target);if(!set)streamViewers.set(target,set=new Set());const had=set.has(viewer);on?set.add(viewer):set.delete(viewer);
+  if(had!==on&&target===room?.localParticipant.identity)uiSound(on?'peerJoin':'peerLeave',{gap:300});paintViewers();}
+function paintViewers(){for(const tile of document.querySelectorAll('#voice-stage .media-screen[data-participant-id]')){const set=streamViewers.get(tile.dataset.participantId),n=set?.size||0;let b=tile.querySelector('.sp-viewers');
+  if(!n){b?.remove();continue;}if(!b){b=el('span','sp-viewers');tile.append(b);}b.innerHTML='<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M12 5c-5 0-9 4.5-10 7 1 2.5 5 7 10 7s9-4.5 10-7c-1-2.5-5-7-10-7zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"/></svg>';b.append(String(n));
+  const names=[...set].map(id=>person(id)?.display_name||'Alguém').join(', ');b.title='Assistindo: '+names;b.setAttribute('aria-label',n+' assistindo: '+names);}}
+function receiveCallData(payload,participant,kind,topic){if(topic==='orbita-watch'){try{const m=JSON.parse(new TextDecoder().decode(payload));if(m?.type==='watching'&&participant)setViewer(String(m.target),participant.identity,!!m.on);}catch{}return;}callReactions?.receive(payload,participant,kind,topic);}
 const screenLabel=el('label','screen-option'),screenCheck=el('input');screenCheck.type='checkbox';screenCheck.id='share-screen-audio';screenCheck.checked=localStorage.getItem('orbita-screen-audio')==='true';screenLabel.title='Só o áudio de uma aba ou janela; as vozes da chamada nunca entram. Áudio do sistema da tela inteira fica desligado para não duplicar vozes.';screenLabel.append(screenCheck,document.createTextNode('Compartilhar áudio da aba (opcional; as vozes da chamada não são incluídas)'));if(screenInfo.mobile)screenLabel.hidden=true;$('active-controls').before(screenLabel);
 function updateScreenAudio(){localStorage.setItem('orbita-screen-audio',String(screenCheck.checked));}
 screenCheck.onchange=updateScreenAudio;updateScreenAudio();
@@ -1789,7 +1797,7 @@ callLayout=initCallLayout({screenWatch,audioSettings:()=>audioTools?.open(),micS
   participant:(participant,event)=>{const r=event?.currentTarget?.getBoundingClientRect?.()||event?.target?.getBoundingClientRect?.();participantMenu(participant.identity,event?.clientX||r?.left||innerWidth/2,event?.clientY||r?.bottom||innerHeight/2,!event||event.type==='click');}
 });
 const updateBeforeCallLayout=updateCallUI;
-updateCallUI=()=>{updateBeforeCallLayout();callLayout.update();syncHiddenVideo();};
+updateCallUI=()=>{updateBeforeCallLayout();callLayout.update();syncHiddenVideo();paintViewers();};
 const feedContext={
   state:()=>({db,session,profile,moderator:siteRoles.some(role=>role.user_id===session?.user.id&&['creator','admin'].includes(role.role))}),
   el,toast,checked,showDialog,tools:async action=>{const tools=await loadSocialTools();if(session)tools[action]();},sharePost:post=>sharePostToConversation(post),questions:async id=>{const tools=await loadSocialTools();if(session)tools.questions(id);},

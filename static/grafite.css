@@ -610,3 +610,4 @@ html.emoji-fallback .mp-emoji,html.emoji-fallback .mp-emoji *,html.emoji-fallbac
 body.yt-theater .yt-w-player{position:fixed!important;z-index:1401;left:50%;top:50%;transform:translate(-50%,-50%);width:min(96vw,calc(88dvh*16/9))!important;max-width:none!important;aspect-ratio:16/9;border-radius:12px;overflow:hidden;box-shadow:0 30px 80px #000}
 body.yt-theater .yt-w-player iframe{width:100%!important;height:100%!important}
 .yt-theater-btn[aria-pressed=true]{background:var(--ac)!important;color:#fff!important}
+.sp-viewers{position:absolute;top:8px;left:8px;z-index:3;display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:99px;background:#000b;color:#fff;font:600 12px/1 inherit;pointer-events:auto}
