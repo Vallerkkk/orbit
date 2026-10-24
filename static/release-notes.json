@@ -2,7 +2,7 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.23+b42d82a",
+   "version": "2026.10.23+27da34c",
    "date": "23 out 2026",
    "highlights": [
     [
@@ -24,6 +24,7 @@
    ],
    "items": {
     "chamadas": [
+     "Ouvir juntos: canal de texto #ouvir-juntos para comandos",
      "Chamada: Ouvir juntos e canais viram toggles reais",
      "Ouvir juntos: barra de controles não invade mais a fila",
      "Chamada: nomes com estilo da Loja sempre legíveis nos chips, lista de voz e painel do usuário"

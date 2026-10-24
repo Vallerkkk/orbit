@@ -703,7 +703,7 @@ async function leaveCall({preserveJoin=false}={}) {
   enhancements?.callEnded(previous);callReactions?.clear();
   if (previous) previous.removeAllListeners();
   for(const entry of [...callMedia.values()])disposeMedia(entry);
-  document.querySelectorAll('[data-remote-audio]').forEach(node => node.remove());
+  document.querySelectorAll('[data-remote-audio]').forEach(node => node.remove());callMediaSession();
   $('media-grid').replaceChildren(); updateCallUI();
   if (previous) {try{await previous.disconnect();}finally{await audioTools?.ended(previous);}}
 }
@@ -721,7 +721,7 @@ $('join-call').onclick = async () => {
       if(!response.ok)throw Error(typeof data.detail==='string'?data.detail:'Não foi possível entrar.');return data;
     },{signal:operation.signal,timeout:30000});
     if(!current())return;
-    const {Room, RoomEvent, VideoPresets, ScreenSharePresets} = await requestWithDeadline(()=>import('https://cdn.jsdelivr.net/npm/livekit-client@2.15.6/+esm'),{signal:operation.signal,timeout:30000});
+    const {Room, RoomEvent, VideoPresets, ScreenSharePresets, DisconnectReason} = await requestWithDeadline(()=>import('https://cdn.jsdelivr.net/npm/livekit-client@2.15.6/+esm'),{signal:operation.signal,timeout:30000});
     if (!current()) return;
     await leaveCall({preserveJoin:true});
     if(!current())return;
@@ -758,10 +758,14 @@ $('join-call').onclick = async () => {
     connected.on(RoomEvent.ConnectionQualityChanged,updateCallUI);
     connected.on(RoomEvent.Reconnecting, () => { $('call-status').textContent = 'Reconectando à sala…'; });
     connected.on(RoomEvent.Reconnected, updateCallUI);
-    connected.on(RoomEvent.Disconnected, () => { if (room === connected) { uiSound('leave');leaveCall(); toast('Você saiu da chamada.'); } });
+    connected.on(RoomEvent.Disconnected, reason => { if (room === connected) {
+      // Mobile: o sistema congela a aba em segundo plano e a conexão cai sem o usuário sair. Reentra automaticamente.
+      const final=[DisconnectReason?.CLIENT_INITIATED,DisconnectReason?.DUPLICATE_IDENTITY,DisconnectReason?.PARTICIPANT_REMOVED,DisconnectReason?.ROOM_DELETED,DisconnectReason?.USER_REJECTED].includes(reason);
+      if(!final&&!shuttingDown&&session&&callRejoinAttempts<3){callRejoinTarget=target;leaveCall().catch(()=>{});$('call-status').textContent='Reconectando à sala…';scheduleCallRejoin();return;}
+      uiSound('leave');leaveCall(); toast('Você saiu da chamada.'); } });
     await connected.connect(result.url, result.token);
     if (!current() || room !== connected) { await connected.disconnect(); return; }
-    uiSound('join');
+    uiSound('join');callRejoinTarget=null;callRejoinAttempts=0;callMediaSession();
     try { await connected.startAudio(); } catch { toast('A chamada entrou. Toque na tela para liberar o áudio neste navegador.'); }
     if(!current()||room!==connected){await connected.disconnect();return;}
     enhancements.connected(connected,RoomEvent,result);
@@ -836,7 +840,12 @@ facingSelect.onchange=async()=>{
 };
 window.addEventListener('resize',updateCameraControl);
 document.addEventListener('pointerdown',()=>{const current=room;if(current?.state==='connected'&&current.canPlaybackAudio===false)current.startAudio().then(()=>{if(room===current)syncRemoteVolumes();}).catch(()=>{});},{passive:true});
-window.addEventListener('pagehide', () => { shuttingDown = true;cancelCallJoin();if(presenceChannel)presenceChannel.untrack();leaveCall().catch(()=>{}); });
+// Ao trocar de app no celular a página pode ir para o bfcache (persisted) sem fechar: a chamada continua.
+let callRejoinTarget=null,callRejoinAttempts=0,callRejoinTimer;
+function scheduleCallRejoin(){clearTimeout(callRejoinTimer);if(!callRejoinTarget||document.hidden||!navigator.onLine)return;callRejoinTimer=setTimeout(async()=>{const target=callRejoinTarget;if(!target||room||joining||!session||document.hidden)return;callRejoinAttempts++;try{if(selected?.id!==target.id){const channel=channels.find(c=>c.id===target.id);if(channel)await selectChannel(channel);}if(selected?.id===target.id&&selected?.kind==='voice'){$('join-call').click();}else callRejoinTarget=null;}catch{}},800);}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleCallRejoin();});window.addEventListener('online',scheduleCallRejoin);
+function callMediaSession(){if(!('mediaSession'in navigator))return;try{if(room&&callChannel){navigator.mediaSession.metadata=new MediaMetadata({title:callChannel.name||'Chamada',artist:'Órbita · chamada de voz',artwork:[{src:'/static/icons/icon-192.png',sizes:'192x192',type:'image/png'}]});navigator.mediaSession.playbackState='playing';try{navigator.mediaSession.setActionHandler('hangup',()=>leaveCall());}catch{}}else if(navigator.mediaSession.metadata?.artist==='Órbita · chamada de voz'){navigator.mediaSession.metadata=null;navigator.mediaSession.playbackState='none';}}catch{}}
+window.addEventListener('pagehide', event => { if(event.persisted&&room)return;shuttingDown = true;cancelCallJoin();if(presenceChannel)presenceChannel.untrack();leaveCall().catch(()=>{}); });
 window.addEventListener('pageshow', event => { shuttingDown = false;if(event.persisted&&session){publishVoicePresence(true).catch(()=>{});if(!home&&selected?.kind==='text'){subscribeMessages(selected,generation);loadMessages(generation,true);}} });
 
 function setEntryBusy(busy){const entry=$('entry-animation');if(entry)entry.hidden=!busy;$('app-view').inert=busy;$('auth-view').inert=busy;}

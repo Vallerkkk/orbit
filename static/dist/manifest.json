@@ -1,8 +1,8 @@
 {
-  "version": "6640c46c1d1e5529",
-  "entry": "/static/dist/app-WZALZOIS.js",
+  "version": "b0977010acce2a87",
+  "entry": "/static/dist/app-EIMEN46G.js",
   "files": [
-    "/static/dist/app-WZALZOIS.js",
+    "/static/dist/app-EIMEN46G.js",
     "/static/dist/call-layout-41217c9121da3858.css",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js",
@@ -28,7 +28,7 @@
     "/static/dist/chunk-prod-BILYJVBG.js",
     "/static/dist/chunk-profile-appearance-GDA3C5VT.js",
     "/static/dist/chunk-profile-studio-B3WYEG7K.js",
-    "/static/dist/chunk-social-feed-HFQW35PB.js",
+    "/static/dist/chunk-social-feed-DOL36L6U.js",
     "/static/dist/chunk-social-tools-OM5BQQVS.js",
     "/static/dist/chunk-telemetry-L3E3VUOP.js",
     "/static/dist/chunk-voice-chat-BHSY2K7F.js",
@@ -65,7 +65,7 @@
     "/static/grafite.css": "/static/dist/grafite-cc829130e1a8b640.css"
   },
   "integrity": {
-    "/static/dist/app-WZALZOIS.js": "675468511d12839afba670825a3f8552d63ae1f34c428deb5df7146fe8f94f54",
+    "/static/dist/app-EIMEN46G.js": "af70245d11614c3369a3c72ccfc0ef4c886f799990546848782a006e11c9b424",
     "/static/dist/call-layout-41217c9121da3858.css": "41217c9121da385886b24e21b88d59a06c04e575277db89d6c1901b1a99d41da",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js": "20cfee0fc731efe53611da92202bd240b2f9d28e6b3115691ed50fc718851ee0",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js": "db2508c2c9152fbe631806e53dd148bd67a8b3695a0094caa6145d906b978027",
@@ -91,7 +91,7 @@
     "/static/dist/chunk-prod-BILYJVBG.js": "392e7c812c1ce2bb32af37ededef482035b91913c868d087465a8667a23b8a0a",
     "/static/dist/chunk-profile-appearance-GDA3C5VT.js": "2d06a66f69743c4f16a7500d3a4540863d8546e011fb908ffea5a0c934680e48",
     "/static/dist/chunk-profile-studio-B3WYEG7K.js": "f2f625228008d44a07e53553b4f7c8413e73a1d4b8db85eee70b8f08392b6456",
-    "/static/dist/chunk-social-feed-HFQW35PB.js": "86e0113dc83b774d4c8dd5f1187decdd193270797288e31550d8b00b5a48d8d0",
+    "/static/dist/chunk-social-feed-DOL36L6U.js": "44c9d9e50729c67bca8e394502e23cc0920745a4e1ae71637dc9a7d538ae5c66",
     "/static/dist/chunk-social-tools-OM5BQQVS.js": "e5d8f14a5b938ff0ca6d4540b02d17ad836a449b6101b97c4e6b6810aab77ece",
     "/static/dist/chunk-telemetry-L3E3VUOP.js": "3132e8830e5589029e82064b1fc2e9c325e2bcaaaf0f50eb9a7cc31f52ddba8c",
     "/static/dist/chunk-voice-chat-BHSY2K7F.js": "ec22cc5db5a13e64232ba19973145824603959f2778ecc8864a429ffca62d1cf",
