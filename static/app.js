@@ -1055,12 +1055,16 @@ $('btn-members-toggle').onclick=()=>toggleMembers();
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key.toLowerCase()==='m'&&membersContext()){e.preventDefault();toggleMembers();}if(e.key==='Escape'&&document.body.classList.contains('mv2-open')&&!matchMedia('(min-width:1100px)').matches&&!$('app-dialog').open)toggleMembers(false);});
 document.addEventListener('pointerdown',e=>{if(!document.body.classList.contains('mv2-open')||matchMedia('(min-width:1100px)').matches)return;if(e.target.closest('#members-sidebar,#btn-members-toggle,#mv2-show,dialog'))return;toggleMembers(false);},true);
 function memberActivity(p,isOnline,voice){if(voice)return voice.screen?'Ao vivo · compartilhando a tela':'Em voz · '+(channels.find(c=>c.id===voice.channel_id)?.name||'chamada');return p.custom_status||p.presence_activity||(isOnline?({idle:'Ausente',dnd:'Não perturbe'}[p.presence_status]||'Disponível'):'Offline');}
+// Entrar na sala de voz em que a pessoa está (clique no indicador "Em voz · Sala").
+async function joinVoiceChannel(id){const channel=channels.find(c=>c.id===id&&c.kind==='voice');if(!channel)return toast('Essa sala não está disponível aqui.');if(room&&callChannel?.id===id)return selectChannel(channel);await selectChannel(channel);if(selected?.id===id&&!$('join-call').disabled)$('join-call').click();}
+function voiceJoinable(node,channelId){if(!channelId||!channels.some(c=>c.id===channelId&&c.kind==='voice'))return;node.classList.add('voice-join');node.tabIndex=0;node.setAttribute('role','button');node.title='Entrar nesta sala de voz';
+  const go=e=>{e.preventDefault();e.stopPropagation();$('app-dialog').open&&$('app-dialog').close();joinVoiceChannel(channelId);};node.addEventListener('click',go);node.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')go(e);});}
 function memberRow(p,isOnline,voice){const signature=JSON.stringify([p.display_name,p.avatar_src,p.avatar_color,p.custom_status,p.presence_activity,p.presence_status,isOnline,voice?.channel_id,!!voice?.screen,memberRoles.filter(r=>r.user_id===p.id),communityRoleList.length,roleFor(p.id),JSON.stringify(p.appearance||{})]);
   const cached=memberNodes.get(p.id);if(cached?.signature===signature)return cached.node;
   const row=cached?.node||el('div','member');row.replaceChildren();row.className='member mv2-row'+(isOnline?'':' is-offline');row.dataset.userId=p.id;
   const av=el('span','avatar mv2-av');setAvatar(av,p);const dot=el('i','mv2-dot '+(isOnline?(p.presence_status==='dnd'?'dnd':p.presence_status==='idle'?'idle':'on'):'off'));dot.setAttribute('aria-hidden','true');const wrap=el('span','mv2-avwrap');wrap.append(av,dot);
   const body=el('div','mv2-body'),name=el('strong','member-name',p.display_name||'Participante'),assigned=memberRoles.filter(r=>r.user_id===p.id).map(m=>communityRoleList.find(r=>r.id===m.role_id)).filter(Boolean).sort((x,y)=>y.position-x.position);
-  if(assigned[0])name.style.color=assigned[0].color;body.append(name,el('small','mv2-sub',memberActivity(p,isOnline,voice)));row.append(wrap,body);
+  if(assigned[0])name.style.color=assigned[0].color;{const sub=el('small','mv2-sub',memberActivity(p,isOnline,voice));if(voice)voiceJoinable(sub,voice.channel_id);body.append(name,sub);}row.append(wrap,body);
   if(voice){const v=el('span','mv2-voice'+(voice.screen?' live':''),voice.screen?'AO VIVO':'');v.title=voice.screen?'Ao vivo':'Em chamada de voz';if(!voice.screen)v.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>';row.append(v);}
   row.tabIndex=0;row.setAttribute('role','button');row.setAttribute('aria-label','Abrir perfil de '+(p.display_name||'Participante')+' · '+memberActivity(p,isOnline,voice));row.onclick=()=>showProfile(person(p.id));row.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showProfile(person(p.id));}};
   memberNodes.set(p.id,{signature,node:row});return row;}
@@ -1162,7 +1166,7 @@ function showProfile(p) {
     const voiceRoom=el('div','rp-voice-room'+(inCall?' on':'')),vIcon=el('span','rp-voice-icon'),vText=el('span','rp-voice-text'),bars=el('span','rp-voice-bars');
     vIcon.setAttribute('aria-hidden','true');bars.setAttribute('aria-hidden','true');for(let i=0;i<4;i++)bars.append(el('i'));
     vText.append(el('strong','',inCall?(callChannel?.name||'Chamada'):'Nenhuma sala de voz'),el('small','',inCall?'Canal de voz':'Fora de chamadas no momento'));
-    voiceRoom.append(vIcon,vText,bars);voiceSec.append(voiceHead,voiceRoom);body.append(voiceSec);
+    voiceRoom.append(vIcon,vText,bars);voiceSec.append(voiceHead,voiceRoom);if(!inCall){const pv=publicVoicePresence.find(v=>v.id===p.id&&v.channel_id);const vc=pv&&channels.find(c=>c.id===pv.channel_id&&c.kind==='voice');if(vc){voiceRoom.classList.add('on');vText.replaceChildren(el('strong','',vc.name),el('small','','Clique para entrar na sala'));voiceJoinable(voiceRoom,vc.id);}}body.append(voiceSec);
     const actions = el('div', 'rp-actions');
     if (own) {
       actions.classList.add('rp-own-actions');

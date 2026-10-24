@@ -611,3 +611,4 @@ body.yt-theater .yt-w-player{position:fixed!important;z-index:1401;left:50%;top:
 body.yt-theater .yt-w-player iframe{width:100%!important;height:100%!important}
 .yt-theater-btn[aria-pressed=true]{background:var(--ac)!important;color:#fff!important}
 .sp-viewers{position:absolute;top:8px;left:8px;z-index:3;display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:99px;background:#000b;color:#fff;font:600 12px/1 inherit;pointer-events:auto}
+.voice-join{cursor:pointer}.voice-join:hover{color:var(--ok,#23a55a)!important;text-decoration:underline}.rp-voice-room.voice-join:hover{text-decoration:none;border-color:var(--ok,#23a55a)!important}
