@@ -274,3 +274,18 @@
 .rp-name.ps-hl,.rp-bio.ps-hl,.rp-username.ps-hl,.ps-badge-row.ps-hl{outline-offset:3px;background:color-mix(in srgb,var(--ac) 8%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 8%,transparent),0 0 14px color-mix(in srgb,var(--ac) 22%,transparent)}
 @media (prefers-reduced-motion:reduce){[data-preview-part]{transition:none}}
 .rp-name.ps-hl,.rp-bio.ps-hl,.rp-username.ps-hl{outline-offset:5px;border-radius:9px}
+/* Prévia retangular (estilo cartão de perfil largo, ~16:10) */
+@media (min-width:861px){.ps-editor:not(.ps-editor-hub){grid-template-columns:280px minmax(0,1fr) 250px}}
+.ps-ed-center{display:flex;align-items:center;justify-content:center;min-width:0}
+.ps-ed-stage{width:100%;display:flex;flex-direction:column;align-items:center;padding:18px clamp(8px,2vw,24px)}
+.ps-ed-stage .ps-card{width:min(100%,600px);aspect-ratio:16/10;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.ps-ed-stage .rp-banner{min-height:0;height:38%;flex:none}
+.ps-ed-stage .rp-body{flex:1}
+@media (max-width:860px){.ps-ed-stage{padding:12px 0}.ps-ed-stage .ps-card{width:100%;aspect-ratio:auto}.ps-ed-stage .rp-banner{height:120px}}
+.ps-ed-stage .ps-card{min-height:auto;overflow:visible}.ps-ed-stage .rp-banner{height:120px!important;min-height:0!important}.ps-ed-stage .rp-body{padding-bottom:14px}
+
+.ps-ed-center .ps-ed-stage .ps-card.rich-profile{width:min(600px,100%)!important}
+@media (max-width:860px){.ps-ed-center .ps-ed-stage .ps-card.rich-profile{width:100%!important}}
+@media (min-width:861px){.ps-editor:not(.ps-editor-hub){grid-template-columns:260px minmax(0,1fr) 210px}}.ps-ed-stage .rp-banner{height:96px!important}.ps-ed-center .ps-ed-stage .ps-card.rich-profile{width:min(640px,100%)!important}
+.ps-ed-center .ps-ed-stage .ps-card.rich-profile .rp-banner{height:96px!important;min-height:0!important;max-height:96px!important}@media (min-width:861px){.ps-editor:not(.ps-editor-hub){grid-template-columns:260px minmax(0,1fr) 230px}}
+.ps-ed-center .ps-ed-stage .rp-body h5{margin:10px 0 2px!important}.ps-ed-center .ps-ed-stage .rp-body p{margin:0!important}

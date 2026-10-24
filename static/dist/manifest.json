@@ -1,5 +1,5 @@
 {
-  "version": "1951304ead182521",
+  "version": "62aac03af2015745",
   "entry": "/static/dist/app-H2PXOEGB.js",
   "files": [
     "/static/dist/app-H2PXOEGB.js",
@@ -43,7 +43,7 @@
     "/static/dist/modern-dfbf9772c6bc459c.css",
     "/static/dist/orbita-v2-0cb77913a83177eb.css",
     "/static/dist/polish-9e30c3704e33af2f.css",
-    "/static/dist/profile-studio-685b4b189e29be61.css",
+    "/static/dist/profile-studio-f065f939114165ca.css",
     "/static/dist/social-feed-4b3f4d2a773418e0.css",
     "/static/dist/store-v2-497d86db13d87b1a.css",
     "/static/dist/style-66be5b65cd0613f2.css"
@@ -60,7 +60,7 @@
     "/static/polish.css": "/static/dist/polish-9e30c3704e33af2f.css",
     "/static/modern.css": "/static/dist/modern-dfbf9772c6bc459c.css",
     "/static/orbita-v2.css": "/static/dist/orbita-v2-0cb77913a83177eb.css",
-    "/static/profile-studio.css": "/static/dist/profile-studio-685b4b189e29be61.css",
+    "/static/profile-studio.css": "/static/dist/profile-studio-f065f939114165ca.css",
     "/static/store-v2.css": "/static/dist/store-v2-497d86db13d87b1a.css",
     "/static/grafite.css": "/static/dist/grafite-f73d1e7608aac005.css"
   },
@@ -106,7 +106,7 @@
     "/static/dist/modern-dfbf9772c6bc459c.css": "dfbf9772c6bc459cf02777db2a4552b159ad6db43b2be1f7969b7d686c52a25a",
     "/static/dist/orbita-v2-0cb77913a83177eb.css": "0cb77913a83177eb14b8376e20f067053cd331c5cb4a1c49c81515e468f7d353",
     "/static/dist/polish-9e30c3704e33af2f.css": "9e30c3704e33af2f58e9330948fffaeb5dca7beb172355dfbb845e08418161ef",
-    "/static/dist/profile-studio-685b4b189e29be61.css": "685b4b189e29be61836f7d5d33283419ff9bc28330e78e90a8847683173916de",
+    "/static/dist/profile-studio-f065f939114165ca.css": "f065f939114165ca8158d9c9192a9afd6f403b43e832920a3c61e1ceaf24edb3",
     "/static/dist/social-feed-4b3f4d2a773418e0.css": "4b3f4d2a773418e091aa1d85c724a235dd23e18fbf00f9f5c20a5b5f329ae1d3",
     "/static/dist/store-v2-497d86db13d87b1a.css": "497d86db13d87b1a774fbfaa891ed7e6dc97c02b84d11d27ec1bb5adb1bcfe98",
     "/static/dist/style-66be5b65cd0613f2.css": "66be5b65cd0613f2fab19a08027714234f0160213e49c2844153be0101107064"
