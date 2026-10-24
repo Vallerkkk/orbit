@@ -604,3 +604,4 @@ body.realtime-ok #btn-free-setup{display:none}
 .ps-overlay .ps-head .ps-close.ps-close{border:0!important;outline:none!important;box-shadow:none!important}.ps-overlay .ps-head .ps-close.ps-close:focus-visible{box-shadow:0 0 0 2px var(--ac)!important}
 .ps-overlay .ps-tabs:not(.ps-ed-tabs) button[aria-selected=true]{background:none!important;border-radius:0!important}
 @media (max-width:640px){.ps-overlay .ps-head .ps-sub{display:none}.ps-overlay .ps-head h2{font-size:1rem!important}}
+.ps-overlay .ps-sheet:focus{outline:none}

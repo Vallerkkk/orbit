@@ -26,6 +26,6 @@ export function openMenu({x=0,y=0,items=[],header=null,card=false,label='Menu'}=
   menu.querySelector('button,input')?.focus({preventScroll:true});return menu;}
 // Toque longo (500 ms) dispara callback com as coordenadas; cancela se o dedo mexer.
 export function onLongPress(root,selector,cb){let t=0,sx=0,sy=0;
-  root.addEventListener('touchstart',e=>{const target=e.target.closest(selector);if(!target)return;const p=e.touches[0];sx=p.clientX;sy=p.clientY;clearTimeout(t);t=setTimeout(()=>{t=0;cb(target,sx,sy);},500);},{passive:true});
+  root.addEventListener('touchstart',e=>{const el=e.target instanceof Element?e.target:e.target?.parentElement,target=el?.closest(selector);if(!target)return;const p=e.touches[0];sx=p.clientX;sy=p.clientY;clearTimeout(t);t=setTimeout(()=>{t=0;cb(target,sx,sy);},500);},{passive:true});
   const cancel=()=>{clearTimeout(t);t=0;};root.addEventListener('touchend',cancel);root.addEventListener('touchcancel',cancel);
   root.addEventListener('touchmove',e=>{const p=e.touches[0];if(Math.abs(p.clientX-sx)+Math.abs(p.clientY-sy)>10)cancel();},{passive:true});}

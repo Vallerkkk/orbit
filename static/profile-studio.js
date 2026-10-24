@@ -17,7 +17,7 @@ export function initProfileStudio(ctx){
     const head=el('header','ps-head'),h=el('h2','',title);if(sub)h.append(el('span','ps-sub',sub));const close=button('×',()=>shut(),'ps-close');close.setAttribute('aria-label','Fechar');head.append(h,close);
     const body=el('div','ps-body');box.append(head,body);back.append(box);document.body.append(back);overlay=back;
     const key=e=>{if(e.key==='Escape'){e.stopPropagation();shut();}};const shut=()=>{back.remove();document.removeEventListener('keydown',key,true);if(overlay===back)overlay=null;back.dispatchEvent(new Event('ps-close'));};
-    document.addEventListener('keydown',key,true);back.addEventListener('click',e=>{if(e.target===back)shut();});setTimeout(()=>close.focus(),0);
+    document.addEventListener('keydown',key,true);back.addEventListener('click',e=>{if(e.target===back)shut();});setTimeout(()=>{box.tabIndex=-1;box.focus({preventScroll:true});},0);
     return {back,box,head,body,shut};
   }
   const me=()=>ctx.state();
