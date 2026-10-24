@@ -2,9 +2,13 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.24+626608b",
+   "version": "2026.10.24+555cab0",
    "date": "24 out 2026",
    "highlights": [
+    [
+     "perfil",
+     "Perfil: prévia vertical também em Configurações › Perfil"
+    ],
     [
      "perfil",
      "Prévia do perfil: fundo grafite com brilho e fótons animados"
@@ -16,14 +20,11 @@
     [
      "chamadas",
      "Ícone de desligar vermelho"
-    ],
-    [
-     "chamadas",
-     "Faders de volume do microfone"
     ]
    ],
    "items": {
     "perfil": [
+     "Perfil: prévia vertical também em Configurações › Perfil",
      "Prévia do perfil: fundo grafite com brilho e fótons animados"
     ],
     "chamadas": [

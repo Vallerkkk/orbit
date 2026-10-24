@@ -312,3 +312,8 @@
 .ps-editor-hub .ps-ed-center{align-self:start!important;position:sticky!important;top:0!important;height:auto!important;min-height:0!important;max-height:none!important;padding:10px!important}
 .ps-editor-hub .ps-ed-center .ps-ed-stage{min-height:620px!important;height:auto;padding:18px 10px!important;justify-content:center}
 @media (max-width:860px){.profile-edit-card.st-profile{grid-template-columns:1fr!important}.ps-editor-hub .ps-ed-center{position:static!important}}
+/* Configurações › Perfil = estúdio redesenhado: visual primeiro, identidade depois, prévia fixa à direita */
+#app-dialog.st-dialog .st-panel .profile-edit-card.st-profile{overflow:visible!important;grid-template-areas:"cos preview" "form preview"!important}
+#app-dialog.st-dialog .ps-editor-hub>.ps-ed-center{grid-area:preview;position:sticky!important;top:8px!important}
+#app-dialog.st-dialog .st-profile>form{border:1px solid var(--sg-b1,#ffffff14);border-radius:16px;background:var(--sg-s1,#ffffff06);padding:16px}
+@media(max-width:980px){#app-dialog.st-dialog .st-panel .profile-edit-card.st-profile{grid-template-areas:"preview" "cos" "form"!important}#app-dialog.st-dialog .ps-editor-hub>.ps-ed-center{position:static!important}}
