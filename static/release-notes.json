@@ -2,9 +2,13 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.24+4d91c6e",
+   "version": "2026.10.24+626608b",
    "date": "24 out 2026",
    "highlights": [
+    [
+     "perfil",
+     "Prévia do perfil: fundo grafite com brilho e fótons animados"
+    ],
     [
      "chamadas",
      "Call v3: mudo/ensurdecido, sem engrenagem, ícones de chamada, duplo clique, botão Entrar central"
@@ -16,13 +20,12 @@
     [
      "chamadas",
      "Faders de volume do microfone"
-    ],
-    [
-     "visual",
-     "Avisa pedidos de amizade novos"
     ]
    ],
    "items": {
+    "perfil": [
+     "Prévia do perfil: fundo grafite com brilho e fótons animados"
+    ],
     "chamadas": [
      "Call v3: mudo/ensurdecido, sem engrenagem, ícones de chamada, duplo clique, botão Entrar central",
      "Ícone de desligar vermelho",

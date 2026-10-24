@@ -307,3 +307,8 @@
 @keyframes psPhotonB{from{transform:translate3d(4%,-2%,0) rotate(0deg)}to{transform:translate3d(-5%,4%,0) rotate(4deg)}}
 @keyframes psTwinkle{0%,100%{opacity:.45}50%{opacity:.85}}
 @media (prefers-reduced-motion:reduce){.ps-ed-center .ps-ed-stage::before,.ps-ed-center .ps-ed-stage::after{animation:none}}
+/* Configurações › Perfil (hub): mesma prévia vertical, fixa no topo da coluna */
+.profile-edit-card.st-profile{grid-template-columns:minmax(0,1fr) 380px!important;align-items:start}
+.ps-editor-hub .ps-ed-center{align-self:start!important;position:sticky!important;top:0!important;height:auto!important;min-height:0!important;max-height:none!important;padding:10px!important}
+.ps-editor-hub .ps-ed-center .ps-ed-stage{min-height:620px!important;height:auto;padding:18px 10px!important;justify-content:center}
+@media (max-width:860px){.profile-edit-card.st-profile{grid-template-columns:1fr!important}.ps-editor-hub .ps-ed-center{position:static!important}}
