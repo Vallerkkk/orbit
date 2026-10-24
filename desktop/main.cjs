@@ -41,7 +41,7 @@ async function start(){
   protocol.handle('orbita-desktop',localHandler);
   const ses=session.fromPartition('persist:orbita');
   ses.protocol.handle('orbita-desktop',localHandler);
-  mainWindow=new BrowserWindow({title:'Órbita',width:1360,height:900,minWidth:800,minHeight:600,show:false,backgroundColor:'#10101b',icon:path.join(__dirname,'assets/icon.png'),webPreferences:{session:ses,nodeIntegration:false,nodeIntegrationInSubFrames:false,contextIsolation:true,sandbox:true,webSecurity:true,allowRunningInsecureContent:false,webviewTag:false,devTools:!app.isPackaged}});
+  mainWindow=new BrowserWindow({title:'Órbita',width:1360,height:900,minWidth:800,minHeight:600,show:false,backgroundColor:'#10101b',icon:path.join(__dirname,'assets/icon.png'),webPreferences:{session:ses,nodeIntegration:false,nodeIntegrationInSubFrames:false,contextIsolation:true,sandbox:true,webSecurity:true,allowRunningInsecureContent:false,webviewTag:false,backgroundThrottling:false,devTools:!app.isPackaged}});
   protectNavigation(mainWindow);
   ses.setPermissionCheckHandler((contents,permission,origin,details)=>{
     if(!isAppURL(origin)||details?.isMainFrame===false)return false;

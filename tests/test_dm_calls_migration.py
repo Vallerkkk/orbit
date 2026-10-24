@@ -46,3 +46,31 @@ class DmCallMigration(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+GLARE = (ROOT/'supabase/migrations/20261024030000_dm_call_glare.sql').read_text(encoding='utf-8')
+
+class DmCallGlareMigration(unittest.TestCase):
+    def test_one_active_call_per_dm(self):
+        self.assertIn("create unique index if not exists call_events_one_active_per_dm on public.call_events(conversation_id) where status in('ringing','accepted')", GLARE)
+
+    def test_start_serialises_and_returns_existing(self):
+        body = GLARE.split('function public.start_dm_call', 1)[1].split('$$;', 1)[0]
+        self.assertIn('for update', body)
+        self.assertIn("interval '35 seconds'", body)
+        self.assertIn('return query select ev,true,now()', body)
+        self.assertIn('orbita_private.can_call_conversation(target)', body)
+        self.assertIn('me in(c.user_a,c.user_b)', body)
+
+    def test_definer_functions_are_locked_down(self):
+        for m in re.finditer(r'create or replace function ([\w.]+)\(.*?\$\$', GLARE, re.S):
+            self.assertIn("set search_path=''", m.group(0), m.group(1))
+            self.assertIn('security definer', m.group(0))
+        self.assertIn('revoke all on function public.start_dm_call(uuid,text) from public,anon', GLARE)
+        self.assertIn('revoke all on function public.dm_ringing_calls() from public,anon', GLARE)
+
+    def test_glare_access_sql_rolls_back(self):
+        sql = (ROOT/'tests/dm_call_glare_access.sql').read_text(encoding='utf-8')
+        self.assertTrue(sql.startswith('begin;'))
+        self.assertTrue(sql.rstrip().endswith('rollback;'))
+        self.assertIn('Glare: callee start must return the existing call', sql)
+        self.assertIn('Stale ring blocked new call', sql)

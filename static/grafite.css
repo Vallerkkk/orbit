@@ -470,7 +470,7 @@ body.yt-open .mv2-edge-btn,body.yt-open #btn-members-toggle,body.yt-open #member
 .dm-call-log time{font-size:11px;color:#8a8d9a}
 .dm-call-log-text{overflow:hidden;text-overflow:ellipsis}
 /* Cartão de chamada (recebendo / chamando / resultado) */
-.dm-call-card{position:fixed;z-index:130;top:calc(16px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;min-width:320px;max-width:calc(100vw - 24px);padding:14px 16px;background:#1a1b22;border:1px solid #3a3c47;border-radius:16px;box-shadow:0 18px 50px #0009;color:#f1f2f6}
+.dm-call-card{position:fixed;z-index:130;top:calc(72px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;min-width:320px;max-width:calc(100vw - 24px);padding:14px 16px;background:#1a1b22;border:1px solid #3a3c47;border-radius:16px;box-shadow:0 18px 50px #0009;color:#f1f2f6}
 .dm-call-card[data-mode=incoming]{border-color:color-mix(in srgb,var(--ac,#7c5cff) 70%,#3a3c47)}
 .dm-call-av{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#fff;flex:none;overflow:hidden}
 .dm-call-av img{width:100%;height:100%;object-fit:cover}
@@ -511,3 +511,10 @@ body.yt-open .mv2-edge-btn,body.yt-open #btn-members-toggle,body.yt-open #member
 .rail-dm-unread{margin-top:8px}
 @media(max-width:780px){#text-view.is-dm .chat-actions{gap:2px;flex:none}#text-view.is-dm #channel-title{max-width:100%}}
 @media(max-width:780px){#text-view.is-dm .chat-actions>*:not(.dm-call-action):not(:last-child){display:none!important}}
+/* Overlay global de chamada recebida: camada superior (popover) acima de diálogos, palco e tela cheia. */
+.dm-call-card[popover]{right:auto;bottom:auto;top:calc(72px + env(safe-area-inset-top,0px));left:50%;margin:0;color:inherit;overflow:visible}
+.dm-call-card[hidden]{display:none!important}
+.dm-call-card[data-audio=blocked] .dm-call-info small{color:#f3c969}
+.dm-call-action.is-answer{color:#fff;background:#23a55a;border-color:#23a55a;animation:dm-answer-pulse 1.2s ease-in-out infinite}
+@keyframes dm-answer-pulse{50%{box-shadow:0 0 0 6px color-mix(in srgb,#23a55a 35%,transparent)}}
+@media (prefers-reduced-motion:reduce){.dm-call-action.is-answer{animation:none}}

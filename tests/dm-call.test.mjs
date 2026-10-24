@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { shouldRing, callLogText, formatDuration, RING_TIMEOUT_MS } from '../static/dm-call.js';
+import { shouldRing, callLogText, formatDuration, RING_TIMEOUT_MS, startOutcome } from '../static/dm-call.js';
 import { totalUnread, badgeText } from '../static/dm-unread.js';
 const ME = 'a', OTHER = 'b', now = Date.parse('2026-10-24T01:00:00Z');
 const at = ms => new Date(now - ms).toISOString();
@@ -21,4 +21,18 @@ test('call log describes duration, missed and declined calls', () => {
 test('formats durations and unread badges', () => {
   assert.equal(formatDuration(42), '42 s');assert.equal(formatDuration(3725), '1 h 02 min');
   assert.equal(totalUnread([{ unread: 3 }, { unread: 120 }]), 123);assert.equal(badgeText(123), '99+');
+});
+test('rings by the server clock, so a skewed PC clock still rings', () => {
+  const ev = { caller_id: OTHER, status: 'ringing', created_at: at(2000) };
+  const pcAhead = now + 90000, skew = -90000; // PC 90 s ahead of the server
+  assert.equal(shouldRing(ev, ME, pcAhead), false);
+  assert.equal(shouldRing(ev, ME, pcAhead + skew), true);
+});
+test('start_dm_call outcome: new ring, glare answer, join or keep ringing', () => {
+  const ev = (o) => ({ id: 'e', caller_id: OTHER, status: 'ringing', ...o });
+  assert.equal(startOutcome({ event: ev({ caller_id: ME }), existing: false }, ME), 'ringing');
+  assert.equal(startOutcome({ event: ev(), existing: true }, ME), 'answer');
+  assert.equal(startOutcome({ event: ev({ caller_id: ME }), existing: true }, ME), 'ringing');
+  assert.equal(startOutcome({ event: ev({ status: 'accepted' }), existing: true }, ME), 'join');
+  assert.equal(startOutcome(null, ME), 'error');
 });

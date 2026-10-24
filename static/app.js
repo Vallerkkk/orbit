@@ -872,7 +872,7 @@ async function boot() {
     if(config.sentryDsn||config.umamiScript)import('./telemetry.js').then(module=>module.configureTelemetry(config)).catch(()=>{});
     if (!config.configured) { $('setup').hidden = false; $('auth-submit').disabled = true; return; }
     const {createClient} = await requestWithDeadline(()=>import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm'),{timeout:30000});
-    if(!db){db=createClient(config.supabaseUrl,config.supabaseKey);
+    if(!db){db=createClient(config.supabaseUrl,config.supabaseKey,{realtime:{worker:true}});
     // Supabase calls run outside the Auth callback to avoid locking the session.
     db.auth.onAuthStateChange((_event,next)=>{setTimeout(()=>showSession(next).catch(error=>toast(errorText(error))),0);});}
     await socialLogin.ready(db,config);
@@ -1005,7 +1005,7 @@ async function initSocial() {
     .on('postgres_changes',{event:'*',schema:'public',table:'call_events'},payload=>dmCalls?.onEvent(payload.new,payload.eventType))
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'direct_messages'},payload=>{const m=payload.new;if(m?.author_id!==session?.user.id&&!(selected?.private&&selected.id===m?.conversation_id&&!document.hidden))dmUnread?.refresh();else if(selected?.private&&selected.id===m?.conversation_id)dmUnread?.markRead(m.conversation_id);})
     .on('postgres_changes',{event:'*',schema:'public',table:'reactions'},()=>{if(!home&&selected?.kind==='text')refreshMessages();})
-    .subscribe();dmUnread?.refresh();
+    .subscribe(status=>{if(status==='SUBSCRIBED')dmCalls?.poll();});dmUnread?.refresh();dmCalls?.watch();
   if(presenceChannel) await db.removeChannel(presenceChannel);
   if(!current())return;
   presenceChannel=db.channel('community:main',{config:{private:true,presence:{key:uid}}});
@@ -1195,6 +1195,19 @@ function syncDmHeader(channel){
     const desc=$('channel-description');desc.replaceChildren();const handle=el('span','dm-handle','@'+(f.username||'')),status=el('span','dm-status',PRESENCE_TEXT[state]||'Offline');status.dataset.status=state;desc.append(handle,status);
     if(f.custom_status&&state!=='offline')desc.append(el('span','dm-custom',f.custom_status));}
   if(dm)refreshCallLog();
+  syncDmCallButtons();
+}
+// Um só estado por DM: se o contato está ligando, o botão vira "Atender"; em chamada, "Em chamada".
+function syncDmCallButtons(){
+  const voice=$('dm-voice-call'),video=$('dm-video-call');if(!voice||!video)return;
+  const active=selected?.private?dmCalls?.pendingFor(selected.id):null,incoming=active?.status==='ringing'&&active.caller_id!==session?.user.id;
+  const inCall=active?.status==='accepted'&&!!(room&&callChannel?.private&&callChannel.id===selected?.id),outgoing=active?.status==='ringing'&&!incoming;
+  voice.classList.toggle('is-answer',incoming);video.classList.toggle('is-answer',incoming&&active.kind==='video');
+  const label=incoming?'Atender':inCall?'Vocês já estão em uma chamada':outgoing?'Chamando…':'Iniciar chamada de voz';
+  voice.title=label;voice.setAttribute('aria-label',label);voice.dataset.state=incoming?'answer':inCall?'in-call':outgoing?'outgoing':'idle';
+  const vlabel=incoming?'Atender':inCall?'Vocês já estão em uma chamada':outgoing?'Chamando…':'Iniciar chamada de vídeo';
+  video.title=vlabel;video.setAttribute('aria-label',vlabel);video.dataset.state=voice.dataset.state;
+  voice.disabled=video.disabled=inCall||outgoing;
 }
 const dmCallLog=new Map();let callLogTask=0;
 async function refreshCallLog(){
@@ -1222,7 +1235,7 @@ async function joinDmCall(c,kind){
     if(room&&callChannel?.id===c.id&&!room.localParticipant.isCameraEnabled)$('camera').click();}
 }
 const dmCalls=createDmCalls({db:()=>db,el,me:()=>session?.user.id,person,setAvatar,toast,uiSound,conversations:()=>conversations,
-  loadConversation:id=>checked(db.from('conversations').select('*').eq('id',id).single()),joinCall:joinDmCall,leaveCall:()=>room&&callChannel?.private?leaveCall():undefined,refreshLog:()=>refreshCallLog().catch(()=>{})});
+  loadConversation:id=>checked(db.from('conversations').select('*').eq('id',id).single()),joinCall:joinDmCall,inCall:id=>!!(room&&callChannel?.private&&callChannel.id===id),changed:()=>syncDmCallButtons(),leaveCall:()=>room&&callChannel?.private?leaveCall():undefined,refreshLog:()=>refreshCallLog().catch(()=>{})});
 const dmUnread=createDmUnread({db:()=>db,el,me:()=>session?.user.id,person,setAvatar,rail:()=>$('rail-servers-list'),home:()=>$('friends-nav'),
   open:async id=>{let c=conversations.find(c=>c.id===id);if(!c)c=await checked(db.from('conversations').select('*').eq('id',id).single());await openConversation(c);},
   isOpen:id=>!!(selected?.private&&selected.id===id&&selected.kind==='text'&&!home&&!document.hidden)});
