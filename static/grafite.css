@@ -605,3 +605,4 @@ body.realtime-ok #btn-free-setup{display:none}
 .ps-overlay .ps-tabs:not(.ps-ed-tabs) button[aria-selected=true]{background:none!important;border-radius:0!important}
 @media (max-width:640px){.ps-overlay .ps-head .ps-sub{display:none}.ps-overlay .ps-head h2{font-size:1rem!important}}
 .ps-overlay .ps-sheet:focus{outline:none}
+html.emoji-fallback .mp-emoji,html.emoji-fallback .mp-emoji *,html.emoji-fallback .emoji-grid button,html.emoji-fallback .message-reactions button,html.emoji-fallback .vc-reaction{font-family:"Noto Color Emoji","Segoe UI Emoji","Apple Color Emoji",sans-serif}
