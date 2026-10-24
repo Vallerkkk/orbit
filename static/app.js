@@ -525,8 +525,10 @@ function sourceVolume(identity,source){
   const key='orbita-volume-'+identity+(source==='screen_share_audio'?'-screen':''),stored=localStorage.getItem(key);
   if(stored===null)return 1;const value=Number(stored);return Number.isFinite(value)?Math.max(0,Math.min(1,value)):1;
 }
+// "Mutar para mim": silencia só localmente o áudio dessa pessoa (lembrado neste dispositivo).
+const mutedForMe=identity=>localStorage.getItem('orbita-mute-'+identity)==='1';
 function applyRemoteVolume(entry){
-  const volume=deafened?0:sourceVolume(entry.participantId,entry.source);
+  const volume=deafened||mutedForMe(entry.participantId)?0:sourceVolume(entry.participantId,entry.source);
   // The SDK controls its gain node when Web Audio mixing is enabled (including iOS).
   // Do not unmute or raise the SDK's silent HTML element and create a second audio path.
   if(typeof entry.track.setVolume==='function')entry.track.setVolume(volume);
@@ -1776,6 +1778,7 @@ callLayout=initCallLayout({screenWatch,audioSettings:()=>audioTools?.open(),micS
     box.append(el('p','muted',qualityText(participant.connectionQuality)));
     if(participant.isLocal){box.append(button('Meu perfil e áudio',()=>{$('app-dialog').close();openSettingsHub('voz');}));return;}
     for(const [source,label] of [['microphone','Microfone'],['screen_share_audio','Transmissão de tela']]){const field=volumeControl(participant,source,label),slider=field.querySelector('input');slider.setAttribute('aria-label',(source==='microphone'?'Volume do microfone de ':'Volume da transmissão de ')+(participant.name||'Participante'));slider.value=sourceVolume(participant.identity,source);field.querySelector('output').value=Math.round(Number(slider.value)*100)+'%';box.append(field);}
+    const muteLabel=()=>mutedForMe(participant.identity)?'Desmutar para mim':'Mutar para mim';const mute=button(muteLabel(),()=>{const key='orbita-mute-'+participant.identity;if(mutedForMe(participant.identity))localStorage.removeItem(key);else localStorage.setItem(key,'1');syncRemoteVolumes();mute.textContent=muteLabel();mute.setAttribute('aria-pressed',String(mutedForMe(participant.identity)));});mute.setAttribute('aria-pressed',String(mutedForMe(participant.identity)));box.append(mute);
     box.append(el('p','muted','Estes volumes alteram apenas o que você ouve.'));
   })
 });
