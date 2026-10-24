@@ -15,6 +15,7 @@ export function initAudioControls(ctx){
   }
   const enhanced=()=>ctx.noise()&&localStorage.getItem('orbita-noise-mode')!=='browser';
   const sensitivity=()=>Number(localStorage.getItem('orbita-mic-sensitivity')||'50');
+  const micVolume=()=>Number(localStorage.getItem('orbita-mic-volume')||'100');
   const noiseMode=()=>localStorage.getItem('orbita-noise-mode')||'enhanced';
   async function process(track,room){
     if(!track||track.source!=='microphone'||typeof track.setProcessor!=='function')return;
@@ -23,9 +24,9 @@ export function initAudioControls(ctx){
     record.pending=(async()=>{do{record.again=false;
       if(!enhanced()){if(record.processor){await track.stopProcessor();record.processor=null;}continue;}
       // Processador já ativo: aplica sensibilidade e modo na hora, sem reiniciar a faixa.
-      if(record.processor){record.processor.update({sensitivity:sensitivity(),mode:noiseMode()});continue;}
+      if(record.processor){record.processor.update({sensitivity:sensitivity(),mode:noiseMode(),volume:micVolume()});continue;}
       // O LiveKit chama processor.init() dentro de setProcessor; iniciar antes criava um segundo AudioContext.
-      const processor=createNoiseProcessor({sensitivity:sensitivity(),mode:noiseMode()});
+      const processor=createNoiseProcessor({sensitivity:sensitivity(),mode:noiseMode(),volume:micVolume()});
       try{
         await requestWithDeadline(()=>track.setProcessor(processor),{timeout:12000});
         if(ctx.room()!==room){await track.stopProcessor();return;}
@@ -73,6 +74,10 @@ export function initAudioControls(ctx){
     sens.oninput=()=>{sensVal.textContent=sens.value+'%';localStorage.setItem('orbita-mic-sensitivity',sens.value);sync().catch(()=>{});meter.mark();};
     sens.onchange=async()=>{try{await sync();}catch{}};
     sensLabel.append(sens,sensVal);box.append(sensLabel);
+    // Volume de entrada (aplicado no processamento do microfone) e volume geral de saída da chamada.
+    const fader=(label,key,min,max,def,after)=>{const l=el('label','field',label),r=el('input'),v=el('span','muted');r.type='range';r.min=String(min);r.max=String(max);r.value=localStorage.getItem(key)||String(def);r.setAttribute('aria-label',label);v.textContent=r.value+'%';r.oninput=()=>{v.textContent=r.value+'%';localStorage.setItem(key,r.value);after();};l.append(r,v);box.append(l);};
+    fader('Volume do microfone','orbita-mic-volume',0,200,100,()=>{if(!enhanced())localStorage.getItem('orbita-noise-mode')==='browser'&&ctx.toast?.('O volume do microfone funciona com a redução de ruído Aprimorada ou Agressiva.');sync().catch(()=>{});});
+    fader('Volume de saída da chamada','orbita-output-volume',0,100,100,()=>window.dispatchEvent(new Event('orbita-output-volume')));
     const meter=micMeter(()=>gateThreshold(sens.value,mode.value));box.append(meter.node);
 
     async function refresh(){

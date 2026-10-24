@@ -528,12 +528,14 @@ function sourceVolume(identity,source){
 // "Mutar para mim": silencia só localmente o áudio dessa pessoa (lembrado neste dispositivo).
 const mutedForMe=identity=>localStorage.getItem('orbita-mute-'+identity)==='1';
 function applyRemoteVolume(entry){
-  const volume=deafened||mutedForMe(entry.participantId)?0:sourceVolume(entry.participantId,entry.source);
+  const master=Math.max(0,Math.min(100,Number(localStorage.getItem('orbita-output-volume')||'100')))/100;
+  const volume=deafened||mutedForMe(entry.participantId)?0:sourceVolume(entry.participantId,entry.source)*master;
   // The SDK controls its gain node when Web Audio mixing is enabled (including iOS).
   // Do not unmute or raise the SDK's silent HTML element and create a second audio path.
   if(typeof entry.track.setVolume==='function')entry.track.setVolume(volume);
   else{entry.media.volume=volume;entry.media.muted=deafened;}
 }
+window.addEventListener('orbita-output-volume',()=>syncRemoteVolumes());
 function syncRemoteVolumes(){for(const entry of callMedia.values())if(entry.track.kind==='audio')applyRemoteVolume(entry);}
 function syncLocalCameraPreview(){
   for(const entry of callMedia.values())if(entry.track.kind==='video'&&entry.source==='camera'&&entry.participantId===room?.localParticipant.identity){

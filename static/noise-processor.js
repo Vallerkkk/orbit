@@ -2,7 +2,7 @@ let binary;
 export function createNoiseProcessor(defaults={}){
   return {
     name:'orbita-rnnoise',processedTrack:undefined,
-    async init({track, sensitivity=defaults.sensitivity??50, mode=defaults.mode??'enhanced'}){
+    async init({track, sensitivity=defaults.sensitivity??50, mode=defaults.mode??'enhanced', volume=defaults.volume??100}){
       try{
         const Audio=window.AudioContext||window.webkitAudioContext;
         this.context=new Audio({sampleRate:48000});
@@ -27,15 +27,18 @@ export function createNoiseProcessor(defaults={}){
         this.highpass.connect(this.filter);
         this.filter.connect(this.analyser);
         this.filter.connect(this.gain);
-        this.gain.connect(this.destination);
-        this.update({sensitivity,mode});this.startGate();
+        // Volume de entrada do microfone (0–200%), depois do gate.
+        this.volume=this.context.createGain();this.volume.gain.value=1;
+        this.gain.connect(this.volume);this.volume.connect(this.destination);
+        this.update({sensitivity,mode,volume});this.startGate();
         await this.context.resume();
         if(this.cancelled)throw Error('Processamento cancelado');
         this.processedTrack=this.destination.stream.getAudioTracks()[0];
       }catch(error){await this.destroy();throw error;}
     },
-    update({sensitivity=this.sensitivity??50,mode=this.mode??'enhanced'}={}){
-      this.sensitivity=sensitivity;this.mode=mode;
+    update({sensitivity=this.sensitivity??50,mode=this.mode??'enhanced',volume=this.micVolume??100}={}){
+      this.sensitivity=sensitivity;this.mode=mode;this.micVolume=volume;
+      if(this.volume)this.volume.gain.value=Math.max(0,Math.min(200,Number(volume)||0))/100;
       if(this.highpass)this.highpass.frequency.value=mode==='aggressive'?120:80;
       this.threshold=gateThreshold(sensitivity,mode);
     },
@@ -53,11 +56,11 @@ export function createNoiseProcessor(defaults={}){
     async restart(options){await this.destroy();this.cancelled=false;await this.init(options);},
     async destroy(){
       this.cancelled=true;clearInterval(this.gateTimer);
-      for(const node of [this.source,this.highpass,this.filter,this.analyser,this.gain,this.destination]){try{node?.disconnect();}catch{}}
+      for(const node of [this.source,this.highpass,this.filter,this.analyser,this.gain,this.volume,this.destination]){try{node?.disconnect();}catch{}}
       try{this.filter?.destroy();this.filter?.port?.close();}catch{}
       this.processedTrack?.stop();this.processedTrack=undefined;
       const context=this.context;this.context=null;if(context&&context.state!=='closed')await context.close().catch(()=>{});
-      this.source=this.highpass=this.filter=this.analyser=this.gain=this.destination=null;
+      this.source=this.highpass=this.filter=this.analyser=this.gain=this.volume=this.destination=null;
     },
   };
 }
