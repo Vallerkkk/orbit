@@ -1,3 +1,4 @@
+import {pickStage,tileKind,isDoubleTap,toggleFullscreen} from './call-stage.js';
 // Call presentation owns no tracks: the existing room remains the sole media owner.
 export function initCallLayout(context) {
   const $=id=>document.getElementById(id),view=$('voice-view'),stage=$('voice-stage'),controls=$('active-controls');
@@ -6,7 +7,7 @@ export function initCallLayout(context) {
   function action(id,name,label,fn,parent){const b=document.createElement('button');b.id=id;b.type='button';b.className='call-icon';icon(b,name,label);b.onclick=()=>Promise.resolve().then(fn).catch(context.report);parent.append(b);return b;}
   const grid=document.createElement('div');grid.className='call-grid';grid.append($('media-grid'),$('participants'));stage.prepend(grid);
   let tileCount=0,fitFrame;
-  function fit(){if(fitFrame)return;fitFrame=requestAnimationFrame(()=>{fitFrame=null;if(!tileCount||matchMedia('(max-width:800px)').matches){grid.style.removeProperty('--call-max-width');return;}const columns=tileCount<=1?1:tileCount<=4?2:tileCount<=9?3:4,rows=Math.ceil(tileCount/columns),style=getComputedStyle(stage),height=stage.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom);grid.style.setProperty('--call-max-width',Math.min(1440,Math.max(columns*220,((height-(rows-1)*8)/rows)*16/9*columns+(columns-1)*8-4))+'px');});}
+  function fit(){if(fitFrame)return;fitFrame=requestAnimationFrame(()=>{fitFrame=null;if(!tileCount||grid.dataset.layout==='focus'||matchMedia('(max-width:800px)').matches){grid.style.removeProperty('--call-max-width');return;}const columns=tileCount<=1?1:tileCount<=4?2:tileCount<=9?3:4,rows=Math.ceil(tileCount/columns),style=getComputedStyle(stage),height=stage.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom);grid.style.setProperty('--call-max-width',Math.min(1440,Math.max(columns*220,((height-(rows-1)*8)/rows)*16/9*columns+(columns-1)*8-4))+'px');});}
   const resize=new ResizeObserver(fit);resize.observe(stage);
   const header=view.querySelector('.chat-header'),nav=action('call-navigation','menu','Abrir canais e conversas',()=>{const open=document.body.classList.toggle('mobile-menu-open');nav.setAttribute('aria-expanded',String(open));},header);header.prepend(nav);nav.classList.add('mobile-nav-btn');nav.setAttribute('aria-expanded','false');
   const footer=document.createElement('div');footer.className='call-footer';controls.before(footer);footer.append(controls);
@@ -16,7 +17,9 @@ export function initCallLayout(context) {
   const pip=action('call-popout','popout','Abrir vídeo flutuante',async()=>{const video=[...$('media-grid').querySelectorAll('.media-tile:not([hidden]) video')].find(v=>v.readyState>=2);if(!video)return context.toast('Ative uma câmera ou transmissão antes de abrir o vídeo flutuante.');if(!document.pictureInPictureEnabled||!video.requestPictureInPicture)return context.toast('Vídeo flutuante não está disponível neste navegador.');if(document.pictureInPictureElement)await document.exitPictureInPicture();else await video.requestPictureInPicture();},right);
   const fullscreen=action('call-fullscreen','fullscreen','Tela cheia da chamada',async()=>{if(document.fullscreenElement)await document.exitFullscreen();else if(view.requestFullscreen)await view.requestFullscreen();else context.toast('Tela cheia não está disponível neste navegador.');},right);
   document.addEventListener('fullscreenchange',()=>{fullscreen.setAttribute('aria-pressed',String(document.fullscreenElement===view));fullscreen.title=document.fullscreenElement===view?'Sair da tela cheia':'Tela cheia da chamada';});
-  function options(id,label,build){const target=$(id),group=document.createElement('div');group.className='call-control-group';target.before(group);group.append(target);action(id+'-options','chevron',label,()=>context.dialog(label,build),group);}
+  // Preferência: assistir automaticamente às telas dos outros (padrão: só quando tocar em Assistir).
+  function screenAutoField(box){const sw=context.screenWatch;if(!sw)return;const label=document.createElement('label'),check=document.createElement('input');label.className='check-field';check.type='checkbox';check.id='screen-autowatch';check.checked=localStorage.getItem('orbita-screen-autowatch')==='true';check.onchange=()=>sw.setAuto(check.checked);label.append(check,document.createTextNode(' Assistir automaticamente às telas compartilhadas pelos outros'));box.append(label);}
+  function options(id,label,build){const target=$(id),group=document.createElement('div');group.className='call-control-group';target.before(group);group.append(target);action(id+'-options','chevron',label,()=>context.dialog(label,box=>{build(box);if(id==='screen')screenAutoField(box);}),group);}
   function proxy(parent,id,text){const b=context.button(text,()=>{$('app-dialog').close();$(id).click();});parent.append(b);}
   options('mic','Opções de áudio',box=>{const devices=document.createElement('button');devices.className='soft-button';devices.textContent='Entrada, saída e redução de ruído';devices.onclick=()=>context.audioSettings();box.append(devices);proxy(box,'deafen',context.state().deafened?'Voltar a ouvir':'Ensurdecer: silenciar todo o áudio');const mic=context.button('Configurar microfone, ruído e pressionar para falar',()=>context.micSettings());box.append(mic);});
   const facing=$('camera-facing');
@@ -40,7 +43,12 @@ export function initCallLayout(context) {
     if(!visible&&document.fullscreenElement===view)document.exitFullscreen().catch(()=>{});
     const cameras=new Set();for(const tile of $('media-grid').children){decorate(tile,tile.dataset.participantId);if(!tile.classList.contains('media-screen')&&!tile.hidden)cameras.add(tile.dataset.participantId);tile.style.order=tile.classList.contains('media-screen')?'0':'1';for(const b of tile.querySelectorAll('.expand-video'))if(!b.dataset.callIcon){const isPip=b.textContent==='Vídeo flutuante';icon(b,isPip?'popout':'fullscreen',isPip?'Vídeo flutuante de '+tile.querySelector('figcaption span').textContent:b.getAttribute('aria-label'));b.dataset.callIcon='true';}if(tile.classList.contains('media-screen')&&!tile.querySelector('.call-live')){const badge=document.createElement('span');badge.className='call-live';badge.textContent='AO VIVO';tile.append(badge);}}
     for(const card of $('participants').children){card.hidden=cameras.has(card.dataset.participantId);card.style.order='1';decorate(card,card.dataset.participantId);context.avatar(card.querySelector('.avatar'),card.dataset.participantId);}
-    const count=[...grid.querySelectorAll('.participant,.media-tile,.watch-tile')].filter(n=>!n.hidden).length;tileCount=count;fit();grid.dataset.count=count;grid.style.setProperty('--call-columns',count<=1?'1':count<=4?'2':count<=9?'3':'4');
+    const tiles=[...grid.querySelectorAll('.participant,.media-tile,.watch-tile')].filter(n=>!n.hidden),count=tiles.length;
+    // Layout: com Ouvir juntos ou uma tela assistida, o destaque vai para o palco e o resto para a faixa lateral.
+    const stageIndex=pickStage(tiles.map(n=>({kind:tileKind(n)}))),stageTile=count>1?tiles[stageIndex]:null;
+    for(const n of grid.querySelectorAll('.call-stage-tile'))if(n!==stageTile)n.classList.remove('call-stage-tile');stageTile?.classList.add('call-stage-tile');
+    grid.dataset.layout=stageTile?'focus':'grid';grid.style.setProperty('--strip-rows',String(Math.max(1,count-1)));
+    grid.dataset.avatars=String(tiles.filter(n=>n.classList.contains('participant')).length);tileCount=count;fit();grid.dataset.count=count;grid.style.setProperty('--call-columns',count<=1?'1':count<=4?'2':count<=9?'3':'4');
     for(const [id,on,off] of [['mic','Silenciar microfone','Ativar microfone'],['camera','Desligar câmera','Ativar câmera'],['screen','Parar compartilhamento','Compartilhar tela']]){const b=$(id),label=b.getAttribute('aria-pressed')==='true'?on:off;b.title=label;b.setAttribute('aria-label',label);}
     pip.setAttribute('aria-disabled',String(!document.pictureInPictureEnabled));
   }
@@ -72,9 +80,16 @@ export function initCallLayout(context) {
   function placeWatch(){const w=watchBtn();if(w&&w.parentElement!==controls){w.id=w.id||'call-watch';w.classList.add('vc-btn','call-watch');w.classList.remove('feature-options','soft-button');w.title='Ouvir juntos';w.setAttribute('aria-label','Ouvir juntos');icon(w,'watch','Ouvir juntos');controls.insertBefore(w,audioBtn);}
     if(w&&!w.dataset.toggle){w.dataset.toggle='1';const open=w.onclick;w.onclick=()=>{const panel=$('watch-panel');if(panel&&!panel.hidden){panel.querySelector('.wp-hide')?.click();syncWatch();return;}return open?.();};}syncWatch();}
   // Toggle local: ocultar o painel não para a reprodução dos outros; o áudio continua e o botão mantém um indicador.
+  let lastShown=null;
   function syncWatch(){const w=$('call-watch');if(!w)return;const panel=$('watch-panel'),shown=!!panel&&!panel.hidden,label=shown?'Ocultar Ouvir juntos':'Ouvir juntos';
-    w.setAttribute('aria-pressed',String(shown));w.classList.toggle('active',shown);w.classList.toggle('watch-live',!!panel&&panel.hidden&&panel.classList.contains('is-playing'));if(w.getAttribute('aria-label')!==label){w.title=label;w.dataset.tip=label;w.setAttribute('aria-label',label);}}
+    if(shown!==lastShown){lastShown=shown;update();}
+    w.setAttribute('aria-pressed',String(shown));w.classList.toggle('active',shown);w.classList.toggle('watch-live',!!panel&&panel.hidden&&(panel.classList.contains('is-playing')||panel.classList.contains('session-live')));if(w.getAttribute('aria-label')!==label){w.title=label;w.dataset.tip=label;w.setAttribute('aria-label',label);}}
   placeWatch();new MutationObserver(placeWatch).observe(view.querySelector('.chat-header'),{childList:true,subtree:true});
   new MutationObserver(syncWatch).observe(view,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});
+  // Celular: toque duplo num vídeo, tela ou Ouvir juntos alterna tela cheia (no desktop fica o ícone e o clique duplo).
+  let lastTap=null;
+  grid.addEventListener('pointerup',e=>{if(e.pointerType!=='touch')return;const tile=e.target.closest?.('.media-tile:not(.screen-placeholder),.watch-tile');if(!tile||e.target.closest('button,a,input,select,textarea,summary,.wp-side,.wp-bar'))return lastTap=null;
+    const cur={target:tile,t:e.timeStamp,x:e.clientX,y:e.clientY};if(isDoubleTap(lastTap,cur)){lastTap=null;e.preventDefault();toggleFullscreen(tile).catch(context.report);}else lastTap=cur;});
+  document.addEventListener('keydown',e=>{const p=document.querySelector('.pseudo-fullscreen');if(e.key==='Escape'&&p)toggleFullscreen(p);});
   return {update};
 }

@@ -32,7 +32,7 @@ const viaMore=async id=>{await page.locator('#call-more').click();await page.loc
   await viaMore('deafen');await page.waitForFunction(()=>document.querySelector('#deafen').getAttribute('aria-pressed')==='false');
   await page.locator('#call-audio').click();await page.getByRole('button',{name:'Microfone, sensibilidade e pressionar para falar',exact:true}).click();assert.equal(await page.locator('#app-dialog').evaluate(n=>n.open),true);await close();
   await viaMore('camera-options');await page.locator('#camera-facing-menu').selectOption('environment');await close();assert.equal(await page.locator('#camera-facing').inputValue(),'environment');
-  await viaMore('screen-options');const check=page.locator('#app-dialog input[type=checkbox]');await check.uncheck();assert.equal(await page.locator('#share-screen-audio').isChecked(),false);await check.check();await close();
+  await viaMore('screen-options');const check=page.locator('#app-dialog input[type=checkbox]:not(#screen-autowatch)');await check.uncheck();assert.equal(await page.locator('#share-screen-audio').isChecked(),false);await check.check();await close();
   await viaMore('vc-react-call');await page.getByRole('button',{name:'Reagir com 🎉',exact:true}).click();await page.waitForFunction(()=>window.__qaPublished?.some(p=>p.topic==='orbita-reaction'));
   await viaMore('call-soundboard');await page.getByRole('button',{name:/Fanfarra/}).click();await page.waitForFunction(()=>window.__qaPublished?.some(p=>p.topic==='orbita-sound'));
   await viaMore('connection-info');await page.getByRole('heading',{name:'Conexão da chamada',exact:true}).waitFor();await close();

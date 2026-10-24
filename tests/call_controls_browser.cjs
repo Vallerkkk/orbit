@@ -15,7 +15,7 @@ let browser;
   const peer=page.locator('#app-dialog'),mic=peer.getByRole('slider',{name:'Volume do microfone de Outra pessoa'}),screen=peer.getByRole('slider',{name:'Volume da transmissão de Outra pessoa'});
   assert.equal(await mic.inputValue(),'0.65');assert.equal(await screen.inputValue(),'1');
   await page.evaluate(()=>{
-   const r=window.__qaRoom,remote=[...r.remoteParticipants.values()][0];window.qaAudio={};
+   localStorage.setItem('orbita-screen-autowatch','true');const r=window.__qaRoom,remote=[...r.remoteParticipants.values()][0];window.qaAudio={};
    window.qaAddAudio=(name,source,sdk=true)=>{const audio=document.createElement('audio');audio.muted=true;audio.volume=0;const track={kind:'audio',source,sid:name,isMuted:false,volume:-1,attach:()=>audio,detach:()=>audio.remove()};if(sdk)track.setVolume=value=>{track.volume=value;};const pub={track,source,trackSid:name};window.qaAudio[name]={track,pub,audio};r.emit('TrackSubscribed',track,pub,remote);};
    window.qaAddAudio('mic','microphone');window.qaAddAudio('screen','screen_share_audio');
   });

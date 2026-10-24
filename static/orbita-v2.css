@@ -881,9 +881,6 @@ body[data-color-mode=light] .st-seg>button[aria-checked=true]{background:#fff;co
 #voice-view .media-tile .call-deco-fx{display:none!important}
 
 /* ===== Ouvir juntos v2: player em destaque, tiles em faixa lateral/abaixo ===== */
-#voice-view .call-grid:has(>#watch-panel:not([hidden])){display:grid!important;grid-template-columns:minmax(0,1fr) 210px!important;grid-auto-rows:min-content!important;align-content:start;gap:10px!important}
-#voice-view .call-grid:has(>#watch-panel:not([hidden]))>#watch-panel{grid-column:1;grid-row:1 / span 50;order:-1;align-self:start;height:auto!important;max-height:none!important}
-#voice-view .call-grid:has(>#watch-panel:not([hidden]))>:not(#watch-panel){grid-column:2;aspect-ratio:16/10;min-height:0!important;height:auto!important}
 #voice-view .watch-tile.wp2{display:flex;flex-direction:column;gap:10px;min-height:0;aspect-ratio:auto!important;padding:12px!important;border:1px solid #2b2840!important;border-radius:18px!important;background:linear-gradient(180deg,var(--s1),#0f0e16)!important;box-shadow:0 20px 60px -30px #000}
 .wp2 .wp-head{display:flex;align-items:center;gap:8px}
 .wp2 .wp-head>svg{width:18px;height:18px;fill:var(--ac)}
@@ -931,7 +928,6 @@ body[data-color-mode=light] .st-seg>button[aria-checked=true]{background:#fff;co
 .wp2 .wp-more[open]{display:flex;flex-wrap:wrap;gap:6px}
 .wp2 .wp-more button{min-height:32px!important;font-size:11.5px!important}
 @media(max-width:1180px){.wp2 .wp-body{grid-template-columns:1fr}.wp2 .wp-side{max-height:none}}
-@media(max-width:900px){#voice-view .call-grid:has(>#watch-panel:not([hidden])){grid-template-columns:repeat(2,minmax(0,1fr))!important}#voice-view .call-grid:has(>#watch-panel:not([hidden]))>#watch-panel{grid-column:1/-1;grid-row:auto}#voice-view .call-grid:has(>#watch-panel:not([hidden]))>:not(#watch-panel){grid-column:auto}}
 @media(max-width:520px){.wp2 .wp-bar-right>.wp-ibtn[data-icon=sync]{display:none}.wp2 .wp-bar{flex-wrap:wrap!important}.wp2 .wp-seek{order:-1;flex:1 1 100%;margin:6px 4px 4px}.wp2 .wp-bar-right{margin-left:auto}.wp2 .wp-ibtn{width:30px;height:30px}.wp2 .watch-time{font-size:10.5px!important}.wp2 .wp-seek{margin:0 3px}}
 /* Ouvir juntos: barra de controles sempre dentro da coluna do player (container queries) */
 .wp2,.wp2 .wp-body>*{min-width:0}
@@ -1127,3 +1123,43 @@ body[data-color-mode=light] .st-seg>button[aria-checked=true]{background:#fff;co
  .wp2 .wp-pop-mute{display:inline-flex;min-height:0!important;height:26px!important;align-items:center;line-height:1;border:1px solid var(--bd,#ffffff1f);background:none;color:var(--t2,#ccc);border-radius:6px;padding:3px 8px;font-size:12px;cursor:pointer}
  .wp2 .wp-pop-mute[aria-pressed=true]{color:var(--ac);border-color:var(--ac)}
 }
+/* ── Chamada v2: palco + faixa, telas opt-in, avatares no celular, tela cheia por toque duplo ── */
+#voice-view .call-grid :is(.media-tile,.watch-tile){touch-action:manipulation}
+#voice-view .screen-placeholder{display:flex;align-items:center;justify-content:center;background:var(--s2,#1c1d20)!important;border:1px dashed var(--bd,#ffffff26)!important}
+#voice-view .screen-placeholder .sp-body{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px;text-align:center;color:var(--t2,#c9c9cf);font-size:13px}
+#voice-view .screen-placeholder .sp-icon{font-size:26px;line-height:1;color:var(--t3,#8b8b93)}
+#voice-view .screen-placeholder .sp-text{margin:0;max-width:260px;line-height:1.35}
+#voice-view .screen-placeholder .sp-text strong{color:var(--t1,#fff);font-weight:600}
+#voice-view .screen-placeholder .sp-watch{min-height:32px;padding:6px 16px;border:0;border-radius:8px;background:var(--ac);color:#fff;font-weight:600;font-size:13px;cursor:pointer}
+#voice-view .screen-placeholder.sp-loading .sp-watch{opacity:.6;pointer-events:none}
+#voice-view .media-tile .sp-stop{position:absolute;right:10px;top:10px;z-index:3;pointer-events:auto;min-height:28px;padding:4px 10px;border:1px solid #ffffff2e;border-radius:7px;background:#16161acc;color:#fff;font-size:12px;cursor:pointer;opacity:0;transition:opacity .15s}
+#voice-view .media-tile:hover .sp-stop,#voice-view .media-tile:focus-within .sp-stop{opacity:1}
+@media(pointer:coarse){#voice-view .media-tile .sp-stop{opacity:1}#voice-view .media-tile .expand-video,.wp2 .wp-ibtn[data-icon=full]{display:none!important}}
+@media(min-width:801px){
+ #voice-view .call-grid[data-layout=focus]{grid-template-columns:minmax(0,1fr) clamp(160px,20%,260px)!important;grid-template-rows:repeat(var(--strip-rows,1),min-content) 1fr!important;grid-auto-rows:min-content!important;align-content:start!important;max-width:none!important;gap:10px!important}
+ #voice-view .call-grid[data-layout=focus] .call-stage-tile{grid-column:1!important;grid-row:1 / -1!important;order:-2!important;align-self:start;min-width:0}
+ #voice-view .call-grid[data-layout=focus] :is(.participant,.media-tile,.watch-tile):not(.call-stage-tile){grid-column:2!important;grid-row:auto!important;aspect-ratio:16/9!important;height:auto!important;min-height:0!important;align-self:start}
+ #voice-view .call-grid[data-layout=focus] .participant:not(.call-stage-tile) .avatar{width:44px!important;height:44px!important;min-width:44px!important;font-size:16px!important}
+ #voice-view .call-grid[data-layout=focus] .participant:not(.call-stage-tile) .participant-name{font-size:11px!important;padding:3px 6px!important;left:6px!important;bottom:6px!important}
+}
+@media(max-width:800px){
+ #voice-view .call-grid{grid-template-columns:repeat(auto-fill,minmax(72px,1fr))!important;grid-auto-rows:auto!important;align-content:start!important;gap:8px!important;max-width:none!important}
+ #voice-view .call-grid :is(.media-tile,.watch-tile){grid-column:1 / -1!important;order:1}
+ #voice-view .call-grid .call-stage-tile{order:-2!important}
+ #voice-view .call-grid .participant{order:5;aspect-ratio:auto!important;height:auto!important;min-height:0!important;padding:4px 0!important;gap:4px;justify-content:flex-start!important;background:none!important;border:0!important;box-shadow:none!important;overflow:visible!important}
+ #voice-view .call-grid .participant::before,#voice-view .call-grid .participant::after{display:none!important}
+ #voice-view .call-grid .participant .avatar{width:56px!important;height:56px!important;min-width:56px!important;font-size:19px!important;box-shadow:0 0 0 2px var(--s2,#1c1d20)!important;transition:box-shadow .2s}
+ #voice-view .call-grid .participant.speaking .avatar{box-shadow:0 0 0 2px var(--bg,#111),0 0 0 4px var(--ac)!important}
+ #voice-view .call-grid .participant .participant-name{position:static!important;max-width:76px!important;padding:0!important;background:none!important;font-size:11px!important;line-height:14px!important;font-weight:500!important;color:var(--t2,#c9c9cf)!important;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ #voice-view .call-grid .participant .participant-status{display:none!important}
+ #voice-view .call-grid .participant{position:relative!important;flex-direction:column!important;align-items:center!important}
+ #voice-view .call-grid .participant .avatar{order:1}
+ #voice-view .call-grid .participant .participant-name{order:2}
+ #voice-view .call-grid .participant .call-tile-menu{position:absolute!important;top:0!important;right:calc(50% - 36px)!important;left:auto!important;bottom:auto!important;width:22px!important;height:22px!important;min-width:22px!important;padding:0!important;border-radius:50%!important;opacity:1!important;visibility:visible!important;background:var(--s2,#1c1d20)!important;border:1px solid #ffffff1f!important;z-index:2}
+ #voice-view .call-grid .participant .call-tile-menu svg{width:12px!important;height:12px!important}
+ #voice-view .call-grid .participant[data-mic=off] .avatar{opacity:.85}
+}
+.pseudo-fullscreen{position:fixed!important;inset:0!important;z-index:2147483000!important;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;margin:0!important;border-radius:0!important;aspect-ratio:auto!important;background:#000!important;grid-column:auto!important}
+.pseudo-fullscreen video{width:100%;height:100%;object-fit:contain}
+html.has-pseudo-fullscreen,html.has-pseudo-fullscreen body{overflow:hidden}
+@media(max-width:800px){#voice-view .call-grid .participant button.call-tile-menu.call-icon{height:22px!important;max-height:22px!important;min-height:0!important;width:22px!important;inset:0 calc(50% - 36px) auto auto!important}}

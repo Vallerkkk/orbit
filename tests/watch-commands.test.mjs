@@ -20,7 +20,7 @@ test('commands parse in pt-BR with aliases and arguments',()=>{
  assert.equal(C.parseWatchInput(`/playlist https://youtube.com/playlist?list=${L}`).link.list,L);
  assert.ok(C.parseWatchInput(`/playlist https://youtu.be/${V}`).error);
  assert.ok(C.parseWatchInput('/xyz').error);assert.ok(C.parseWatchInput('').error);
- for(const n of C.COMMANDS.map(c=>c[0]))assert.ok(!C.parseWatchInput('/'+n+(n==='tocar'?' a':n==='remover'?' 1':n==='playlist'?` https://youtube.com/playlist?list=${L}`:'')).error,n);
+ for(const n of C.COMMANDS.map(c=>c[0]))assert.ok(!C.parseWatchInput('/'+n+(['tocar','adicionar','proxima'].includes(n)?' a':n==='remover'?' 1':n==='playlist'?` https://youtube.com/playlist?list=${L}`:'')).error,n);
 });
 test('plain links enqueue, plain text is rejected with a hint',()=>{
  assert.deepEqual([C.parseWatchInput(`https://youtu.be/${V}`).cmd,C.parseWatchInput(`https://youtu.be/${V}`).queue],['tocar',true]);
@@ -35,4 +35,21 @@ test('queue helpers: order from video, remove, shuffle, cap and chunking',()=>{
  const big=Array.from({length:250},(_,i)=>({v:'x'+i}));const r=C.appendLimited(items,big);assert.equal(r.queue.length,C.QUEUE_LIMIT);assert.equal(r.added,195);assert.equal(r.dropped,55);
  assert.deepEqual(C.chunk(big.slice(0,60),25).map(x=>x.length),[25,25,10]);assert.deepEqual(C.chunk([]),[[]]);
  assert.match(C.helpText(),/\/embaralhar/);
+});
+
+test('adicionar/proxima/tocar agora: enfileirar sem interromper', () => {
+  const V='dQw4w9WgXcQ';
+  assert.equal(C.parseWatchInput(`/adicionar https://youtu.be/${V}`).mode,'queue');
+  assert.equal(C.parseWatchInput(`/add lofi`).search,'lofi');
+  assert.equal(C.parseWatchInput(`/fila+ https://youtu.be/${V}`).cmd,'tocar');
+  assert.equal(C.parseWatchInput(`/proxima https://youtu.be/${V}`).mode,'next');
+  assert.equal(C.parseWatchInput(`/próxima lofi`).mode,'next');
+  assert.equal(C.parseWatchInput(`/tocar https://youtu.be/${V}`).mode,'queue');
+  const now=C.parseWatchInput(`/tocar agora https://youtu.be/${V}`);assert.equal(now.mode,'now');assert.equal(now.link.video,V);
+  assert.equal(C.parseWatchInput(`https://youtu.be/${V}`).mode,'queue');
+  assert.ok(C.parseWatchInput('/adicionar').error);assert.ok(C.parseWatchInput('/tocar agora').error);
+  const q=[{v:'a'},{v:'b'}];
+  assert.deepEqual(C.placeItems(q,[{v:'x'}],'next').queue.map(x=>x.v),['x','a','b']);
+  assert.deepEqual(C.placeItems(q,[{v:'x'}]).queue.map(x=>x.v),['a','b','x']);
+  assert.match(C.helpText(),/\/adicionar/);assert.match(C.helpText(),/\/proxima/);
 });

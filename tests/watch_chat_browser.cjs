@@ -41,17 +41,33 @@ function fakeYouTube(){
   async function say(page,text,reply){const before=await rows(page).count();await page.locator('#message-input').fill(text);await page.locator('#message-input').press('Enter');await page.waitForFunction(n=>document.querySelectorAll('#message-list .message').length>n,before);const row=rows(page).last();if(reply)await row.locator('.music-reply').filter({hasText:reply}).waitFor({timeout:15000}).catch(async e=>{console.error('ROW',await row.innerText(),errors);throw e;});return row;}
   await openMusic(host);
   assert.equal((await host.locator(`[data-channel-id="${MUSIC}"] .channel-icon`).first().textContent()).trim(),'♪');
-  assert.equal(await host.locator('#music-card .music-card-cmds li').count(),14);if(mobile){assert.equal(await host.locator('#music-card').evaluate(n=>n.open),false);await host.locator('#music-card summary').click();}
+  assert.equal(await host.locator('#music-card .music-card-cmds li').count(),16);if(mobile){assert.equal(await host.locator('#music-card').evaluate(n=>n.open),false);await host.locator('#music-card summary').click();}
   assert.equal(await host.locator('#message-input').getAttribute('placeholder'),'/tocar <link ou busca>, /pular, /fila, /ajuda…');
   const count=await rows(host).count();await host.locator('#message-input').fill('oi pessoal');await host.locator('#message-input').press('Enter');
   await host.getByText(/só aceita comandos/).first().waitFor();assert.equal(await host.locator('#message-input').inputValue(),'oi pessoal');assert.equal(await rows(host).count(),count);
   await say(host,'https://www.youtube.com/playlist?list=PLqa1234567',/Lista QA/);
   await host.waitForFunction(()=>window.__qaYT?.ready&&window.__qaYT.video==='qa000000000');
-  await follower.locator('#watch-queue .wp-q-item').nth(58).waitFor();assert.equal(await follower.locator('#watch-queue .wp-q-item').count(),59);
+  await follower.locator('#watch-queue .wp-q-item').nth(58).waitFor({state:'attached'});assert.equal(await follower.locator('#watch-queue .wp-q-item').count(),59);
   await openMusic(follower);await say(follower,'/pular',/Faixa 2/);await host.waitForFunction(()=>window.__qaYT.video==='qa000000001');
   await say(follower,'/remover 1',/Removeu/i);await host.waitForFunction(()=>document.querySelectorAll('#watch-queue .wp-q-item').length===57);
   await say(host,'/voltar');await follower.waitForFunction(()=>window.__qaYT.video==='qa000000000');
-  await say(host,'/tocar https://youtu.be/dQw4w9WgXcQ?list=PLqa1234567 só',/./);await follower.waitForFunction(()=>window.__qaYT.video==='dQw4w9WgXcQ');
+  // Fim do vídeo: os dois recebem ENDED ao mesmo tempo e só um avanço acontece; sem o líder, o outro assume depois.
+  const qn=page=>page.evaluate(()=>document.querySelectorAll('#watch-queue .wp-q-item').length),ended=page=>page.evaluate(()=>{const y=window.__qaYT;y.status=0;y.options.events.onStateChange({target:y,data:0});});
+  await host.waitForFunction(()=>window.__qaYT.video==='qa000000000');const q0=await qn(host);
+  await Promise.all([ended(host),ended(follower)]);await follower.waitForFunction(()=>window.__qaYT.video==='qa000000001');await host.waitForTimeout(4500);
+  assert.equal(await host.evaluate(()=>window.__qaYT.video),'qa000000001');assert.equal(await follower.evaluate(()=>window.__qaYT.video),'qa000000001');assert.equal(await qn(host),q0-1);assert.equal(await qn(follower),q0-1);
+  await ended(follower);await host.waitForFunction(()=>window.__qaYT.video!=='qa000000001',null,{timeout:8000});const v2=await host.evaluate(()=>window.__qaYT.video);await host.waitForTimeout(4500);assert.equal(await qn(host),q0-2);assert.equal(await host.evaluate(()=>window.__qaYT.video),v2);assert.equal(await follower.evaluate(()=>window.__qaYT.video),v2);
+  await say(host,'/repetir',/repetir/);await host.evaluate(()=>{window.__qaYT.position=200;});await ended(host);await follower.waitForFunction(()=>window.__qaYT.position<2&&window.__qaYT.status===1);assert.equal(await qn(host),q0-2);await say(host,'/repetir',/repetir/);
+  // Enfileirar sem interromper: /adicionar vai ao fim, /proxima entra na frente, /tocar agora interrompe.
+  {const cur=await host.evaluate(()=>window.__qaYT.video),n0=await qn(host);
+  await say(host,'/adicionar https://youtu.be/aaaaaaaaaaa',/./);await follower.waitForFunction(n=>document.querySelectorAll('#watch-queue .wp-q-item').length===n+1,n0);
+  assert.equal(await host.evaluate(()=>window.__qaYT.video),cur);assert.equal(await follower.evaluate(()=>[...document.querySelectorAll('#watch-queue .wp-q-item')].length),n0+1);
+  await say(follower,'/proxima https://youtu.be/bbbbbbbbbbb',/próxima/);await host.waitForFunction(n=>document.querySelectorAll('#watch-queue .wp-q-item').length===n+2,n0);
+  assert.equal(await host.evaluate(()=>window.__qaYT.video),cur);
+  await say(host,'/tocar https://youtu.be/ccccccccccc',/à fila/);assert.equal(await host.evaluate(()=>window.__qaYT.video),cur);
+  await say(host,'https://youtu.be/ddddddddddd',/à fila/);assert.equal(await host.evaluate(()=>window.__qaYT.video),cur);
+  await say(host,'/pular');await follower.waitForFunction(()=>window.__qaYT.video==='bbbbbbbbbbb');}
+  await say(host,'/tocar agora https://youtu.be/dQw4w9WgXcQ?list=PLqa1234567 só',/./);await follower.waitForFunction(()=>window.__qaYT.video==='dQw4w9WgXcQ');
   await say(host,'https://www.youtube.com/playlist?list=PLnokey12345',/YOUTUBE_API_KEY/);
   await say(host,'/repetir',/repetir/);await say(host,'/volume 30',/30% \(só para você\)/);await say(host,'/agora',/Tocando:/);
   await say(host,'/ajuda',/\/embaralhar/);
