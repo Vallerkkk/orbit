@@ -2,6 +2,39 @@
  "generated": true,
  "releases": [
   {
+   "version": "2026.10.24+3ee8632",
+   "date": "24 out 2026",
+   "highlights": [
+    [
+     "correcoes",
+     "Esconde a pílula 'Tempo real ativo' quando a conexão está ok"
+    ],
+    [
+     "correcoes",
+     "'Manter a tela acesa' só aparece em celular/tablet"
+    ],
+    [
+     "correcoes",
+     "Não toca/mostra 'chamando' para quem já está na chamada da DM"
+    ],
+    [
+     "correcoes",
+     "Oculta botões de baixar/instalar quando já está rodando como app"
+    ]
+   ],
+   "items": {
+    "correcoes": [
+     "Esconde a pílula 'Tempo real ativo' quando a conexão está ok",
+     "'Manter a tela acesa' só aparece em celular/tablet",
+     "Não toca/mostra 'chamando' para quem já está na chamada da DM",
+     "Oculta botões de baixar/instalar quando já está rodando como app",
+     "Imagem colada vai para pré-visualização e só é enviada com Enter",
+     "Painel de configurações segue o modo claro",
+     "Tooltip da insígnia aparece na frente do perfil"
+    ]
+   }
+  },
+  {
    "version": "2026.10.23+28781bc",
    "date": "23 out 2026",
    "highlights": [
