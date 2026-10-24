@@ -1,3 +1,4 @@
+import './intro.js';
 import {screenSupport,screenCaptureOptions,screenErrorText} from './screen-share.js';
 import {initScreenWatch} from './screen-watch.js';
 import {initMusicChannel} from './music-channel.js';
@@ -18,6 +19,7 @@ import {initNavigationMotion} from './navigation-motion.js';
 import {DECORATIONS} from './profile-decoration-catalog.js';
 import {LEGACY_DECOR} from './store-collections.js';
 import {applyAppearanceEverywhere} from './appearance-runtime.js';
+import {createBugReports} from './bug-report.js';
 import {compactAppearance,stripAdminOnly,packOf,ITEMS as COSMETIC_ITEMS} from './cosmetics.js';
 import {initShareReceiver} from './share-target.js';
 import {initThemeAccessibility,foreground} from './theme-accessibility.js';
@@ -1543,7 +1545,7 @@ showFriends=()=>{baseShowFriends();voiceChat?.update();navigation(true);};
 $('friends-nav').onclick=showFriends;$('friends-shortcut').onclick=showFriends;
 function updateFounders(){
   const names=siteRoles.filter(r=>r.role==='creator').map(r=>person(r.user_id).display_name);
-  $('sidebar-boost-pill').textContent='COMUNIDADE';$('creators-credit').textContent='Criadores · '+(names.join(' & ')||'Órbita');
+  $('sidebar-boost-pill').textContent='COMUNIDADE';
 }
 const baseRenderMembers=renderMembers;
 renderMembers=()=>{baseRenderMembers();for(const row of [...$('member-list').children]){const name=row.querySelector('strong'),p=people.find(p=>p.id===row.dataset.userId);if(!p)continue;const assigned=memberRoles.filter(r=>r.user_id===p.id).map(m=>communityRoleList.find(role=>role.id===m.role_id)).filter(Boolean).sort((a,b)=>b.position-a.position);if(assigned[0]){name.style.color=assigned[0].color;const badge=el('span','role-badge',assigned[0].name);badge.style.color=assigned[0].color;if(!name.querySelector('.role-badge'))name.append(badge);else name.querySelector('.role-badge').style.color=assigned[0].color;}else if(roleFor(p.id)&&!name.querySelector('.role-badge'))name.append(el('span','role-badge',roleFor(p.id)==='creator'?'CRIADOR':'ADMIN'));}
@@ -1635,7 +1637,7 @@ $('settings').onclick=()=>{
   const layout=el('div','theme-layout');layout.append(prev,themeGrid);themeLabel.append(layout);appearance.append(themeLabel);
   const densityLabel=el('label','field','Densidade'),density=el('select');for(const value of ['cozy','compact']){const option=el('option','',value==='cozy'?'Confortável':'Compacta');option.value=value;density.append(option);}density.value=localStorage.getItem('orbita-density')||'cozy';densityLabel.append(density);appearance.append(densityLabel);
   for(const [input,key]of[[density,'density']])input.onchange=()=>{localStorage.setItem('orbita-'+key,input.value);document.body.dataset[key]=input.value;};
-  container.append(appearance,button('Aceitar convite de criador',()=>showCreatorInvite()),button('Sobre esta versão',()=>openCloud()));
+  container.append(appearance,button('🐞 Reportar bug',()=>bugReports().open()),button('Aceitar convite de criador',()=>showCreatorInvite()),button('Sobre esta versão',()=>openCloud()));if(isAdmin())container.append(button('Relatórios de bug (ADM)',()=>bugReports().admin()));
   if(isAdmin())container.append(button('Administrar o site',()=>openManagement(),'primary'));
 };
 function showCreatorInvite(){showDialog('Convite de criador — Kalil',container=>{
@@ -2291,3 +2293,7 @@ async function shareAttachment(a){try{
   if(navigator.canShare&&navigator.share){try{const u=await downloadAttachment(a,true),blob=await (await fetch(u)).blob();URL.revokeObjectURL(u);const file=new File([blob],a.name||'arquivo',{type:a.mime_type||blob.type});if(navigator.canShare({files:[file]}))return await navigator.share({files:[file],title:a.name});}catch(e){if(e?.name==='AbortError')return;}}
   const url=await resolveAttachmentUrl(a);if(navigator.share){try{return await navigator.share({url,title:a.name});}catch(e){if(e?.name==='AbortError')return;}}
   await navigator.clipboard.writeText(url);toast('Link copiado');}catch(e){toast(errorText(e));}}
+
+// Reportar bug: botão no painel do usuário (ao lado de Configurações), Configurações e gaveta mobile.
+let bugApi;function bugReports(){return bugApi??=createBugReports({db,session:()=>session,isAdmin,showDialog,el,button,toast});}
+document.getElementById('bug-report-btn')?.addEventListener('click',()=>{if(session)bugReports().open();});

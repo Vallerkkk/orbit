@@ -660,3 +660,28 @@ body.server-themed .main{background-image:radial-gradient(120% 60% at 100% 0%,co
 .ap-chat footer button{border:0;border-radius:6px;padding:4px 9px;font-size:10px;font-weight:700;color:#fff;background:var(--pv-ac);transition:background .2s}
 @media (prefers-reduced-motion:reduce){.ap-preview,.ap-preview *{transition:none}}
 .ap-preview{font-weight:400;text-transform:none;letter-spacing:0}.ap-preview b,.ap-chan strong,.ap-chat header{font-weight:700}.ap-chat footer button{min-height:0;height:auto;line-height:1.3;width:auto}
+/* Abertura */
+.orbita-intro{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:#0d0e10;color:#e6e7ea;cursor:pointer;transition:opacity .3s ease}
+.orbita-intro.out{opacity:0;pointer-events:none}
+.oi-inner{display:flex;flex-direction:column;align-items:center;text-align:center}
+.oi-inner img{animation:oiLogo .7s cubic-bezier(.2,.8,.2,1) both;filter:drop-shadow(0 0 24px color-mix(in srgb,var(--ac,#9b87ff) 45%,transparent))}
+.oi-name{margin:10px 0 22px;font-size:20px;font-weight:800;letter-spacing:.02em;animation:oiUp .5s .2s ease both}
+.oi-inner small{font-size:10.5px;letter-spacing:.32em;text-transform:uppercase;color:#8b8f97;animation:oiUp .5s .5s ease both}
+.oi-inner strong{margin-top:6px;font-size:22px;font-weight:700;letter-spacing:.01em;animation:oiUp .5s .62s ease both}
+@keyframes oiLogo{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:none}}
+@keyframes oiUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.orbita-intro.reduce *{animation:none!important}.orbita-intro.reduce{transition:none}
+/* Reportar bug */
+.bug-modal textarea{width:100%;min-height:110px;resize:vertical;border-radius:10px;padding:10px;font:inherit}
+.bug-when{margin:0 0 8px;font-size:12px;color:var(--text-muted,#9aa0a6)}
+.bug-files{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.bug-thumb{position:relative;width:96px;height:72px;border-radius:8px;overflow:hidden;background:#0006;border:1px solid #ffffff14}
+.bug-thumb img,.bug-thumb video{width:100%;height:100%;object-fit:cover;display:block}
+.bug-x{position:absolute;top:3px;right:3px;width:22px;height:22px;min-height:0;padding:0;border-radius:50%;border:0;background:#000a;color:#fff}
+.bug-actions{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap}
+.bug-add{background:transparent;border:1px dashed color-mix(in srgb,var(--ac) 55%,transparent);color:var(--ac)}
+.bug-done{text-align:center;padding:18px 6px}.bug-done strong{display:block;font-size:18px;color:var(--ac);margin-bottom:6px}
+.bug-item{padding:10px 12px;border-radius:10px;background:#ffffff06;border:1px solid #ffffff10;margin-bottom:8px}
+.bug-item header{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.bug-item header small{flex:1}
+.bug-item select[data-status=aberto]{color:#f0b232}.bug-item select[data-status=resolvido]{color:#3ba55d}
+.bug-desc{white-space:pre-wrap;margin:6px 0}
