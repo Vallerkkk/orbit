@@ -5,6 +5,7 @@ import { reserveImage, focusElement } from './dom-utils.js';
 import { requestWithDeadline } from './chat-state.js';
 import { requestAppInstall } from './app-install.js';
 import { watchUploadedVideo } from './uploaded-video.js';
+import { attachmentMedia } from './media-viewer.js';
 
 export function initEnhancements(context) {
   const { el, button, toast, checked, showDialog, inputField } = context;
@@ -194,7 +195,7 @@ export function initEnhancements(context) {
     const article=el('article','thread-message'),p=state().people.find(p=>p.id===message.author_id)||message.profiles||{};
     article.dataset.messageId=message.id;article.append(el('strong','',p.display_name||'Participante'),el('time','muted',relativeTime(message.created_at)),context.richText(message.content));
     article.orbitaMessage=message;
-    if(message.attachments){const a=message.attachments;if(a.mime_type?.startsWith('image/')){const image=el('img','attachment-preview');image.alt=a.name;image.loading='lazy';reserveImage(image);context.resolveAttachmentUrl(a).then(url=>image.src=url).catch(()=>image.remove());article.append(image);}else if(a.mime_type?.startsWith('video/')){const video=watchUploadedVideo(el('video'));video.setAttribute('aria-label','Vídeo: '+a.name);article.append(video);context.resolveAttachmentUrl(a).then(url=>{if(video.isConnected)video.src=url;}).catch(()=>video.remove());}article.append(button('↓ '+a.name,()=>context.downloadAttachment(a),'file-card'));}
+    if(message.attachments){const a=message.attachments;if(/^(image|video)\//.test(a.mime_type||''))article.append(attachmentMedia(a,{resolve:context.resolveAttachmentUrl,download:context.downloadAttachment,makeVideo:watchUploadedVideo}));article.append(button('↓ '+a.name,()=>context.downloadAttachment(a),'file-card'));}
     const actions=el('div','message-actions');actions.append(button('Responder',()=>{closePanel();context.replyToMessage(message);},'tiny-button'));
     if(message.author_id===state().session.user.id)actions.append(button('Editar',()=>context.messageAction(message,'edit'),'tiny-button'));
     if(message.author_id===state().session.user.id||(!state().selected?.private&&context.hasPermission('manage_messages')))actions.append(button('Excluir',()=>context.messageAction(message,'delete'),'tiny-button'));
