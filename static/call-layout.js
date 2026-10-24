@@ -45,13 +45,14 @@ export function initCallLayout(context) {
     for(const card of $('participants').children){card.hidden=cameras.has(card.dataset.participantId);card.style.order='1';decorate(card,card.dataset.participantId);context.avatar(card.querySelector('.avatar'),card.dataset.participantId);}
     const tiles=[...grid.querySelectorAll('.participant,.media-tile,.watch-tile')].filter(n=>!n.hidden),count=tiles.length;
     // Layout: com Ouvir juntos ou uma tela assistida, o destaque vai para o palco e o resto para a faixa lateral.
-    const stageIndex=pickStage(tiles.map(n=>({kind:tileKind(n)}))),stageTile=count>1?tiles[stageIndex]:null;
+    const stageIndex=pickStage(tiles.map(n=>({kind:tileKind(n),pinned:n.classList.contains('ux-spotlight-tile')}))),stageTile=count>1?tiles[stageIndex]:null;
     for(const n of grid.querySelectorAll('.call-stage-tile'))if(n!==stageTile)n.classList.remove('call-stage-tile');stageTile?.classList.add('call-stage-tile');
     grid.dataset.layout=stageTile?'focus':'grid';grid.style.setProperty('--strip-rows',String(Math.max(1,count-1)));
     grid.dataset.avatars=String(tiles.filter(n=>n.classList.contains('participant')).length);tileCount=count;fit();grid.dataset.count=count;grid.style.setProperty('--call-columns',count<=1?'1':count<=4?'2':count<=9?'3':'4');
-    for(const [id,on,off] of [['mic','Silenciar microfone','Ativar microfone'],['camera','Desligar câmera','Ativar câmera'],['screen','Parar compartilhamento','Compartilhar tela']]){const b=$(id),label=b.getAttribute('aria-pressed')==='true'?on:off;b.title=label;b.setAttribute('aria-label',label);}
+    for(const [id,on,off] of [['mic','Silenciar microfone','Ativar microfone'],['camera','Desligar câmera','Ativar câmera'],['screen','Parar compartilhamento','Compartilhar tela']]){const b=$(id),label=b.dataset.unsupported||(b.getAttribute('aria-pressed')==='true'?on:off);b.title=label;b.setAttribute('aria-label',label);}
     pip.setAttribute('aria-disabled',String(!document.pictureInPictureEnabled));
   }
+  document.addEventListener('orbita-media-focus',()=>update());
   // Navigation can hide the call without disconnecting it; observe only visibility attributes.
   const visibility=new MutationObserver(update);visibility.observe(view,{attributes:true,attributeFilter:['hidden']});visibility.observe($('app-view'),{attributes:true,attributeFilter:['hidden']});
   // ── Controles consolidados: 1 controle por função ──

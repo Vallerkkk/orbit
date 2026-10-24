@@ -1132,7 +1132,7 @@ body[data-color-mode=light] .st-seg>button[aria-checked=true]{background:#fff;co
 #voice-view .screen-placeholder .sp-text strong{color:var(--t1,#fff);font-weight:600}
 #voice-view .screen-placeholder .sp-watch{min-height:32px;padding:6px 16px;border:0;border-radius:8px;background:var(--ac);color:#fff;font-weight:600;font-size:13px;cursor:pointer}
 #voice-view .screen-placeholder.sp-loading .sp-watch{opacity:.6;pointer-events:none}
-#voice-view .media-tile .sp-stop{position:absolute;right:10px;top:10px;z-index:3;pointer-events:auto;min-height:28px;padding:4px 10px;border:1px solid #ffffff2e;border-radius:7px;background:#16161acc;color:#fff;font-size:12px;cursor:pointer;opacity:0;transition:opacity .15s}
+#voice-view .media-tile .sp-stop{position:absolute;right:48px;top:10px;z-index:3;pointer-events:auto;min-height:28px;padding:4px 10px;border:1px solid #ffffff2e;border-radius:7px;background:#16161acc;color:#fff;font-size:12px;cursor:pointer;opacity:0;transition:opacity .15s}
 #voice-view .media-tile:hover .sp-stop,#voice-view .media-tile:focus-within .sp-stop{opacity:1}
 @media(pointer:coarse){#voice-view .media-tile .sp-stop{opacity:1}#voice-view .media-tile .expand-video,.wp2 .wp-ibtn[data-icon=full]{display:none!important}}
 @media(min-width:801px){

@@ -1,3 +1,4 @@
+import {screenSupport,screenCaptureOptions,screenErrorText} from './screen-share.js';
 import {initScreenWatch} from './screen-watch.js';
 import {initMusicChannel} from './music-channel.js';
 import {configureUiSounds,uiSoundsEnabled,setUiSoundsEnabled,uiSound} from './ui-sounds.js';
@@ -51,7 +52,7 @@ const cameraTrackFacing=new WeakMap();
 const mobileCamera=()=>matchMedia('(max-width:780px), (pointer:coarse)').matches;
 let pushToTalk=localStorage.getItem('orbita-push-to-talk')==='true',talkHeld=false,pttButton;
 // Metas de qualidade: o navegador e o LiveKit podem reduzir conforme o dispositivo e a rede.
-const canShareScreen = typeof navigator.mediaDevices?.getDisplayMedia === 'function';
+const screenInfo=screenSupport(),canShareScreen=screenInfo.supported;
 function mediaMode(){
   const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
   const slow=/^(slow-2g|2g|3g)$/.test(connection?.effectiveType||'');
@@ -61,7 +62,7 @@ function mediaMode(){
   return 'alta';
 }
 function mediaSettings(){
-  const mode=mediaMode(),screenAudio=localStorage.getItem('orbita-screen-audio')!=='false';
+  const mode=mediaMode(),screenAudio=localStorage.getItem('orbita-screen-audio')==='true';
   const profile=mode==='economia'
     ? {camera:[640,360,20,650_000],screen:[1280,720,15,1_400_000]}
     : mode==='equilibrada'
@@ -71,7 +72,7 @@ function mediaSettings(){
   return {
     cameraCapture:{resolution:{width:cw,height:ch,frameRate:cf},facingMode:mobileCamera()?{exact:cameraFacing}:{ideal:cameraFacing}},
     cameraPublish:{videoEncoding:{maxBitrate:cb,maxFramerate:cf},degradationPreference:'balanced'},
-    screenCapture:{resolution:{width:sw,height:sh,frameRate:sf},contentHint:'detail',audio:screenAudio,systemAudio:screenAudio?'include':'exclude',surfaceSwitching:'include'},
+    screenCapture:screenCaptureOptions({mobile:screenInfo.mobile,audio:screenAudio,resolution:{width:sw,height:sh,frameRate:sf}}),
     screenPublish:{screenShareEncoding:{maxBitrate:sb,maxFramerate:sf},degradationPreference:'maintain-resolution'},
     mode,
   };
@@ -789,7 +790,7 @@ $('join-call').onclick = async () => {
   finally { if(callJoin===operation){callJoin=null;joining=false;updateCallUI();} }
 };
 $('leave-call').onclick = () => leaveCall();
-if(!canShareScreen){$('screen').disabled=true;$('screen').title='Este navegador não suporta compartilhar a tela';}
+if(!canShareScreen){$('screen').disabled=true;$('screen').dataset.unsupported=screenInfo.reason;$('screen').title=screenInfo.reason;$('screen').setAttribute('aria-label',screenInfo.reason);if(screenInfo.mobile)$('screen').hidden=true;}
 for (const [id, property, method] of [['mic','isMicrophoneEnabled','setMicrophoneEnabled'],['camera','isCameraEnabled','setCameraEnabled'],['screen','isScreenShareEnabled','setScreenShareEnabled']]) {
   $(id).onclick = async () => {
     if (!room||id==='camera'&&cameraTask) return;const target=room,cameraWasEnabled=target.localParticipant.isCameraEnabled,operation=id==='camera'?{room:target}:null;if(operation)cameraTask=operation;$(id).disabled = true;
@@ -797,8 +798,8 @@ for (const [id, property, method] of [['mic','isMicrophoneEnabled','setMicrophon
       const enabled = !room.localParticipant[property];
       if (id === 'camera') {const media=mediaSettings();await target.localParticipant.setCameraEnabled(enabled,media.cameraCapture,media.cameraPublish);if(enabled&&room===target){const track=[...target.localParticipant.videoTrackPublications.values()].find(p=>(p.source||p.track?.source)==='camera')?.track;if(track){const facing=track.mediaStreamTrack?.getSettings?.().facingMode||cameraTrackFacing.get(track);if(facing&&facing!==cameraFacing)await track.restartTrack({...media.cameraCapture,deviceId:undefined,facingMode:{exact:cameraFacing}});cameraTrackFacing.set(track,cameraFacing);}}}
       else if (id === 'screen') {
-        if(!canShareScreen)throw Error('Este navegador não oferece compartilhamento de tela. Em alguns celulares, use a opção de compartilhar tela do navegador ou do sistema.');
-        const media=mediaSettings();await room.localParticipant.setScreenShareEnabled(enabled,media.screenCapture,media.screenPublish);
+        if(!canShareScreen)throw Error(screenInfo.reason);
+        const media=mediaSettings();try{await room.localParticipant.setScreenShareEnabled(enabled,media.screenCapture,media.screenPublish);}catch(e){if(enabled)await room.localParticipant.setScreenShareEnabled(false).catch(()=>{});throw Error(screenErrorText(e,screenInfo.mobile));}
         if(enabled&&media.screenCapture.audio&&![...room.localParticipant.audioTrackPublications.values()].some(p=>p.source==='screen_share_audio'))toast('A tela foi compartilhada sem áudio. Escolha uma aba e marque Compartilhar áudio na janela do navegador.');
       }
       else if(id==='mic'&&pushToTalk){toast('Segure o botão “Falar” ou a tecla Espaço para abrir o microfone.');}
@@ -1620,7 +1621,7 @@ $('up-mic-btn').onclick=()=>$('mic').click();$('up-deafen-btn').onclick=()=>$('d
 $('back-to-call').onclick=()=>{if(selected?.private){const c=conversations.find(c=>c.id===selected.id);if(c)openConversation(c);}else{const c=channels.find(c=>c.community_id===activeCommunity&&c.kind==='text');if(c)selectChannel(c);}};
 $('connection-info').onclick=()=>showDialog('Conexão da chamada',container=>{container.append(el('p','',room?'Estado: '+room.state:'Você ainda não está em uma chamada.'));if(room){container.append(el('p','','Qualidade local: '+room.localParticipant.connectionQuality));for(const p of room.remoteParticipants.values())container.append(el('p','',(p.name||'Participante')+' · '+p.connectionQuality));}container.append(el('p','muted',`Vídeo adaptativo: perfil ${mediaSettings().mode}. O navegador ajusta a recepção à rede; áudio da tela só é liberado em abas e navegadores compatíveis.`));});
 function receiveCallData(...args){callReactions?.receive(...args);}
-const screenLabel=el('label','screen-option'),screenCheck=el('input');screenCheck.type='checkbox';screenCheck.id='share-screen-audio';screenCheck.checked=localStorage.getItem('orbita-screen-audio')!=='false';screenLabel.append(screenCheck,document.createTextNode('Incluir áudio da tela (autorize também na janela do navegador)'));$('active-controls').before(screenLabel);
+const screenLabel=el('label','screen-option'),screenCheck=el('input');screenCheck.type='checkbox';screenCheck.id='share-screen-audio';screenCheck.checked=localStorage.getItem('orbita-screen-audio')==='true';screenLabel.title='Só o áudio de uma aba ou janela; as vozes da chamada nunca entram. Áudio do sistema da tela inteira fica desligado para não duplicar vozes.';screenLabel.append(screenCheck,document.createTextNode('Compartilhar áudio da aba (opcional; as vozes da chamada não são incluídas)'));if(screenInfo.mobile)screenLabel.hidden=true;$('active-controls').before(screenLabel);
 function updateScreenAudio(){localStorage.setItem('orbita-screen-audio',String(screenCheck.checked));}
 screenCheck.onchange=updateScreenAudio;updateScreenAudio();
 $('btn-notif-toggle').onclick=async()=>{if(!('Notification'in window))return toast('Este navegador não oferece notificações.');const permission=await Notification.requestPermission();toast(permission==='granted'?'Notificações ativadas neste navegador.':'Notificações não autorizadas.');};

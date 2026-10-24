@@ -11,7 +11,7 @@ function fakeYouTube(){window.YT={Player:class{constructor(id,o){this.options=o;
 (async()=>{
  browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||undefined});const report=[];
  for(const mobile of [false,true]){
-  const context=await browser.newContext({viewport:{width:mobile?390:1440,height:mobile?844:900},isMobile:mobile,hasTouch:mobile});await context.addInitScript(fakeYouTube);
+  const context=await browser.newContext({viewport:{width:mobile?390:1440,height:mobile?844:900},isMobile:mobile,hasTouch:mobile,...(mobile?{userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1'}:{})});await context.addInitScript(fakeYouTube);
   const livekit=fs.readFileSync(path.join(__dirname,'fixtures/livekit_stub.mjs'),'utf8');
   await context.route('**/*',route=>{const url=route.request().url();if(url.includes('supabase-js'))return route.fulfill({contentType:'application/javascript',body:stub});if(url.includes('livekit-client'))return route.fulfill({contentType:'application/javascript',body:livekit});if(url.endsWith('/api/config'))return route.fulfill({json:{configured:true,supabaseUrl:'https://qa.supabase.co',supabaseKey:'public-qa',callsConfigured:true,storageConfigured:true}});if(url.endsWith('/join'))return route.fulfill({json:{url:'wss://fake.invalid',token:'fake',canPublish:true}});return route.continue();});
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -28,6 +28,10 @@ function fakeYouTube(){window.YT={Player:class{constructor(id,o){this.options=o;
    const cam=window.qaTrack('cam','camera');window.__qaRoom.emit('TrackSubscribed',cam.t,cam.pub,window.qaRemote);
    const scr=window.qaTrack('scr','screen_share');window.qaScr=scr;window.__qaRoom.emit('TrackSubscribed',scr.t,scr.pub,window.qaRemote);
   });
+  // Compartilhar tela: no iPhone o botão some; no desktop o áudio é opt-in e nunca inclui as vozes da chamada.
+  if(mobile){assert.equal(await page.locator('#screen').isVisible(),false);assert.match(await page.locator('#screen').getAttribute('title'),/não permite compartilhar a tela/);}
+  else{const opts=await page.evaluate(async()=>{const lp=window.__qaRoom.localParticipant;let got;lp.setScreenShareEnabled=async(on,capture)=>{got=capture;};document.getElementById('screen').click();await new Promise(r=>setTimeout(r,50));localStorage.setItem('orbita-screen-audio','true');document.getElementById('screen').click();await new Promise(r=>setTimeout(r,50));const second=got;return {second};});
+   assert.equal(opts.second.systemAudio,'exclude');assert.equal(opts.second.audio.restrictOwnAudio,true);assert.equal(opts.second.selfBrowserSurface,'exclude');await page.evaluate(()=>localStorage.removeItem('orbita-screen-audio'));}
   // Tela não assinada por padrão: placeholder com "Assistir".
   const ph=page.locator('.screen-placeholder');await ph.waitFor();assert.match(await ph.textContent(),/está compartilhando a tela/);
   assert.deepEqual(await page.evaluate(()=>window.qaSubs),[['scr',false]]);
@@ -37,6 +41,18 @@ function fakeYouTube(){window.YT={Player:class{constructor(id,o){this.options=o;
   await page.locator('.media-tile.media-screen:not(.screen-placeholder) video').waitFor();assert.equal(await ph.count(),0);
   await page.locator('.sp-stop').click();assert.deepEqual(await page.evaluate(()=>window.qaSubs.at(-1)),['scr',false]);await ph.waitFor();
   await ph.getByRole('button',{name:/Assistir/}).click();await page.evaluate(()=>window.__qaRoom.emit('TrackSubscribed',window.qaScr.t,window.qaScr.pub,window.qaRemote));await page.locator('.media-tile.media-screen video').waitFor();
+  // Trocar de tela sem "Parar de assistir": a segunda tela vai para o palco; câmera também pode ser focada.
+  if(!mobile){
+   await page.evaluate(()=>{const r=window.__qaRoom,p2=Object.assign(Object.create(Object.getPrototypeOf(window.qaRemote)),window.qaRemote,{identity:'qa-second',videoTrackPublications:new Map(),audioTrackPublications:new Map()});r.remoteParticipants.set('qa-second',p2);const keep=window.qaRemote;window.qaRemote=p2;const s2=window.qaTrack('scr2','screen_share');window.qaRemote=keep;window.qaScr2=s2;window.qaP2=p2;s2.pub.setSubscribed=function(v){this.isSubscribed=v;window.qaSubs.push(['scr2',v]);if(v)setTimeout(()=>r.emit('TrackSubscribed',s2.t,s2.pub,p2),0);};r.emit('TrackSubscribed',s2.t,s2.pub,p2);});
+   const ph2=page.locator('.screen-placeholder[data-participant-id="qa-second"]');await ph2.waitFor();await ph2.getByRole('button',{name:/Assistir/}).click();
+   await page.waitForFunction(()=>document.querySelector('.call-stage-tile video')?.dataset.track==='scr2');
+   assert.equal(await page.locator('.media-tile.media-screen:not(.screen-placeholder) video').count(),2);
+   await page.locator('.media-tile video[data-track="cam"]').click();await page.waitForFunction(()=>document.querySelector('.call-stage-tile video')?.dataset.track==='cam');
+   await page.locator('.media-tile video[data-track="scr"]').click();await page.waitForFunction(()=>document.querySelector('.call-stage-tile video')?.dataset.track==='scr');
+   await page.locator('.media-tile video[data-track="scr"]').click();
+   if(shots)await page.screenshot({path:path.join(shots,'call-v2-share-switch.png')});
+   await page.evaluate(()=>{window.__qaRoom.emit('TrackUnpublished',window.qaScr2.pub,window.qaP2);window.__qaRoom.emit('ParticipantDisconnected',window.qaP2);window.__qaRoom.remoteParticipants.delete('qa-second');document.querySelector('.media-tile video[data-track="scr2"]')?.closest('figure')?.remove();});
+  }
   // Ouvir juntos: sessão remota tocando não abre o painel; o botão mostra o indicador.
   await page.evaluate(()=>window.__qaRoom.emit('DataReceived',new TextEncoder().encode(JSON.stringify({type:'command',video:'M7lc1UVf-VE',position:0,playing:true,sharedMuted:false,n:5,actor:window.qaRemote.identity})),window.qaRemote,undefined,'orbita-watch'));
   await page.waitForFunction(()=>document.getElementById('watch-panel'));assert.equal(await page.locator('#watch-panel').isVisible(),false);

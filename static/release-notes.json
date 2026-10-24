@@ -2,7 +2,7 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.23+27da34c",
+   "version": "2026.10.23+28781bc",
    "date": "23 out 2026",
    "highlights": [
     [
@@ -23,7 +23,13 @@
     ]
    ],
    "items": {
+    "chat": [
+     "DM: redesign, chamadas 1:1 com toque, notificações de DMs não lidas no trilho",
+     "Chat v3: agrupamento real",
+     "Chat v2: texto e nomes maiores, avatares 40px, barra de ações com destaque do tema, reações,…"
+    ],
     "chamadas": [
+     "Telas opt-in, Ouvir juntos oculto ao entrar, palco responsivo, avatares mobile e toque duplo",
      "Ouvir juntos: canal de texto #ouvir-juntos para comandos",
      "Chamada: Ouvir juntos e canais viram toggles reais",
      "Ouvir juntos: barra de controles não invade mais a fila",
@@ -47,10 +53,6 @@
      "Mensagens diretas v2: avatar com presença, nome de exibição estilizado, @handle/status,…",
      "Insígnias v2: arte premium por categoria, nível e raridade",
      "Editor de perfil: cards com ícones, estados de hover e ativo, prévia centralizada e maior,…"
-    ],
-    "chat": [
-     "Chat v3: agrupamento real",
-     "Chat v2: texto e nomes maiores, avatares 40px, barra de ações com destaque do tema, reações,…"
     ],
     "loja": [
      "Loja v3: Decorações unificadas na Loja, coleções clássicas refeitas com animações próprias e…",

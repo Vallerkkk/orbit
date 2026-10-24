@@ -46,7 +46,10 @@ export function initWatchParty(ctx){
   async function ensure(){if(player||!snapshot)return;if(loading)return loading;const joined=room,panel=$('watch-panel'),g=generation;if(!panel)return;const task=(async()=>{await api();if(room!==joined||generation!==g||!panel.isConnected)return;let instance;const initial=snapshot.video,current=e=>room===joined&&generation===g&&panel.isConnected&&player===instance&&(!e?.target||e.target===instance);instance=new window.YT.Player('youtube-player',{height:'100%',width:'100%',host:'https://www.youtube-nocookie.com',videoId:initial,playerVars:{playsinline:1,controls:0,modestbranding:1,rel:0,iv_load_policy:3,disablekb:1,fs:0,origin:location.origin,autoplay:0,start:Math.floor(position())},events:{
     onReady:e=>{if(!current(e))return;clearTimeout(readyTimer);ready=true;loadedVideo=initial;error='';quality();drift();apply();},
     onPlaybackQualityChange:e=>{if(current(e))$('watch-quality')&&($('watch-quality').textContent=({hd1080:'1080p',hd720:'720p',large:'480p',medium:'360p',small:'240p',tiny:'144p',highres:'4K'})[e.data]||'');},
-    onStateChange:e=>{if(current(e)&&e.data===0){syncIcons(0);try{const d=instance.getDuration?.();if(d>0&&snapshot)durations.set(snapshot.video,d);}catch{}onEnd();return;}if(current(e))syncIcons(e.data);if(!current(e)||suppressed||!snapshot||![0,1,2].includes(e.data))return;const p=instance.getCurrentTime();if(Number.isFinite(p))command({playing:e.data===1,position:Math.min(86400,Math.max(0,p))});},
+    onStateChange:e=>{if(!current(e))return;if(e.data===0){syncIcons(0);if(!onCurrentVideo(instance))return;try{const d=instance.getDuration?.();if(d>0&&snapshot)durations.set(snapshot.video,d);}catch{}onEnd();return;}syncIcons(e.data);
+      // O estado do player NUNCA é transmitido: pausa/buffer/autoplay bloqueado/aba oculta são locais. Só os botões e
+      // /pausar /continuar mudam a sessão. Se a sessão está tocando e o player parou sozinho, recupera localmente.
+      if(e.data===1){stall=0;if(error===TAP_HINT){error='';label();}}else if(snapshot?.playing&&!suppressed&&[-1,2,5].includes(e.data))recover();},
     onAutoplayBlocked:e=>{if(current(e)){error='Toque em “Ouvir áudio” para liberar a reprodução neste dispositivo.';label();}},
     onError:e=>{if(!current(e))return;error=({2:'Link de vídeo inválido.',5:'Este navegador não conseguiu reproduzir o vídeo.',100:'Este vídeo foi removido ou é privado.',101:'O autor bloqueou a reprodução fora do YouTube.',150:'O autor bloqueou a reprodução fora do YouTube.',153:'O YouTube não identificou o site. Reabra o aplicativo.'})[e.data]||'Não foi possível reproduzir este vídeo.';label();}
   }});player=instance;const frame=instance.getIframe?.();if(frame){frame.title='Vídeo do YouTube — Ouvir juntos';frame.referrerPolicy='strict-origin-when-cross-origin';frame.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';frame.allowFullscreen=true;}readyTimer=setTimeout(()=>{if(current()&&!ready){error='O YouTube demorou para responder. Toque em Tentar novamente.';label();}},20000);})();loading=task;try{await task;}finally{if(loading===task)loading=null;}}
@@ -66,13 +69,18 @@ export function initWatchParty(ctx){
   function playItem(next,rest){remember();nowTitle=next.t;nowBy=next.by;setQueue(rest);command({video:next.v,position:0,playing:true,title:next.t,by:next.by});}
   // Fim do vídeo: exatamente um avanço. O líder age na hora; os demais esperam (2,5 s + 1 s por posição) e só agem
   // se ninguém mexeu na sessão desde o fim (mesmo vídeo e mesmo relógio). Ninguém transmite "pausa" ao terminar.
-  const durations=new Map();let endKey='';
+  const durations=new Map();let endKey='',stall=0,recoverTimer;const TAP_HINT='Toque para ouvir: o navegador pausou o áudio neste dispositivo.';
+  // O player está mesmo no vídeo da sessão? (durante a troca ele ainda reporta o vídeo anterior)
+  function onCurrentVideo(p){if(!snapshot||loadedVideo!==snapshot.video)return false;try{const id=p?.getVideoData?.()?.video_id;return !id||id===snapshot.video;}catch{return true;}}
+  function recover(){clearTimeout(recoverTimer);const p=player,g=generation;recoverTimer=setTimeout(()=>{if(g!==generation||p!==player||!snapshot?.playing)return;let st;try{st=p.getPlayerState();}catch{}if(st===1||st===3)return;stall++;
+      try{if(stall>=2&&p.mute&&!muted){p.mute();p.playVideo();setTimeout(()=>{try{if(p===player&&!muted)p.unMute();}catch{}},400);}else p.playVideo();}catch{}
+      if(stall>=3){error=TAP_HINT;label();}},800);}
   function onEnd(){if(!snapshot||room?.state!=='connected')return;const v=snapshot.video,c0=clock,key=v+'@'+c0;if(endKey===key)return;endKey=key;
     const ids=[self(),...room.remoteParticipants.keys()].filter(Boolean).sort(),delay=endDelay(ids.indexOf(self()));
     const act=()=>{if(!snapshot||snapshot.video!==v||clock!==c0||room?.state!=='connected')return;const plan=endAction({loop,queueLength:queue.length});if(plan==='repeat')command({position:0,playing:true});else if(plan==='next')playNext();else command({playing:false,position:durations.get(v)||position()});};
     if(delay)setTimeout(act,delay);else act();}
   // Aba em segundo plano ou player sem evento: detecta o fim pelo relógio da sessão.
-  function checkEnd(dur){if(!snapshot)return;if(dur>0)durations.set(snapshot.video,dur);const d=durations.get(snapshot.video);if(snapshot.playing&&d&&position()>d+2)onEnd();}
+  function checkEnd(dur){if(!snapshot)return;if(dur>0&&onCurrentVideo(player))durations.set(snapshot.video,dur);const d=durations.get(snapshot.video);if(snapshot.playing&&d&&position()>d+2)onEnd();}
   function playNext(){const [next,...rest]=queue;if(!next)return false;playItem(next,rest);return true;}
   async function titleFor(id){try{const r=await fetch('https://www.youtube.com/oembed?format=json&url='+encodeURIComponent('https://www.youtube.com/watch?v='+id));if(r.ok){const j=await r.json();if(typeof j.title==='string')return j.title.slice(0,90);}}catch{}return 'Vídeo do YouTube';}
   const myName=()=>String(ctx.state().profile?.display_name||'Alguém').slice(0,40);
@@ -137,7 +145,9 @@ export function initWatchParty(ctx){
     const name=j.title?'“'+j.title.slice(0,60)+'”':'a playlist';
     if(mode==='now'||!busy()){const [first,...rest]=items;const r=appendLimited(rest,queue);startVideo(first.v,first.t,link.video===first.v?link.start:0);setQueue(r.queue);return announce(`tocou ${name} (${items.length} vídeos${j.truncated?', limite de '+QUEUE_LIMIT:''}).`);}
     else{const r=placeItems(queue,items,mode);if(!r.added)return hint('A fila está cheia ('+QUEUE_LIMIT+').');setQueue(r.queue);return announce(`${mode==='next'?'colocou':'adicionou'} ${r.added} vídeos de ${name} ${mode==='next'?'como próximos':'à fila'}${r.dropped?` (${r.dropped} ficaram de fora: limite de ${QUEUE_LIMIT})`:''}.`);}}
-  const busy=()=>!!snapshot?.playing;
+  // Há item atual na sessão? Vale mesmo com o painel oculto ou o player sem carregar: só conta como livre quando não há
+  // vídeo ou quando o atual já terminou (pausado no fim). Pausado no meio também não é interrompido.
+  const busy=()=>{if(!snapshot?.video)return false;if(snapshot.playing)return true;const d=durations.get(snapshot.video);return !(d&&position()>=d-1.5);};
   // Fila sem interromper: só começa a tocar se nada estiver tocando.
   async function enqueue(v,mode='queue',known='',start=0){if(!busy()){const t=known||await titleFor(v);startVideo(v,t,start);return announce('tocou “'+t+'”.');}if(queue.length>=QUEUE_LIMIT)return hint('A fila está cheia ('+QUEUE_LIMIT+').');const t=known||await titleFor(v);setQueue(placeItems(queue,[{v,t,by:myName()}],mode).queue);return announce(mode==='next'?'colocou “'+t+'” como a próxima.':'adicionou “'+t+'” à fila.');}
   async function run(raw){const r=parseWatchInput(raw);if(r.error)return hint(r.error);

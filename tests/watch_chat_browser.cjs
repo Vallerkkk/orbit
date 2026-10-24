@@ -60,9 +60,13 @@ function fakeYouTube(){
   await say(host,'/repetir',/repetir/);await host.evaluate(()=>{window.__qaYT.position=200;});await ended(host);await follower.waitForFunction(()=>window.__qaYT.position<2&&window.__qaYT.status===1);assert.equal(await qn(host),q0-2);await say(host,'/repetir',/repetir/);
   // Enfileirar sem interromper: /adicionar vai ao fim, /proxima entra na frente, /tocar agora interrompe.
   {const cur=await host.evaluate(()=>window.__qaYT.video),n0=await qn(host);
-  await say(host,'/adicionar https://youtu.be/aaaaaaaaaaa',/./);await follower.waitForFunction(n=>document.querySelectorAll('#watch-queue .wp-q-item').length===n+1,n0);
-  assert.equal(await host.evaluate(()=>window.__qaYT.video),cur);assert.equal(await follower.evaluate(()=>[...document.querySelectorAll('#watch-queue .wp-q-item')].length),n0+1);
-  await say(follower,'/proxima https://youtu.be/bbbbbbbbbbb',/próxima/);await host.waitForFunction(n=>document.querySelectorAll('#watch-queue .wp-q-item').length===n+2,n0);
+  // Painel oculto + pausa espúria do player do outro: a sessão segue "tocando", então /adicionar do outro só enfileira.
+  await follower.evaluate(()=>{const y=window.__qaYT;y.status=2;y.options.events.onStateChange({target:y,data:2});});await host.waitForTimeout(300);assert.equal(await host.evaluate(()=>window.__qaYT.status),1);
+  await openMusic(follower);await say(follower,'/adicionar https://youtu.be/eeeeeeeeeee',/à fila/);assert.equal(await host.evaluate(()=>window.__qaYT.video),cur);assert.equal(await follower.evaluate(()=>window.__qaYT.video),cur);
+  await openMusic(host);await follower.waitForFunction(n=>document.querySelectorAll('#watch-queue .wp-q-item').length===n+1,n0);const n1=n0+1;
+  await say(host,'/adicionar https://youtu.be/aaaaaaaaaaa',/./);await follower.waitForFunction(n=>document.querySelectorAll('#watch-queue .wp-q-item').length===n+1,n1);
+  assert.equal(await host.evaluate(()=>window.__qaYT.video),cur);assert.equal(await follower.evaluate(()=>[...document.querySelectorAll('#watch-queue .wp-q-item')].length),n1+1);
+  await say(follower,'/proxima https://youtu.be/bbbbbbbbbbb',/próxima/);await host.waitForFunction(n=>document.querySelectorAll('#watch-queue .wp-q-item').length===n+2,n1);
   assert.equal(await host.evaluate(()=>window.__qaYT.video),cur);
   await say(host,'/tocar https://youtu.be/ccccccccccc',/à fila/);assert.equal(await host.evaluate(()=>window.__qaYT.video),cur);
   await say(host,'https://youtu.be/ddddddddddd',/à fila/);assert.equal(await host.evaluate(()=>window.__qaYT.video),cur);
