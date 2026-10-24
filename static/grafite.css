@@ -76,7 +76,7 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{border-color:var
 .icon-btn,.up-btn,.vc-btn,.vb-btn,.tiny-button,.text-button,.ps-btn:not(.primary),.rp-outline,.sf-button{color:var(--t2)}
 .icon-btn:hover,.up-btn:hover,.tiny-button:hover{color:var(--t1)!important;background:var(--s3)!important}
 .danger,.vc-btn.danger,.vb-btn.danger{--accent:var(--err)}
-.vc-btn.danger,.vb-btn.danger,#leave-call,#dock-leave{background:var(--err)!important;color:#1a0507!important}
+.vc-btn.danger,.vb-btn.danger,#leave-call,#dock-leave{background:#f23f43!important;color:#fff!important}#leave-call:hover,#dock-leave:hover{background:#d83a3e!important}
 /* Semânticas */
 .conn-dot,.status-dot[data-status=online],[data-status=online]>.dot{color:var(--ok)}
 #app-view .notice,.toast.success{border-color:color-mix(in srgb,var(--ok) 40%,transparent)!important}
