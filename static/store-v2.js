@@ -38,6 +38,8 @@ export function createStoreV2(o){
   function itemCard(item,open){const p=packOf(item.pack),c=el('article','sv-card');c.tabIndex=0;c.setAttribute('role','button');c.dataset.item=item.id;c.setAttribute('aria-label',`${item.name}, ${ITEM_KINDS[item.kind]}, ${RARITY[item.rarity].name}`);packVars(c,p);c.style.setProperty('--rc',RARITY[item.rarity].color);
     const on=o.mine()[item.kind]===item.id;c.classList.toggle('equipped',on);c.classList.toggle('locked',locked(item));
     const pv=el('div','sv-prev');pv.append(preview(item));const shine=el('span','sv-shine');const meta=el('div','sv-meta');meta.append(pills(item),el('strong','sv-name',item.name),el('small','sv-kind',`${ITEM_KINDS[item.kind]} · ${p.name}`));
+    const foot=el('div','sv-cfoot');foot.append(el('span','sv-price',on?'✓ Seu':locked(item)?'Exclusivo ADM':'Grátis'));
+    const cta=button(item.kind==='server'?'Ver tema':on?'Equipado':'Aplicar',async e=>{e.stopPropagation();if(item.kind==='server'||locked(item))return open(item);cta.disabled=true;if(await o.equip({[item.kind]:on?'':item.id}))render();else cta.disabled=false;},'sv-cta'+(on?' on':''));cta.setAttribute('aria-label',(on?'Remover ':'Aplicar ')+item.name);if(locked(item))cta.disabled=true;foot.append(cta);meta.append(foot);
     if(on)c.append(el('span','sv-on','Equipado'));if(locked(item))c.append(el('span','sv-lock','🔒 Só ADM'));c.append(pv,meta,shine);tilt(c);
     c.onclick=()=>open(item);c.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open(item);}};return c;}
   function skeletons(n=8){const g=el('div','sv-grid');for(let i=0;i<n;i++){const s=el('div','sv-card sv-skel');s.append(el('div','sv-prev'),el('i'),el('i'));g.append(s);}return g;}

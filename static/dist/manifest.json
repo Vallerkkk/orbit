@@ -1,8 +1,8 @@
 {
-  "version": "60c841413353cfbc",
-  "entry": "/static/dist/app-CAMPUNAR.js",
+  "version": "25b256451e5b1fc0",
+  "entry": "/static/dist/app-KOIOZMEL.js",
   "files": [
-    "/static/dist/app-CAMPUNAR.js",
+    "/static/dist/app-KOIOZMEL.js",
     "/static/dist/call-layout-41217c9121da3858.css",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js",
@@ -27,7 +27,7 @@
     "/static/dist/chunk-new-members-MMKEPUOE.js",
     "/static/dist/chunk-prod-VQFTHOXB.js",
     "/static/dist/chunk-profile-appearance-GDA3C5VT.js",
-    "/static/dist/chunk-profile-studio-4E35DHGA.js",
+    "/static/dist/chunk-profile-studio-K7QPXM6A.js",
     "/static/dist/chunk-social-feed-V2IIDYBR.js",
     "/static/dist/chunk-social-tools-OM5BQQVS.js",
     "/static/dist/chunk-telemetry-FIIAPJZJ.js",
@@ -43,7 +43,7 @@
     "/static/dist/modern-dfbf9772c6bc459c.css",
     "/static/dist/orbita-v2-0cb77913a83177eb.css",
     "/static/dist/polish-9e30c3704e33af2f.css",
-    "/static/dist/profile-studio-2945f3cd485c28f5.css",
+    "/static/dist/profile-studio-5c650efa23f2147b.css",
     "/static/dist/social-feed-4b3f4d2a773418e0.css",
     "/static/dist/store-v2-497d86db13d87b1a.css",
     "/static/dist/style-66be5b65cd0613f2.css"
@@ -60,12 +60,12 @@
     "/static/polish.css": "/static/dist/polish-9e30c3704e33af2f.css",
     "/static/modern.css": "/static/dist/modern-dfbf9772c6bc459c.css",
     "/static/orbita-v2.css": "/static/dist/orbita-v2-0cb77913a83177eb.css",
-    "/static/profile-studio.css": "/static/dist/profile-studio-2945f3cd485c28f5.css",
+    "/static/profile-studio.css": "/static/dist/profile-studio-5c650efa23f2147b.css",
     "/static/store-v2.css": "/static/dist/store-v2-497d86db13d87b1a.css",
     "/static/grafite.css": "/static/dist/grafite-14612282937dda1e.css"
   },
   "integrity": {
-    "/static/dist/app-CAMPUNAR.js": "5c7f19f574699fbf2ec915a50bbe6bdaeabe3c119a8576a257aeeb3d1764886a",
+    "/static/dist/app-KOIOZMEL.js": "2b676e7b5cb229909766a266008024fe2e01875bdfa82423f200895250316f51",
     "/static/dist/call-layout-41217c9121da3858.css": "41217c9121da385886b24e21b88d59a06c04e575277db89d6c1901b1a99d41da",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js": "20cfee0fc731efe53611da92202bd240b2f9d28e6b3115691ed50fc718851ee0",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js": "db2508c2c9152fbe631806e53dd148bd67a8b3695a0094caa6145d906b978027",
@@ -90,7 +90,7 @@
     "/static/dist/chunk-new-members-MMKEPUOE.js": "3a4683a75daaf14473e222ad36c3170850694e01fa7e1e5e9394ac3cc8a77657",
     "/static/dist/chunk-prod-VQFTHOXB.js": "392e7c812c1ce2bb32af37ededef482035b91913c868d087465a8667a23b8a0a",
     "/static/dist/chunk-profile-appearance-GDA3C5VT.js": "2d06a66f69743c4f16a7500d3a4540863d8546e011fb908ffea5a0c934680e48",
-    "/static/dist/chunk-profile-studio-4E35DHGA.js": "1db147aba9ef7d5d593c2e74a6df4e6d9c4578e9e7427059a33fa2e9bea6c526",
+    "/static/dist/chunk-profile-studio-K7QPXM6A.js": "05f50e067c9988d15a08425a839bbe0d4fce6b101c8521fca40b7bcbe01117a6",
     "/static/dist/chunk-social-feed-V2IIDYBR.js": "4e08cf87b8c38f45edf8eb9896a984812fc0bd210916b9cad058b6b8d7a06cfc",
     "/static/dist/chunk-social-tools-OM5BQQVS.js": "e5d8f14a5b938ff0ca6d4540b02d17ad836a449b6101b97c4e6b6810aab77ece",
     "/static/dist/chunk-telemetry-FIIAPJZJ.js": "2747c8d2beb57447d9bbf1d402f7272b8637c7e34b650351a98dc14d66962ede",
@@ -106,7 +106,7 @@
     "/static/dist/modern-dfbf9772c6bc459c.css": "dfbf9772c6bc459cf02777db2a4552b159ad6db43b2be1f7969b7d686c52a25a",
     "/static/dist/orbita-v2-0cb77913a83177eb.css": "0cb77913a83177eb14b8376e20f067053cd331c5cb4a1c49c81515e468f7d353",
     "/static/dist/polish-9e30c3704e33af2f.css": "9e30c3704e33af2f58e9330948fffaeb5dca7beb172355dfbb845e08418161ef",
-    "/static/dist/profile-studio-2945f3cd485c28f5.css": "2945f3cd485c28f5bb4031ed013e7514822d269ecadf9e474d6d5c0548acf774",
+    "/static/dist/profile-studio-5c650efa23f2147b.css": "5c650efa23f2147b96436ec94c6002351628617b6fb081e7210db9c38d3df497",
     "/static/dist/social-feed-4b3f4d2a773418e0.css": "4b3f4d2a773418e091aa1d85c724a235dd23e18fbf00f9f5c20a5b5f329ae1d3",
     "/static/dist/store-v2-497d86db13d87b1a.css": "497d86db13d87b1a774fbfaa891ed7e6dc97c02b84d11d27ec1bb5adb1bcfe98",
     "/static/dist/style-66be5b65cd0613f2.css": "66be5b65cd0613f2fab19a08027714234f0160213e49c2844153be0101107064"
