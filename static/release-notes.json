@@ -2,9 +2,13 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.24+9f20ad4",
+   "version": "2026.10.24+4d91c6e",
    "date": "24 out 2026",
    "highlights": [
+    [
+     "chamadas",
+     "Call v3: mudo/ensurdecido, sem engrenagem, ícones de chamada, duplo clique, botão Entrar central"
+    ],
     [
      "chamadas",
      "Ícone de desligar vermelho"
@@ -16,14 +20,11 @@
     [
      "visual",
      "Avisa pedidos de amizade novos"
-    ],
-    [
-     "chamadas",
-     "Botão 'Mutar para mim' no menu de volume do participante"
     ]
    ],
    "items": {
     "chamadas": [
+     "Call v3: mudo/ensurdecido, sem engrenagem, ícones de chamada, duplo clique, botão Entrar central",
      "Ícone de desligar vermelho",
      "Faders de volume do microfone",
      "Botão 'Mutar para mim' no menu de volume do participante"
