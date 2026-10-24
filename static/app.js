@@ -392,7 +392,7 @@ function createMessageRow(message,grouped=false) {
     content.append(meta);
     if(message.reply_to){const original=messages.get(message.reply_to);const quote=button(original?(original.profiles?.display_name||'Participante')+': '+original.content.slice(0,150):'↪ Resposta a uma mensagem anterior',()=>jumpToReply(message.reply_to),'reply-card');quote.setAttribute('aria-label','Ir para a mensagem respondida');content.append(quote);}
     {const media=chatMedia(message.content);if(media){item.classList.add('message-media',media.kind==='sticker'?'message-sticker':'message-gif');content.append(renderChatMedia(media));}else content.append(safeRichText(message.content));}if(message.poll)content.append(renderPoll(message));
-    if(message.attachments){const a=message.attachments;if(/^(image|video)\//.test(a.mime_type||''))content.append(attachmentMedia(a,{resolve:resolveAttachmentUrl,download:downloadAttachment,makeVideo:watchUploadedVideo}));content.append(button('↓ '+a.name+' · '+(a.size/1024/1024).toFixed(1)+' MB',()=>downloadAttachment(a),'file-card'));}
+    if(message.attachments){const a=message.attachments;content.append(attachmentBlock(a));}
     if(message.local_state){item.classList.add('message-local');item.dataset.delivery=message.local_state;const delivery=el('div','message-delivery');delivery.append(el('span','',message.local_state==='sending'?'Enviando…':message.local_state==='checking'?'Verificando envio…':message.local_state==='uncertain'?'Envio não confirmado.':('Falha no envio: '+(message.local_error||'tente novamente.'))));if(!['sending','checking'].includes(message.local_state)){delivery.append(button(message.local_state==='uncertain'?'Verificar envio':'Tentar novamente',()=>retryMessage(message.id),'text-button'),button('Descartar',()=>{outbox.remove(message.id);renderMessages();},'text-button'));}content.append(delivery);const avatar=el('div','avatar');setAvatar(avatar,messageProfile);item.append(avatar,content);item.dataset.messageId=message.id;return item;}
     const actions=el('div','message-actions');actions.append(button('Responder',()=>replyToMessage(message),'tiny-button'));
     for(const emoji of ['👍','❤️','😂','🎉','🔥','👀']){const count=(message.reactions||[]).filter(r=>r.emoji===emoji).length;actions.append(button(emoji+(count?' '+count:''),()=>react(message,emoji),'reaction'));}
@@ -2265,3 +2265,17 @@ initSidebarToggle();
    const items=[{label:'Ver perfil',action:()=>p.id===session?.user.id?openSettingsHub('perfil'):showProfile(p)}];if(p.id!==session?.user.id)items.push({label:'Enviar mensagem',action:()=>startConversation(p)});
    const r=row.getBoundingClientRect(),m=openMenu({x:r.left-310,y:r.top,items,header,card:true,label:'Mini perfil',noFocus:true});m.classList.add('orb-hover-card');header.after(act);shownFor=row;},450);});
 }
+
+// Anexos: sem nome nem botão embaixo; só um "⋯" no canto superior direito com Baixar/Compartilhar.
+function attachmentBlock(a){const mime=a.mime_type||'',kind=/^image\//.test(mime)?'image':/^video\//.test(mime)?'video':/^audio\//.test(mime)?'audio':'file',wrap=el('div','att-wrap att-'+kind);
+  if(kind==='image'||kind==='video')wrap.append(attachmentMedia(a,{resolve:resolveAttachmentUrl,download:downloadAttachment,makeVideo:watchUploadedVideo}));
+  else{const card=el('div','att-card'),ext=(a.name||'').split('.').pop().slice(0,5).toUpperCase();card.append(el('span','att-icon',kind==='audio'?'♪':ext||'ARQ'),el('span','att-meta',(kind==='audio'?'Áudio':ext?'Arquivo '+ext:'Arquivo')+' · '+((a.size||0)/1024/1024).toFixed(1)+' MB'));
+    if(kind==='audio'){const au=el('audio');au.controls=true;au.preload='none';Promise.resolve().then(()=>resolveAttachmentUrl(a)).then(u=>au.src=u).catch(()=>{});card.append(au);}else{card.tabIndex=0;card.setAttribute('role','button');card.title='Baixar';card.onclick=()=>downloadAttachment(a).catch(e=>toast(errorText(e)));}
+    wrap.append(card);}
+  const more=el('button','att-more','⋯');more.type='button';more.setAttribute('aria-label','Opções do anexo');
+  more.onclick=e=>{e.preventDefault();e.stopPropagation();const r=more.getBoundingClientRect();openMenu({x:r.right-200,y:r.bottom+4,label:'Opções do anexo',items:[{label:'Baixar',action:()=>downloadAttachment(a).catch(err=>toast(errorText(err)))},{label:'Compartilhar',action:()=>shareAttachment(a)}]});};
+  wrap.append(more);return wrap;}
+async function shareAttachment(a){try{
+  if(navigator.canShare&&navigator.share){try{const u=await downloadAttachment(a,true),blob=await (await fetch(u)).blob();URL.revokeObjectURL(u);const file=new File([blob],a.name||'arquivo',{type:a.mime_type||blob.type});if(navigator.canShare({files:[file]}))return await navigator.share({files:[file],title:a.name});}catch(e){if(e?.name==='AbortError')return;}}
+  const url=await resolveAttachmentUrl(a);if(navigator.share){try{return await navigator.share({url,title:a.name});}catch(e){if(e?.name==='AbortError')return;}}
+  await navigator.clipboard.writeText(url);toast('Link copiado');}catch(e){toast(errorText(e));}}
