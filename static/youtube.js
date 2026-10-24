@@ -116,7 +116,7 @@ export function initYouTube(ctx){
     if(!alive(v))return;miniTitle.textContent=video.title||'';
     const info=el('div','yt-w-info'),actions=el('div','yt-w-actions'),owner=el('div','yt-owner');const ch=el('button','yt-owner-name');ch.type='button';ch.append(el('b','',video.channelTitle||''));ch.onclick=()=>video.channelId&&go({name:'channel',id:video.channelId});owner.append(av(video.channelTitle),ch);
     const yt=el('a','yt-btn','Abrir no YouTube');yt.href='https://www.youtube.com/watch?v='+video.id;yt.target='_blank';yt.rel='noopener noreferrer';
-    actions.append(el('span','yt-btn yt-likes',video.likes!=null?formatCount(video.likes)+' curtidas':'Curtidas ocultas'),btn('Assistir depois',()=>later(video),'yt-btn','clock'),btn('Enviar no Órbita',()=>ctx.shareVideo(video),'yt-btn ac','orbit'),yt);
+    actions.append(el('span','yt-btn yt-likes',video.likes!=null?formatCount(video.likes)+' curtidas':'Curtidas ocultas'),btn('Assistir depois',()=>later(video),'yt-btn','clock'),btn('Enviar no Órbita',()=>ctx.shareVideo(video),'yt-btn ac','orbit'),btn('Modo teatro',()=>theater(),'yt-btn yt-theater-btn'),yt);
     info.append(el('h1','yt-w-title',video.title||''),el('div','yt-w-row'));info.lastChild.append(owner,actions);
     const desc=el('details','yt-desc'),sum=el('summary');sum.append(el('b','',[video.views!=null?formatCount(video.views,'visualizações'):'',ago(video.published)].filter(Boolean).join(' • ')),el('span','yt-desc-prev',(video.description||'').split('\n')[0].slice(0,160)+' … mais'));desc.append(sum,el('p','',video.description||'Sem descrição.'));info.append(desc);left.append(info);
     const cm=el('section','yt-comments');cm.append(el('h3','yt-h3',(video.comments!=null?formatCount(video.comments)+' ':'')+'comentários'));left.append(cm);
@@ -138,3 +138,9 @@ export function initYouTube(ctx){
   root.addEventListener('keydown',e=>{if(e.key==='Escape')root.classList.remove('yt-side-open');});
   return {open,hide,play:(v,o)=>{play(v,o);schedule();},later,openWatch,sessionChanged,get current(){return current;}};
 }
+
+// Modo teatro: player largo no centro, resto escurecido; Esc ou clique fora sai.
+function theater(force){const on=force??!document.body.classList.contains('yt-theater');document.body.classList.toggle('yt-theater',on);
+  let dim=document.getElementById('yt-theater-dim');if(on&&!dim){dim=document.createElement('div');dim.id='yt-theater-dim';dim.onclick=()=>theater(false);document.body.append(dim);}else if(!on)dim?.remove();
+  for(const b of document.querySelectorAll('.yt-theater-btn'))b.setAttribute('aria-pressed',String(on));}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('yt-theater')){e.stopPropagation();theater(false);}},true);

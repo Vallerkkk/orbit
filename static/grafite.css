@@ -606,3 +606,7 @@ body.realtime-ok #btn-free-setup{display:none}
 @media (max-width:640px){.ps-overlay .ps-head .ps-sub{display:none}.ps-overlay .ps-head h2{font-size:1rem!important}}
 .ps-overlay .ps-sheet:focus{outline:none}
 html.emoji-fallback .mp-emoji,html.emoji-fallback .mp-emoji *,html.emoji-fallback .emoji-grid button,html.emoji-fallback .message-reactions button,html.emoji-fallback .vc-reaction{font-family:"Noto Color Emoji","Segoe UI Emoji","Apple Color Emoji",sans-serif}
+#yt-theater-dim{position:fixed;inset:0;z-index:1400;background:#000d;animation:fade-in .2s}
+body.yt-theater .yt-w-player{position:fixed!important;z-index:1401;left:50%;top:50%;transform:translate(-50%,-50%);width:min(96vw,calc(88dvh*16/9))!important;max-width:none!important;aspect-ratio:16/9;border-radius:12px;overflow:hidden;box-shadow:0 30px 80px #000}
+body.yt-theater .yt-w-player iframe{width:100%!important;height:100%!important}
+.yt-theater-btn[aria-pressed=true]{background:var(--ac)!important;color:#fff!important}
