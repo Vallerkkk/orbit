@@ -289,3 +289,10 @@
 @media (min-width:861px){.ps-editor:not(.ps-editor-hub){grid-template-columns:260px minmax(0,1fr) 210px}}.ps-ed-stage .rp-banner{height:96px!important}.ps-ed-center .ps-ed-stage .ps-card.rich-profile{width:min(640px,100%)!important}
 .ps-ed-center .ps-ed-stage .ps-card.rich-profile .rp-banner{height:96px!important;min-height:0!important;max-height:96px!important}@media (min-width:861px){.ps-editor:not(.ps-editor-hub){grid-template-columns:260px minmax(0,1fr) 230px}}
 .ps-ed-center .ps-ed-stage .rp-body h5{margin:10px 0 2px!important}.ps-ed-center .ps-ed-stage .rp-body p{margin:0!important}
+/* Prévia vertical (retrato, estilo popout do Discord) */
+@media (min-width:861px){.ps-editor:not(.ps-editor-hub){grid-template-columns:300px minmax(0,1fr) 260px}.ps-ed-center{position:sticky;top:0;align-self:start;height:100%;max-height:100%;min-height:0}}
+.ps-ed-center{display:flex;align-items:center;justify-content:center}
+.ps-ed-center .ps-ed-stage{margin:auto;justify-content:center;min-height:100%}
+.ps-ed-center .ps-ed-stage .ps-card.rich-profile{width:340px!important;max-width:100%;aspect-ratio:auto!important;min-height:540px!important;max-height:600px;overflow:auto!important;border-radius:16px;box-shadow:0 18px 50px #0008,0 0 0 1px #ffffff14}
+.ps-ed-center .ps-ed-stage .ps-card.rich-profile .rp-banner{height:120px!important;max-height:120px!important}
+@media (max-width:860px){.ps-ed-center .ps-ed-stage .ps-card.rich-profile{width:min(360px,100%)!important;min-height:480px!important;margin:0 auto}}

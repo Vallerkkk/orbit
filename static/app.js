@@ -394,7 +394,7 @@ function createMessageRow(message,grouped=false) {
     if(message.pinned)meta.append(el('small','pin-label','◆ Fixada'));
     content.append(meta);
     if(message.reply_to){const original=messages.get(message.reply_to);const quote=button(original?(original.profiles?.display_name||'Participante')+': '+original.content.slice(0,150):'↪ Resposta a uma mensagem anterior',()=>jumpToReply(message.reply_to),'reply-card');quote.setAttribute('aria-label','Ir para a mensagem respondida');content.append(quote);}
-    {const media=chatMedia(message.content);if(media){item.classList.add('message-media',media.kind==='sticker'?'message-sticker':'message-gif');content.append(renderChatMedia(media));}else content.append(safeRichText(message.content));}if(message.poll)content.append(renderPoll(message));
+    {const media=chatMedia(message.content);if(media){item.classList.add('message-media',media.kind==='sticker'?'message-sticker':'message-gif');content.append(renderChatMedia(media));}else if(!(message.attachments&&message.attachments.name&&String(message.content||'').replace(/^\s*📎\s*/,'').trim()===String(message.attachments.name).trim()))content.append(safeRichText(message.content));}if(message.poll)content.append(renderPoll(message));
     if(message.attachments){const a=message.attachments;content.append(attachmentBlock(a));}
     if(message.local_state){item.classList.add('message-local');item.dataset.delivery=message.local_state;const delivery=el('div','message-delivery');delivery.append(el('span','',message.local_state==='sending'?'Enviando…':message.local_state==='checking'?'Verificando envio…':message.local_state==='uncertain'?'Envio não confirmado.':('Falha no envio: '+(message.local_error||'tente novamente.'))));if(!['sending','checking'].includes(message.local_state)){delivery.append(button(message.local_state==='uncertain'?'Verificar envio':'Tentar novamente',()=>retryMessage(message.id),'text-button'),button('Descartar',()=>{outbox.remove(message.id);renderMessages();},'text-button'));}content.append(delivery);const avatar=el('div','avatar');setAvatar(avatar,messageProfile);item.append(avatar,content);item.dataset.messageId=message.id;return item;}
     const actions=el('div','message-actions');actions.append(button('Responder',()=>replyToMessage(message),'tiny-button'));
@@ -636,7 +636,7 @@ function updateCallUI() {
   const here = !!room && callChannel?.id === selected?.id && selected?.kind === 'voice';
   $('call-dock').hidden=!room;$('dock-name').textContent=callChannel?.name||'';$('call-dock').querySelector('.vb-ping').textContent=here?qualityText(room.localParticipant.connectionQuality):'Conectado';
   $('join-call').hidden = here; $('join-call').disabled = joining || !config?.callsConfigured;
-  $('join-call').textContent = joining ? 'Conectando…' : (room ? 'Trocar para esta sala ↗' : 'Entrar na sala ↗');
+  $('join-call').textContent = joining ? 'Conectando…' : (room ? 'Trocar para esta sala' : 'Entrar na sala');
   $('active-controls').hidden = !here; $('empty-call').hidden = here;
   $('call-status').textContent = !config?.callsConfigured ? 'As chamadas não estão configuradas neste momento.'
     : here ? `${room.remoteParticipants.size+1} participante${room.remoteParticipants.size===0?'':'s'} · ${qualityText(room.localParticipant.connectionQuality)}`
@@ -2302,3 +2302,5 @@ document.getElementById('bug-report-btn')?.addEventListener('click',()=>{if(sess
 
 let spotifyApi;function spotify(){return spotifyApi??=createSpotify({session:()=>session,el,button,toast});}
 if(/^#spotify=/.test(location.hash)){const ok=location.hash==='#spotify=conectado';history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>toast(ok?'Spotify conectado! Ele aparece no seu perfil enquanto você ouve.':'Não foi possível conectar o Spotify.'),1200);}
+
+window.orbitaJoinVoice=id=>joinVoiceChannel(id);import('./call-v3.js').then(m=>m.installCallV3()).catch(()=>{});
