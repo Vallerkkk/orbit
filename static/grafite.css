@@ -733,3 +733,18 @@ body.server-themed{background:var(--bg)}
 body.server-themed .main,body.server-themed .chat,body.server-themed #voice-view{background-color:var(--bg);background-image:var(--server-bg-image)}
 body.server-themed .sidebar,body.server-themed .channels,body.server-themed .members{background-color:var(--s1)}
 body.server-themed .rail{background-color:color-mix(in srgb,var(--bg) 85%,#000)}
+/* Efeito ambiente do tema de servidor */
+#server-fx{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.6;contain:strict}
+#server-fx canvas{width:100%!important;height:100%!important;display:block}
+body.server-themed .app{position:relative;z-index:1}
+body.server-themed .main,body.server-themed .sidebar,body.server-themed .members,body.server-themed .rail{background-color:color-mix(in srgb,var(--bg) 82%,transparent)!important}
+body.server-themed .sidebar,body.server-themed .members{background-color:color-mix(in srgb,var(--s1) 86%,transparent)!important}
+@media (prefers-reduced-motion:reduce){#server-fx{opacity:.2}}
+body.server-themed .app,body.server-themed #message-list,body.server-themed .messages{background-color:transparent!important}
+body.server-themed .rail{background-color:color-mix(in srgb,var(--bg) 70%,transparent)!important}
+body.server-themed .sidebar{background-color:color-mix(in srgb,var(--s1) 80%,transparent)!important}
+body.server-themed #app-view.app{background:transparent!important}
+body.server-themed #app-view .main{background:color-mix(in srgb,var(--bg) 45%,transparent)!important}
+body.server-themed #app-view .rail,body.server-themed #server-rail{background:color-mix(in srgb,var(--bg) 70%,transparent)!important}
+body.server-themed #app-view .sidebar{background:color-mix(in srgb,var(--s1) 78%,transparent)!important}
+body.server-themed #app-view .members{background:color-mix(in srgb,var(--s1) 78%,transparent)!important}

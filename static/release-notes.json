@@ -2,9 +2,13 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.24+cc9bb2f",
+   "version": "2026.10.24+2596e89",
    "date": "24 out 2026",
    "highlights": [
+    [
+     "visual",
+     "Tema de servidor completo: paleta inteira"
+    ],
     [
      "perfil",
      "Configurações › Perfil: estúdio redesenhado"
@@ -16,13 +20,13 @@
     [
      "perfil",
      "Prévia do perfil: fundo grafite com brilho e fótons animados"
-    ],
-    [
-     "chamadas",
-     "Call v3: mudo/ensurdecido, sem engrenagem, ícones de chamada, duplo clique, botão Entrar central"
     ]
    ],
    "items": {
+    "visual": [
+     "Tema de servidor completo: paleta inteira",
+     "Avisa pedidos de amizade novos"
+    ],
     "perfil": [
      "Configurações › Perfil: estúdio redesenhado",
      "Perfil: prévia vertical também em Configurações › Perfil",
@@ -43,9 +47,6 @@
      "Imagem colada vai para pré-visualização e só é enviada com Enter",
      "Painel de configurações segue o modo claro",
      "Tooltip da insígnia aparece na frente do perfil"
-    ],
-    "visual": [
-     "Avisa pedidos de amizade novos"
     ]
    }
   },

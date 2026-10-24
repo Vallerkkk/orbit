@@ -1909,6 +1909,12 @@ function loadServerTheme() {
 // Tema da Loja aplicado ao servidor (communities.theme): vale para todos os membros, atualiza via realtime.
 function personalServerTheme(){try{return localStorage.getItem('orbita-personal-server-theme:'+(session?.user.id||'guest'))||'';}catch{return '';}}
 function serverThemePack(){const c=!home&&communities.find(x=>x.id===activeCommunity),id=c?.theme||personalServerTheme(),item=id&&COSMETIC_ITEMS.find(i=>i.id===id&&i.kind==='server');return item?packOf(item.pack):null;}
+let ambientKey='';
+// Camada ambiente do tema (mesmo efeito da prévia da Loja), atrás da interface, sem eventos de ponteiro.
+function ambientServerFx(pack){const key=pack?pack.id:'';if(key===ambientKey)return;ambientKey=key;let host=document.getElementById('server-fx');
+  if(host)import('./fx-engine.js').then(m=>m.destroyFxIn(host)).finally(()=>host.replaceChildren());if(!pack?.fx)return host?.remove();
+  if(!host){host=document.createElement('div');host.id='server-fx';host.setAttribute('aria-hidden','true');document.body.prepend(host);}
+  import('./fx-engine.js').then(m=>{if(ambientKey!==key)return;host.replaceChildren();m.mountFx(host,{preset:pack.fx,colors:pack.c,bg:'transparent',mode:'hero',radius:0});}).catch(()=>{});}
 const THEME_VARS=['--bg','--s1','--s2','--s3','--bd','--bdh','--hl','--ac','--ac-h','--ac2','--onac','--acs','--t2','--t3','--server-bg-image'];
 // Tema de servidor completo: recalcula toda a paleta Grafite (fundos, painéis, bordas, texto, destaque) a partir do pacote, no body (vence data-theme).
 function paintServerPalette(pack){const b=document.body,hex=v=>/^#[0-9a-f]{6}$/i.test(v||'')?v:null;for(const k of THEME_VARS)b.style.removeProperty(k);if(!pack)return;
@@ -1920,7 +1926,7 @@ function paintServerPalette(pack){const b=document.body,hex=v=>/^#[0-9a-f]{6}$/i
 function applyServerTheme() {
   const pack=serverThemePack(),hex=v=>/^#[0-9a-f]{6}$/i.test(v||'')?v:null;
   const t = {...(pack?{accent:hex(pack.c?.[0]),bg:hex(pack.bg)}:{}),...Object.fromEntries(Object.entries(!home&&session ? loadServerTheme() : {}).filter(([,v])=>v))};
-  document.body.classList.toggle('server-themed',!!pack);paintServerPalette(pack);document.documentElement.style.setProperty('--server-c2',hex(pack?.c?.[1])||'');if(pack&&hex(pack.c?.[0])){document.documentElement.style.setProperty('--ac',pack.c[0]);document.documentElement.style.setProperty('--acs',pack.c[0]+'26');}else if(!pack){document.documentElement.style.removeProperty('--ac');document.documentElement.style.removeProperty('--acs');}
+  document.body.classList.toggle('server-themed',!!pack);paintServerPalette(pack);ambientServerFx(pack);document.documentElement.style.setProperty('--server-c2',hex(pack?.c?.[1])||'');if(pack&&hex(pack.c?.[0])){document.documentElement.style.setProperty('--ac',pack.c[0]);document.documentElement.style.setProperty('--acs',pack.c[0]+'26');}else if(!pack){document.documentElement.style.removeProperty('--ac');document.documentElement.style.removeProperty('--acs');}
   const root = document.documentElement;
   for(const [key,value] of [['--accent',t.accent],['--bg-main',t.bg]]){if(/^#[0-9a-f]{6}$/i.test(value||''))root.style.setProperty(key,value);else root.style.removeProperty(key);}
   const banner=$('server-banner-box');let url;try{url=new URL(t.banner);if(url.protocol!=='https:')url=null;}catch{}
