@@ -96,7 +96,7 @@ export function initEnhancements(context) {
   // Boas-vindas recebidas: aviso no app; notificação do sistema só se a aba estiver oculta e não houver push.
   function welcomed(data){const s=state();if(!s.session||!data||data.actor_id===s.session.user.id)return;const text=String(data.text||((data.actor_name||'Alguém')+' te deu boas-vindas na Órbita')).slice(0,140);
     toast('👋 '+text);if(s.profile?.presence_status==='dnd'||isQuiet(s.session.user.id))return;audio();
-    if(document.hidden&&'Notification' in window&&Notification.permission==='granted'&&!s.config?.pushConfigured){try{new Notification('Boas-vindas · Órbita',{body:text,tag:'orbita-welcome-'+data.actor_id,icon:'/static/icons/icon-192.png'});}catch{}}}
+    if(document.hidden&&'Notification' in window&&Notification.permission==='granted'&&!s.config?.pushConfigured){try{const n=new Notification('Boas-vindas · Órbita',{body:text,tag:'orbita-welcome-'+data.actor_id,icon:'/static/icons/icon-192.png'});n.onclick=()=>{window.focus();window.orbitaOpenMembers?.();n.close();};}catch{}}}
   let dispatchTask,retryPush;
   async function dispatchPush() {
     const uid=state().session?.user.id;if(!state().config?.pushConfigured||!uid||dispatchTask)return;
