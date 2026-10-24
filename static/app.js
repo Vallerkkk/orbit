@@ -18,7 +18,7 @@ import {initNavigationMotion} from './navigation-motion.js';
 import {DECORATIONS} from './profile-decoration-catalog.js';
 import {LEGACY_DECOR} from './store-collections.js';
 import {applyAppearanceEverywhere} from './appearance-runtime.js';
-import {compactAppearance,stripAdminOnly} from './cosmetics.js';
+import {compactAppearance,stripAdminOnly,packOf,ITEMS as COSMETIC_ITEMS} from './cosmetics.js';
 import {initShareReceiver} from './share-target.js';
 import {initThemeAccessibility,foreground} from './theme-accessibility.js';
 import {initAppUpdates} from './app-updates.js';
@@ -1480,7 +1480,7 @@ initSocial=async()=>{
   if(extraSubscription)await db.removeChannel(extraSubscription);
   if(!current())return;
   extraSubscription=db.channel('orbita-ui-'+session.user.id)
-    .on('postgres_changes',{event:'*',schema:'public',table:'communities'},async()=>{try{const loaded=await checked(db.from('communities').select('*').order('created_at'));if(!current())return;const missing=activeCommunity&&!loaded.some(c=>c.id===activeCommunity)?activeCommunity:null;if(missing){communities=loaded;await forgetCommunity(missing);}else{communities=loaded;renderCommunityRail();}}catch(error){if(current())toast(errorText(error));}})
+    .on('postgres_changes',{event:'*',schema:'public',table:'communities'},async()=>{try{const loaded=await checked(db.from('communities').select('*').order('created_at'));if(!current())return;const missing=activeCommunity&&!loaded.some(c=>c.id===activeCommunity)?activeCommunity:null;if(missing){communities=loaded;await forgetCommunity(missing);}else{communities=loaded;renderCommunityRail();applyServerTheme();}}catch(error){if(current())toast(errorText(error));}})
     .on('postgres_changes',{event:'*',schema:'public',table:'community_welcome'},payload=>{const id=payload.new?.community_id||payload.old?.community_id;welcomeAccess.delete(id);communityViews.delete(id);if(current()&&id===activeCommunity)ensureCommunityWelcome(id).then(accepted=>{if(!current())return;if(!accepted){if(callChannel?.community_id===id)leaveCall();showFriends();}else scheduleAccessRefresh();}).catch(error=>toast(errorText(error)));})
     .on('postgres_changes',{event:'*',schema:'public',table:'site_roles'},async()=>{try{const loaded=await checked(db.from('site_roles').select('*'));if(!current())return;siteRoles=loaded;renderMembers();updateFounders();}catch(error){if(current())toast(errorText(error));}})
     .on('postgres_changes',{event:'*',schema:'public',table:'poll_votes'},()=>{if(!home&&selected?.kind==='text')refreshMessages();}).subscribe();
@@ -1897,8 +1897,12 @@ function loadServerTheme() {
   try { return JSON.parse(localStorage.getItem(SERVER_THEME_KEY+':'+(session?.user.id||'guest')+':'+activeCommunity) || '{}') || {}; }
   catch { return {}; }
 }
+// Tema da Loja aplicado ao servidor (communities.theme): vale para todos os membros, atualiza via realtime.
+function serverThemePack(){const c=!home&&communities.find(x=>x.id===activeCommunity),item=c?.theme&&COSMETIC_ITEMS.find(i=>i.id===c.theme&&i.kind==='server');return item?packOf(item.pack):null;}
 function applyServerTheme() {
-  const t = !home&&session ? loadServerTheme() : {};
+  const pack=serverThemePack(),hex=v=>/^#[0-9a-f]{6}$/i.test(v||'')?v:null;
+  const t = {...(pack?{accent:hex(pack.c?.[0]),bg:hex(pack.bg)}:{}),...Object.fromEntries(Object.entries(!home&&session ? loadServerTheme() : {}).filter(([,v])=>v))};
+  document.body.classList.toggle('server-themed',!!pack);document.documentElement.style.setProperty('--server-c2',hex(pack?.c?.[1])||'');if(pack&&hex(pack.c?.[0])){document.documentElement.style.setProperty('--ac',pack.c[0]);document.documentElement.style.setProperty('--acs',pack.c[0]+'26');}else if(!pack){document.documentElement.style.removeProperty('--ac');document.documentElement.style.removeProperty('--acs');}
   const root = document.documentElement;
   for(const [key,value] of [['--accent',t.accent],['--bg-main',t.bg]]){if(/^#[0-9a-f]{6}$/i.test(value||''))root.style.setProperty(key,value);else root.style.removeProperty(key);}
   const banner=$('server-banner-box');let url;try{url=new URL(t.banner);if(url.protocol!=='https:')url=null;}catch{}
@@ -1997,6 +2001,8 @@ function loadStudio(){if(!studioTask)studioTask=import('./profile-studio.js').th
   state:()=>({db,session,profile,isAdmin:siteRoles.some(r=>r.user_id===session?.user.id&&['admin','creator'].includes(r.role))}),
   saveProfile:async fields=>{const uid=session.user.id;await checked(db.from('profiles').update(fields).eq('id',uid).select('id'));if(session?.user.id===uid){Object.assign(profile,fields);const cur=peopleById.get(uid);if(cur)Object.assign(cur,fields);}},
   roleOf:id=>{if(home||!activeCommunity)return null;const link=memberRoles.find(r=>r.user_id===id);return link?communityRoleList.find(r=>r.id===link.role_id)||null:null;},
+  serverTheme:{community:()=>home?null:communities.find(c=>c.id===activeCommunity)||null,canApply:()=>!home&&canEditActiveServer(),
+    apply:async id=>{const c=!home&&communities.find(x=>x.id===activeCommunity);if(!c)throw Error('Abra um servidor para aplicar o tema.');await checked(db.from('communities').update({theme:id||null}).eq('id',c.id));c.theme=id||null;applyServerTheme();}},
   inCall:()=>room&&callChannel?callChannel.name:null,openSettings:section=>openSettingsHub(section||'perfil')})).catch(error=>{studioTask=null;throw error;});return studioTask;}
 async function studio(method,...args){const uid=session?.user.id;try{const s=await loadStudio();if(session?.user.id===uid)return s[method](...args);}catch(error){toast(errorText(error));}}
 window.orbitaStudio=studio;
