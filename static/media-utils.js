@@ -57,6 +57,22 @@ export function youtubeId(value) {
     return /^[A-Za-z0-9_-]{11}$/.test(id||'')?id:null;
   }catch{return null;}
 }
+// Playlists: youtube.com/playlist?list=, watch?v=..&list=, music.youtube.com e youtu.be/ID?list=.
+// Mixes automáticos (RD…) e "Assistir mais tarde" (WL/LL) não são acessíveis pela API pública.
+export function youtubePlaylistId(value) {
+  try {
+    const url=youtubeURL(value);if(!url)return null;
+    const host=url.hostname;
+    if(host!=='youtu.be'&&!['www.youtube.com','youtube.com','m.youtube.com','music.youtube.com'].includes(host))return null;
+    const list=url.searchParams.get('list')||'';
+    return /^[A-Za-z0-9_-]{2,64}$/.test(list)&&!/^(WL|LL|LM)$/.test(list)?list:null;
+  }catch{return null;}
+}
+export function youtubeLink(value) {
+  const video=youtubeId(value),list=youtubePlaylistId(value);
+  if(!video&&!list)return null;
+  return {video,list,start:video?youtubeStart(value):0,mix:!!list&&/^RD/.test(list)};
+}
 export function youtubeStart(value) {
   try {
     if(!youtubeId(value))return 0;const url=youtubeURL(value),raw=url.searchParams.get('t')||url.searchParams.get('start')||new URLSearchParams(url.hash.slice(1)).get('t')||'0';
