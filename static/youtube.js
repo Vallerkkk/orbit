@@ -36,9 +36,18 @@ export function initYouTube(ctx){
   const closeBtn=btn('',()=>closePlayer(),'yt-mini-btn yt-mini-top','close');closeBtn.setAttribute('aria-label','Fechar player');
   const progress=el('div','yt-mini-progress'),progressFill=el('i');progress.append(progressFill);
   const tops=el('div','yt-mini-tops');tops.append(expandBtn,closeBtn);bar.append(miniInfo,playBtn,nextBtn);dock.append(frameBox,tops,progress,bar);document.body.append(dock);
+  // Mini player arrastável (mouse e toque), preso à tela, posição lembrada.
+  const POS_KEY='orbita-yt-mini-pos';
+  function clampPos(x,y){const r=dock.getBoundingClientRect(),m=8;return [Math.max(m,Math.min(x,innerWidth-r.width-m)),Math.max(m,Math.min(y,innerHeight-r.height-m))];}
+  function applyMiniPos(){let p;try{p=JSON.parse(localStorage.getItem(POS_KEY)||'null');}catch{}if(!p||!dock.classList.contains('mini'))return;const [x,y]=clampPos(p.x,p.y);Object.assign(dock.style,{left:x+'px',top:y+'px',right:'auto',bottom:'auto'});}
+  {let drag=null;bar.style.touchAction='none';bar.style.cursor='grab';
+    bar.addEventListener('pointerdown',e=>{if(!dock.classList.contains('mini')||e.target.closest('button')||e.button>0)return;const r=dock.getBoundingClientRect();drag={dx:e.clientX-r.left,dy:e.clientY-r.top,id:e.pointerId};bar.setPointerCapture(e.pointerId);bar.style.cursor='grabbing';e.preventDefault();});
+    bar.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;const [x,y]=clampPos(e.clientX-drag.dx,e.clientY-drag.dy);Object.assign(dock.style,{left:x+'px',top:y+'px',right:'auto',bottom:'auto'});});
+    const end=e=>{if(!drag||e.pointerId!==drag.id)return;drag=null;bar.style.cursor='grab';const r=dock.getBoundingClientRect();localStorage.setItem(POS_KEY,JSON.stringify({x:r.left,y:r.top}));};
+    bar.addEventListener('pointerup',end);bar.addEventListener('pointercancel',end);addEventListener('resize',()=>applyMiniPos());}
   let player,playerReady,current=null,queue=[],slot=null,playing=false,tick=0,lastSave=0;
   function place(){if(dock.hidden)return;if(slot&&slot.isConnected&&!root.hidden){const r=slot.getBoundingClientRect(),c=scroll?.getBoundingClientRect();dock.classList.remove('mini');dock.classList.add('docked');Object.assign(dock.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px'});dock.style.clipPath=c?`inset(${Math.max(0,c.top-r.top)}px 0 ${Math.max(0,r.bottom-c.bottom)}px 0)`:'';dock.style.visibility=r.bottom<(c?.top||0)||r.top>(c?.bottom||innerHeight)?'hidden':'';}
-    else{dock.classList.add('mini');dock.classList.remove('docked');for(const k of ['left','top','width','height','clipPath','visibility'])dock.style[k]='';}}
+    else{dock.classList.add('mini');dock.classList.remove('docked');for(const k of ['left','top','width','height','clipPath','visibility'])dock.style[k]='';applyMiniPos();}}
   let placeFrame=0;const schedule=()=>{if(!placeFrame)placeFrame=requestAnimationFrame(()=>{placeFrame=0;place();});};
   addEventListener('resize',schedule,{passive:true});const ro=new ResizeObserver(schedule);
   function setPlaying(p){playing=p;playBtn.replaceChildren(svg(p?'pause':'play'));playBtn.setAttribute('aria-label',p?'Pausar':'Reproduzir');dock.classList.toggle('paused',!p);}

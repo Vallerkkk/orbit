@@ -2,9 +2,13 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.24+a7b0a1e",
+   "version": "2026.10.24+873762b",
    "date": "24 out 2026",
    "highlights": [
+    [
+     "chamadas",
+     "Faders de volume do microfone"
+    ],
     [
      "visual",
      "Avisa pedidos de amizade novos"
@@ -16,18 +20,15 @@
     [
      "correcoes",
      "Esconde a pílula 'Tempo real ativo' quando a conexão está ok"
-    ],
-    [
-     "correcoes",
-     "'Manter a tela acesa' só aparece em celular/tablet"
     ]
    ],
    "items": {
+    "chamadas": [
+     "Faders de volume do microfone",
+     "Botão 'Mutar para mim' no menu de volume do participante"
+    ],
     "visual": [
      "Avisa pedidos de amizade novos"
-    ],
-    "chamadas": [
-     "Botão 'Mutar para mim' no menu de volume do participante"
     ],
     "correcoes": [
      "Esconde a pílula 'Tempo real ativo' quando a conexão está ok",
