@@ -2,9 +2,13 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.24+03a6d36",
+   "version": "2026.10.24+e23d25f",
    "date": "24 out 2026",
    "highlights": [
+    [
+     "feed",
+     "Boas-vindas: push/notificacao abrem Novos membros"
+    ],
     [
      "feed",
      "Novos membros: tema Orbita fixo com orbitas/estrelas, botao de boas-vindas novo com som e…"
@@ -16,14 +20,11 @@
     [
      "feed",
      "Feed: Mais recentes/Em alta + filtro mais antigas, video com som e pausa fora da tela"
-    ],
-    [
-     "loja",
-     "Temas da Loja: efeito ambiente do tema no app inteiro, painéis translúcidos, Equipados…"
     ]
    ],
    "items": {
     "feed": [
+     "Boas-vindas: push/notificacao abrem Novos membros",
      "Novos membros: tema Orbita fixo com orbitas/estrelas, botao de boas-vindas novo com som e…",
      "Feed: autoplay de video confiavel",
      "Feed: Mais recentes/Em alta + filtro mais antigas, video com som e pausa fora da tela"
