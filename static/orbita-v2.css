@@ -905,7 +905,7 @@ body[data-color-mode=light] .st-seg>button[aria-checked=true]{background:#fff;co
 .wp2 input[type=range]{-webkit-appearance:none;appearance:none;height:4px;padding:0!important;border:0!important;border-radius:999px;background:linear-gradient(90deg,var(--ac) var(--wp-fill,0%),#ffffff26 0)!important;min-height:0!important;cursor:pointer}
 .wp2 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#fff;border:0}
 .wp2 .wp-seek{flex:1;min-width:60px;width:auto!important;margin:0 6px}
-.wp2 .wp-volume{width:70px!important;background:#ffffff40!important}
+.wp2 .wp-volume{width:70px!important}
 .wp2 .watch-time{flex:none;font-size:11.5px!important;color:#bdb7d1;opacity:1!important;font-variant-numeric:tabular-nums}
 .wp2 .wp-bar-right{display:flex;align-items:center;gap:2px;flex:none}
 .wp2 .wp-vol{display:flex;align-items:center;gap:2px}
@@ -932,7 +932,7 @@ body[data-color-mode=light] .st-seg>button[aria-checked=true]{background:#fff;co
 .wp2 .wp-more button{min-height:32px!important;font-size:11.5px!important}
 @media(max-width:1180px){.wp2 .wp-body{grid-template-columns:1fr}.wp2 .wp-side{max-height:none}}
 @media(max-width:900px){#voice-view .call-grid:has(>#watch-panel:not([hidden])){grid-template-columns:repeat(2,minmax(0,1fr))!important}#voice-view .call-grid:has(>#watch-panel:not([hidden]))>#watch-panel{grid-column:1/-1;grid-row:auto}#voice-view .call-grid:has(>#watch-panel:not([hidden]))>:not(#watch-panel){grid-column:auto}}
-@media(max-width:520px){.wp2 .wp-volume,.wp2 .wp-bar-right>.wp-ibtn[data-icon=sync]{display:none}.wp2 .wp-bar{flex-wrap:wrap!important}.wp2 .wp-seek{order:-1;flex:1 1 100%;margin:6px 4px 4px}.wp2 .wp-bar-right{margin-left:auto}.wp2 .wp-ibtn{width:30px;height:30px}.wp2 .watch-time{font-size:10.5px!important}.wp2 .wp-seek{margin:0 3px}}
+@media(max-width:520px){.wp2 .wp-bar-right>.wp-ibtn[data-icon=sync]{display:none}.wp2 .wp-bar{flex-wrap:wrap!important}.wp2 .wp-seek{order:-1;flex:1 1 100%;margin:6px 4px 4px}.wp2 .wp-bar-right{margin-left:auto}.wp2 .wp-ibtn{width:30px;height:30px}.wp2 .watch-time{font-size:10.5px!important}.wp2 .wp-seek{margin:0 3px}}
 /* Ouvir juntos: barra de controles sempre dentro da coluna do player (container queries) */
 .wp2,.wp2 .wp-body>*{min-width:0}
 .wp2 .wp-main{container-type:inline-size}
@@ -941,7 +941,7 @@ body[data-color-mode=light] .st-seg>button[aria-checked=true]{background:#fff;co
 .wp2 .wp-bar-right,.wp2 .wp-vol{min-width:0;flex:0 1 auto}
 .wp2 .wp-volume{flex:0 1 70px;width:70px!important;min-width:40px}
 .wp2 .wp-side>*{min-width:0;max-width:100%}.wp2 .wp-search input{min-width:0;width:100%;box-sizing:border-box}.wp2 .wp-search button{min-width:0;white-space:normal}.wp2 .wp-more a{overflow-wrap:anywhere}
-@container (max-width:600px){.wp2 .wp-volume{display:none}}
+
 @container (max-width:500px){.wp2 .wp-bar{flex-wrap:wrap!important;row-gap:2px!important}.wp2 .wp-seek{order:-1;flex:1 1 100%;margin:6px 4px 4px}.wp2 .wp-bar-right{margin-left:auto}.wp2 .wp-bar-right>.wp-ibtn[data-icon=sync]{display:none}}
 @container (max-width:340px){.wp2 .wp-ibtn{width:30px;height:30px;min-height:30px!important}.wp2 .watch-time{font-size:10.5px!important}}
 /* Painel de administração global */
@@ -1110,3 +1110,20 @@ body[data-color-mode=light] .st-seg>button[aria-checked=true]{background:#fff;co
 .music-reply{display:flex;gap:8px;align-items:baseline;margin-top:4px;padding:5px 9px;border-left:2px solid var(--ac);border-radius:0 6px 6px 0;background:var(--s2);white-space:pre-line;font-size:13px;color:var(--t2);max-width:640px}
 .music-reply-tag{flex:none;font-size:11px;font-weight:600;color:var(--ac);text-transform:uppercase;letter-spacing:.03em}
 @media (max-width:640px){.music-card{margin:8px 10px 0}.music-card-cmds{grid-template-columns:1fr;max-height:140px}}
+
+/* Ouvir juntos — volume local: slider inline; em larguras estreitas abre ao tocar no alto-falante */
+.wp2 .wp-vol{position:relative}
+.wp2 .wp-vol-pop{display:flex;align-items:center;gap:6px}
+.wp2 .wp-vol .wp-volume{-webkit-appearance:none;appearance:none;height:4px;border-radius:4px;cursor:pointer;flex:0 1 84px;width:84px!important;min-width:48px;margin:0 6px 0 2px;background:linear-gradient(to right,var(--ac) var(--fill,50%),#ffffff33 var(--fill,50%))!important}
+.wp2 .wp-volume::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#fff;border:0;box-shadow:0 0 0 3px #0005}
+.wp2 .wp-volume::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#fff;border:0}
+.wp2 .wp-volume:focus-visible{outline:2px solid var(--ac);outline-offset:4px}
+.wp2 .wp-pop-mute{display:none}
+.wp2 .wp-shared-mute[disabled]{opacity:.5}
+@container (max-width:600px){
+ .wp2 .wp-vol-pop{display:none;position:absolute;bottom:calc(100% + 8px);right:-40px;z-index:5;padding:10px 12px;border:1px solid var(--bd,#ffffff1f);border-radius:10px;background:var(--s2,#1c1d20);box-shadow:0 8px 24px #0007}
+ .wp2 .wp-vol.open .wp-vol-pop{display:flex}
+ .wp2 .wp-vol.open .wp-volume{width:132px!important;flex:none}
+ .wp2 .wp-pop-mute{display:inline-flex;min-height:0!important;height:26px!important;align-items:center;line-height:1;border:1px solid var(--bd,#ffffff1f);background:none;color:var(--t2,#ccc);border-radius:6px;padding:3px 8px;font-size:12px;cursor:pointer}
+ .wp2 .wp-pop-mute[aria-pressed=true]{color:var(--ac);border-color:var(--ac)}
+}
