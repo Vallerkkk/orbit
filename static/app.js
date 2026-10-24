@@ -37,6 +37,7 @@ import { ConversationCache, MessageOutbox, conversationKey, requestWithDeadline 
 import { reconcileNodes, reserveImage, focusElement } from './dom-utils.js';
 import { createDmCalls, callLogText } from './dm-call.js';
 import { createDmUnread } from './dm-unread.js';
+import { openMenu, onLongPress } from './context-menu.js';
 let shareReceiver, enhancements, feed, youtube, callLayout, communityUX, audioTools, callReactions;
 const drafts = new DraftStore(), pendingSends = new Set();
 const draftKey = target => session && target ? session.user.id + ':' + (target.private ? 'dm:' : 'channel:') + target.id : '';
@@ -523,17 +524,17 @@ $('message-form').onsubmit = event => {
 function audioSource(source){return source==='screen_share_audio'?'screen_share_audio':'microphone';}
 function sourceVolume(identity,source){
   const key='orbita-volume-'+identity+(source==='screen_share_audio'?'-screen':''),stored=localStorage.getItem(key);
-  if(stored===null)return 1;const value=Number(stored);return Number.isFinite(value)?Math.max(0,Math.min(1,value)):1;
+  if(stored===null)return 1;const value=Number(stored);return Number.isFinite(value)?Math.max(0,Math.min(2,value)):1;
 }
 // "Mutar para mim": silencia só localmente o áudio dessa pessoa (lembrado neste dispositivo).
 const mutedForMe=identity=>localStorage.getItem('orbita-mute-'+identity)==='1';
 function applyRemoteVolume(entry){
   const master=Math.max(0,Math.min(100,Number(localStorage.getItem('orbita-output-volume')||'100')))/100;
-  const volume=deafened||mutedForMe(entry.participantId)?0:sourceVolume(entry.participantId,entry.source)*master;
+  const volume=deafened||mutedForMe(entry.participantId)||(entry.source==='screen_share_audio'&&localStorage.getItem('orbita-mute-'+entry.participantId+'-screen')==='1')?0:sourceVolume(entry.participantId,entry.source)*master;
   // The SDK controls its gain node when Web Audio mixing is enabled (including iOS).
   // Do not unmute or raise the SDK's silent HTML element and create a second audio path.
-  if(typeof entry.track.setVolume==='function')entry.track.setVolume(volume);
-  else{entry.media.volume=volume;entry.media.muted=deafened;}
+  if(typeof entry.track.setVolume==='function'){try{entry.track.setVolume(volume);}catch{entry.track.setVolume(Math.min(1,volume));}}
+  else{entry.media.volume=Math.min(1,volume);entry.media.muted=deafened;}
 }
 window.addEventListener('orbita-output-volume',()=>syncRemoteVolumes());
 function syncRemoteVolumes(){for(const entry of callMedia.values())if(entry.track.kind==='audio')applyRemoteVolume(entry);}
@@ -545,7 +546,7 @@ function syncLocalCameraPreview(){
 }
 function volumeControl(participant,source,label){
   const field=el('label','participant-volume'),caption=el('span','',label),slider=el('input'),value=el('output');
-  field.dataset.audioSource=source;slider.type='range';slider.min='0';slider.max='1';slider.step='0.01';slider.dataset.audioSource=source;slider.id='volume-'+source+'-'+participant.identity+'-'+crypto.randomUUID();value.htmlFor=slider.id;
+  field.dataset.audioSource=source;slider.type='range';slider.min='0';slider.max='2';slider.step='0.01';slider.dataset.audioSource=source;slider.id='volume-'+source+'-'+participant.identity+'-'+crypto.randomUUID();value.htmlFor=slider.id;
   slider.oninput=()=>{localStorage.setItem('orbita-volume-'+participant.identity+(source==='screen_share_audio'?'-screen':''),slider.value);value.value=Math.round(Number(slider.value)*100)+'%';for(const entry of callMedia.values())if(entry.participantId===participant.identity&&entry.source===source&&entry.track.kind==='audio')applyRemoteVolume(entry);};
   field.append(caption,slider,value);return field;
 }
@@ -1785,16 +1786,10 @@ callLayout=initCallLayout({screenWatch,audioSettings:()=>audioTools?.open(),micS
   state:()=>({room,selected,callChannel,deafened}),report:error=>toast(errorText(error)),toast,button,dialog:showDialog,
   paragraph:text=>el('p','muted',text),invite:()=>{if(selected?.private)showDialog('Chamada privada',box=>box.append(el('p','','Esta conversa é privada. Abra Amigos para iniciar uma chamada com outra pessoa.'),button('Abrir Amigos',()=>{$('app-dialog').close();showFriends();})));else showCommunityInvite();},
   avatar:(node,id)=>{const p=person(id);if(p.display_name==='Participante'){p.display_name=node.parentElement.querySelector('.participant-name')?.textContent||p.display_name;}setAvatar(node,p);},
-  participant:participant=>showDialog(participant.name||'Participante',box=>{
-    box.append(el('p','muted',qualityText(participant.connectionQuality)));
-    if(participant.isLocal){box.append(button('Meu perfil e áudio',()=>{$('app-dialog').close();openSettingsHub('voz');}));return;}
-    for(const [source,label] of [['microphone','Microfone'],['screen_share_audio','Transmissão de tela']]){const field=volumeControl(participant,source,label),slider=field.querySelector('input');slider.setAttribute('aria-label',(source==='microphone'?'Volume do microfone de ':'Volume da transmissão de ')+(participant.name||'Participante'));slider.value=sourceVolume(participant.identity,source);field.querySelector('output').value=Math.round(Number(slider.value)*100)+'%';box.append(field);}
-    const muteLabel=()=>mutedForMe(participant.identity)?'Desmutar para mim':'Mutar para mim';const mute=button(muteLabel(),()=>{const key='orbita-mute-'+participant.identity;if(mutedForMe(participant.identity))localStorage.removeItem(key);else localStorage.setItem(key,'1');syncRemoteVolumes();mute.textContent=muteLabel();mute.setAttribute('aria-pressed',String(mutedForMe(participant.identity)));});mute.setAttribute('aria-pressed',String(mutedForMe(participant.identity)));box.append(mute);
-    box.append(el('p','muted','Estes volumes alteram apenas o que você ouve.'));
-  })
+  participant:(participant,event)=>{const r=event?.currentTarget?.getBoundingClientRect?.()||event?.target?.getBoundingClientRect?.();participantMenu(participant.identity,event?.clientX||r?.left||innerWidth/2,event?.clientY||r?.bottom||innerHeight/2,!event||event.type==='click');}
 });
 const updateBeforeCallLayout=updateCallUI;
-updateCallUI=()=>{updateBeforeCallLayout();callLayout.update();};
+updateCallUI=()=>{updateBeforeCallLayout();callLayout.update();syncHiddenVideo();};
 const feedContext={
   state:()=>({db,session,profile,moderator:siteRoles.some(role=>role.user_id===session?.user.id&&['creator','admin'].includes(role.role))}),
   el,toast,checked,showDialog,tools:async action=>{const tools=await loadSocialTools();if(session)tools[action]();},sharePost:post=>sharePostToConversation(post),questions:async id=>{const tools=await loadSocialTools();if(session)tools.questions(id);},
@@ -2000,7 +1995,35 @@ setTimeout(applyDecorations, 1000);
 document.body.append($('status-popover'));
 
 function callProfileTarget(target){return target instanceof Element?target.closest('.participant .avatar,.participant-name,.media-tile figcaption>span'):null;}
-document.addEventListener('click',event=>{const target=callProfileTarget(event.target),tile=target?.closest('[data-participant-id]');if(tile)showProfile(person(tile.dataset.participantId));});
+// Menus estilo Discord: participante (cartão com volume/mutar/vídeo/perfil/DM/moderação) e transmissão de tela.
+const hiddenVideo=id=>localStorage.getItem('orbita-hidevideo-'+id)==='1';
+function syncHiddenVideo(){for(const n of document.querySelectorAll('#voice-stage [data-participant-id]'))n.classList.toggle('orb-video-off',!n.classList.contains('media-screen')&&hiddenVideo(n.dataset.participantId));}
+function setVol(id,source,v){localStorage.setItem('orbita-volume-'+id+(source==='screen_share_audio'?'-screen':''),String(v));for(const entry of callMedia.values())if(entry.participantId===id&&entry.source===source&&entry.track.kind==='audio')applyRemoteVolume(entry);}
+function participantMenu(id,x,y,card=false){const p=person(id)||{id,display_name:'Participante'},own=id===session?.user.id,name=p.display_name||'Participante',items=[];
+  let header=null;if(card){header=el('div','orb-card-head');const av=el('span','avatar');setAvatar(av,p);header.append(av,el('strong','',name));}
+  if(own){items.push({label:'Meu perfil e áudio',action:()=>openSettingsHub('voz')});}
+  else{items.push({heading:'Configurações de voz e vídeo'},{range:{label:'Volume do usuário',min:0,max:2,step:0.01,value:sourceVolume(id,'microphone'),input:v=>setVol(id,'microphone',v)}},
+    {label:'Silenciar (só para mim)',checked:mutedForMe(id),action:()=>{const k='orbita-mute-'+id;mutedForMe(id)?localStorage.removeItem(k):localStorage.setItem(k,'1');syncRemoteVolumes();}},
+    {label:'Desativar vídeo (só para mim)',checked:hiddenVideo(id),action:()=>{const k='orbita-hidevideo-'+id;hiddenVideo(id)?localStorage.removeItem(k):localStorage.setItem(k,'1');syncHiddenVideo();}},{sep:true});}
+  items.push({label:'Ver perfil',action:()=>own?openSettingsHub('perfil'):showProfile(p)});
+  if(!own)items.push({label:'Enviar mensagem',action:()=>startConversation(p)});
+  const mods=[...([...($('participants')?.children||[])].find(n=>n.dataset.participantId===id)?.querySelectorAll('.voice-moderation button')||[])];
+  if(mods.length){items.push({sep:true},{heading:'Moderação'});for(const b of mods)items.push({label:b.textContent,danger:/descon|expuls|remov/i.test(b.textContent),action:()=>b.click()});}
+  openMenu({x,y,items,header,card,label:'Opções de '+name});}
+function screenMenu(tile,x,y){const id=tile.dataset.participantId,placeholder=tile.dataset.screenPlaceholder==='true',name=person(id)?.display_name||'Alguém',own=id===session?.user.id,muteKey='orbita-mute-'+id+'-screen',items=[];
+  if(!own)items.push(placeholder?{label:'Assistir transmissão',action:()=>screenWatch.watch(id)}:{label:'Parar de assistir transmissão',action:()=>screenWatch.stop(id)});
+  if(!placeholder){items.push({label:'Expandir',action:()=>document.dispatchEvent(new CustomEvent('orbita-focus-tile',{detail:tile}))},{label:'Tela cheia',action:()=>(tile.requestFullscreen||tile.webkitRequestFullscreen)?.call(tile)});
+    if(!own)items.push({sep:true},{range:{label:'Volume da transmissão',min:0,max:2,step:0.01,value:sourceVolume(id,'screen_share_audio'),input:v=>setVol(id,'screen_share_audio',v)}},{label:'Mutar transmissão para mim',checked:localStorage.getItem(muteKey)==='1',action:()=>{localStorage.getItem(muteKey)==='1'?localStorage.removeItem(muteKey):localStorage.setItem(muteKey,'1');syncRemoteVolumes();}});}
+  if(!own)items.push({sep:true},{label:'Fechar transmissão',danger:true,action:()=>{screenWatch.stop(id);document.querySelector('#media-grid [data-screen-placeholder="true"][data-participant-id="'+CSS.escape(id)+'"]')?.remove();}});
+  if(items.length)openMenu({x,y,items,label:'Transmissão de '+name});}
+const CALL_TARGET='#voice-stage [data-participant-id],.voice-tree-person[data-uid]';
+function callMenuAt(node,x,y,card){const id=node.dataset.participantId||node.dataset.uid;if(!id)return;if(node.classList.contains('media-screen'))screenMenu(node,x,y);else participantMenu(id,x,y,card);}
+document.addEventListener('contextmenu',event=>{const node=event.target instanceof Element&&event.target.closest(CALL_TARGET);if(!node||event.target.closest('input,textarea'))return;event.preventDefault();event.stopPropagation();callMenuAt(node,event.clientX,event.clientY,false);},true);
+onLongPress(document,CALL_TARGET,(node,x,y)=>{const block=e=>{e.preventDefault();e.stopPropagation();};document.addEventListener('click',block,{capture:true,once:true});setTimeout(()=>document.removeEventListener('click',block,true),700);callMenuAt(node,x,y,false);});
+document.addEventListener('click',event=>{if(!(event.target instanceof Element))return;const row=event.target.closest('.voice-tree-person[data-uid]');
+  if(row){event.preventDefault();event.stopPropagation();participantMenu(row.dataset.uid,event.clientX,event.clientY,true);return;}
+  const target=callProfileTarget(event.target)||(matchMedia('(pointer:fine)').matches&&!event.target.closest('button,a,input,video[controls]')&&event.target.closest('#voice-stage .participant,#voice-stage .media-tile:not(.media-screen)')),tile=target?.closest('[data-participant-id]');
+  if(tile&&!tile.classList.contains('media-screen'))participantMenu(tile.dataset.participantId,event.clientX,event.clientY,true);},true);
 let profileTargetsFrame;
 const callProfilesObserver=new MutationObserver(()=>{if(profileTargetsFrame)return;profileTargetsFrame=requestAnimationFrame(()=>{profileTargetsFrame=null;for(const node of $('voice-stage').querySelectorAll('.participant .avatar,.participant-name,.media-tile figcaption>span')){node.tabIndex=0;node.setAttribute('role','button');node.setAttribute('aria-label','Abrir perfil de '+(node.closest('.participant')?.querySelector('.participant-name')?.textContent||node.textContent));}});});
 callProfilesObserver.observe($('voice-stage'),{childList:true,subtree:true});

@@ -543,3 +543,19 @@ body.yt-open .mv2-edge-btn,body.yt-open #btn-members-toggle,body.yt-open #member
 html[data-app-window=true] #install-nav,html[data-app-window=true] [data-pwa-install],html[data-app-window=true] .rail-install-link{display:none!important}
 /* Conexão OK: não mostra a pílula 'Tempo real ativo' (evita aviso duplicado junto do 'Voltar à chamada'); ela volta ao cair/reconectar */
 body.realtime-ok #btn-free-setup{display:none}
+/* Menu de contexto / cartão de perfil da chamada (context-menu.js) */
+.orb-menu{position:fixed;z-index:1000;min-width:220px;padding:6px;border-radius:8px;background:var(--bg2,#1e1f22);border:1px solid var(--bd);box-shadow:0 8px 24px #0008;display:flex;flex-direction:column;gap:1px}
+.orb-menu.orb-card{width:300px;padding:0 0 6px}
+.orb-menu-item{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:8px 10px;border:0;border-radius:4px;background:none;color:var(--tx,#ddd);font:inherit;font-size:14px;text-align:left;cursor:pointer}
+.orb-menu-item:hover,.orb-menu-item:focus-visible{background:var(--ac);color:#fff;outline:0}
+.orb-menu-item.danger{color:#f23f43}.orb-menu-item.danger:hover{background:#f23f43;color:#fff}
+.orb-menu-check{width:16px;height:16px;border-radius:4px;border:2px solid currentColor;flex:none}.orb-menu-check.on{background:var(--ac);border-color:var(--ac);box-shadow:inset 0 0 0 2px var(--bg2,#1e1f22)}
+.orb-menu-sep{height:1px;margin:4px 6px;background:var(--bd)}
+.orb-menu-heading{padding:8px 10px 2px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;color:var(--mt,#999)}
+.orb-menu-range{display:flex;flex-direction:column;gap:6px;padding:8px 10px}.orb-menu-range-top{display:flex;justify-content:space-between;font-size:13px;color:var(--tx,#ddd)}.orb-menu-range input{width:100%;accent-color:var(--ac)}
+.orb-card-head{display:flex;align-items:center;gap:10px;padding:14px 12px 8px;border-bottom:1px solid var(--bd);margin-bottom:4px}.orb-card-head .avatar{width:48px;height:48px;flex:none}.orb-card-head strong{font-size:16px}
+.orb-menu.orb-sheet{left:0!important;right:0;bottom:0;top:auto!important;width:auto;max-height:80dvh;overflow:auto;border-radius:14px 14px 0 0;padding-bottom:max(10px,env(safe-area-inset-bottom))}
+.media-tile.orb-video-off video{visibility:hidden}
+.sp-watch,.sp-stop{border:0;border-radius:6px;padding:7px 14px;font:600 13px/1 inherit;cursor:pointer}.sp-watch{background:var(--ac);color:#fff}.sp-watch:hover{filter:brightness(1.1)}
+.sp-stop{background:#000a;color:#fff;margin-left:auto;opacity:0;transition:opacity .15s}.media-tile:hover .sp-stop,.media-tile:focus-within .sp-stop{opacity:1}.sp-stop:hover{background:#f23f43}
+@media (pointer:coarse){.sp-stop{opacity:1}}

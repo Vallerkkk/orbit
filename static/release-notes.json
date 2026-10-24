@@ -2,9 +2,13 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.24+873762b",
+   "version": "2026.10.24+9f20ad4",
    "date": "24 out 2026",
    "highlights": [
+    [
+     "chamadas",
+     "Ícone de desligar vermelho"
+    ],
     [
      "chamadas",
      "Faders de volume do microfone"
@@ -16,21 +20,16 @@
     [
      "chamadas",
      "Botão 'Mutar para mim' no menu de volume do participante"
-    ],
-    [
-     "correcoes",
-     "Esconde a pílula 'Tempo real ativo' quando a conexão está ok"
     ]
    ],
    "items": {
     "chamadas": [
+     "Ícone de desligar vermelho",
      "Faders de volume do microfone",
      "Botão 'Mutar para mim' no menu de volume do participante"
     ],
-    "visual": [
-     "Avisa pedidos de amizade novos"
-    ],
     "correcoes": [
+     "No celular sem suporte, o botão de compartilhar tela aparece e explica o motivo em vez de sumir",
      "Esconde a pílula 'Tempo real ativo' quando a conexão está ok",
      "'Manter a tela acesa' só aparece em celular/tablet",
      "Não toca/mostra 'chamando' para quem já está na chamada da DM",
@@ -38,6 +37,9 @@
      "Imagem colada vai para pré-visualização e só é enviada com Enter",
      "Painel de configurações segue o modo claro",
      "Tooltip da insígnia aparece na frente do perfil"
+    ],
+    "visual": [
+     "Avisa pedidos de amizade novos"
     ]
    }
   },
