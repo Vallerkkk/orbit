@@ -624,3 +624,4 @@ body.yt-theater .yt-w-player iframe{width:100%!important;height:100%!important}
 .crop-view.round::after{content:'';position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 999px #000a;pointer-events:none}
 .crop-zoom{display:flex;align-items:center;gap:10px;font-size:13px}.crop-zoom input{flex:1;accent-color:var(--ac)}
 .crop-actions{display:flex;justify-content:flex-end;gap:8px}.crop-actions button{border:0;border-radius:8px;padding:8px 16px;font:600 13px inherit;cursor:pointer;background:var(--s3);color:var(--t1)}.crop-actions .crop-ok{background:var(--ac);color:#fff}
+.orb-card-txt{display:flex;flex-direction:column;min-width:0}.orb-card-txt small{font-size:12px}.orb-card-activity{margin:0 12px 6px;padding:8px 10px;border-radius:8px;background:var(--s2);font-size:13px;color:var(--t2)}

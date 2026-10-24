@@ -37,7 +37,7 @@ import { ConversationCache, MessageOutbox, conversationKey, requestWithDeadline 
 import { reconcileNodes, reserveImage, focusElement } from './dom-utils.js';
 import { createDmCalls, callLogText } from './dm-call.js';
 import { createDmUnread } from './dm-unread.js';
-import { openMenu, onLongPress } from './context-menu.js';
+import { openMenu, onLongPress, closeMenu } from './context-menu.js';
 import { cropImage } from './image-crop.js';
 let shareReceiver, enhancements, feed, youtube, callLayout, communityUX, audioTools, callReactions;
 const drafts = new DraftStore(), pendingSends = new Set();
@@ -2253,3 +2253,15 @@ initSettingsLayout();
 setInterval(()=>{if(!session||document.hidden)return;const channel=room&&callChannel?.id;apiFetch('/api/badges/heartbeat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channel_id:channel||null,watch_party:!!(channel&&document.querySelector('.wp-ibtn'))})}).catch(()=>{});},60000);
 if(document.body)installGrafiteUi();else addEventListener('DOMContentLoaded',()=>installGrafiteUi(),{once:true});
 initSidebarToggle();
+
+// Mini perfil ao passar o mouse na lista de membros (atividade: em voz, transmitindo, status).
+{let timer=0,shownFor=null;const hide=()=>{clearTimeout(timer);if(shownFor){shownFor=null;closeMenu();}};
+ document.addEventListener('mouseover',e=>{if(!matchMedia('(hover:hover) and (pointer:fine)').matches||!(e.target instanceof Element))return;
+  if(e.target.closest('.orb-hover-card'))return clearTimeout(timer);const row=e.target.closest('#members-sidebar .member[data-user-id]');
+  if(!row){if(shownFor){clearTimeout(timer);timer=setTimeout(hide,250);}return;}if(row===shownFor)return clearTimeout(timer);
+  clearTimeout(timer);timer=setTimeout(()=>{const p=person(row.dataset.userId);if(!p)return;const voice=publicVoicePresence.find(v=>v.id===p.id&&v.channel_id),online=!row.classList.contains('is-offline');
+   const header=el('div','orb-card-head'),av=el('span','avatar');setAvatar(av,p);const txt=el('div','orb-card-txt');txt.append(el('strong','',p.display_name||'Participante'),el('small','muted','@'+(p.username||'')));header.append(av,txt);
+   const act=el('div','orb-card-activity',memberActivity(p,online,voice));if(voice)voiceJoinable(act,voice.channel_id);header.after?.(act);
+   const items=[{label:'Ver perfil',action:()=>p.id===session?.user.id?openSettingsHub('perfil'):showProfile(p)}];if(p.id!==session?.user.id)items.push({label:'Enviar mensagem',action:()=>startConversation(p)});
+   const r=row.getBoundingClientRect(),m=openMenu({x:r.left-310,y:r.top,items,header,card:true,label:'Mini perfil',noFocus:true});m.classList.add('orb-hover-card');header.after(act);shownFor=row;},450);});
+}
