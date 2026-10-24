@@ -964,6 +964,14 @@ function inputField(parent,label,value,max=160) {
   const l=el('label','field',label), input=el('input'); input.value=value||'';input.maxLength=max;l.append(input);parent.append(l);return input;
 }
 let socialRevision=0;
+// Avisa (toast + notificação do sistema) quando chega um pedido de amizade novo; a 1ª carga só registra os existentes.
+let seenRequests=null,seenRequestsUser=null;
+function notifyFriendRequests(userId){
+  const incoming=friendships.filter(f=>f.status==='pending'&&f.recipient_id===userId);
+  if(seenRequestsUser!==userId||!seenRequests){seenRequestsUser=userId;seenRequests=new Set(incoming.map(f=>f.id));return;}
+  for(const f of incoming){if(seenRequests.has(f.id))continue;seenRequests.add(f.id);const who=peopleById.get(f.requester_id)?.display_name||'Alguém',title=who+' enviou um pedido de amizade';
+    toast(title);try{if('Notification' in window&&Notification.permission==='granted'&&(document.hidden||!document.hasFocus()))new Notification(title,{body:'Abra Amigos para aceitar.',tag:'orbita-friend-'+f.id,icon:'/static/icons/icon-192.png'});}catch{}}
+}
 async function loadSocial() {
   const revision=++socialRevision;
   const userId=session?.user.id;if(!userId)return;
@@ -971,7 +979,7 @@ async function loadSocial() {
     checked(db.from('profiles').select('*').order('display_name')),
     checked(db.from('friendships').select('*')),
     checked(db.from('conversations').select('*').order('created_at',{ascending:false}))]);
-  if(session?.user.id!==userId||revision!==socialRevision)return;[people,friendships,conversations]=results;peopleById=new Map(people.map(p=>[p.id,p]));peopleByUsername=new Map(people.map(p=>[p.username?.toLowerCase(),p]));
+  if(session?.user.id!==userId||revision!==socialRevision)return;[people,friendships,conversations]=results;peopleById=new Map(people.map(p=>[p.id,p]));notifyFriendRequests(userId);peopleByUsername=new Map(people.map(p=>[p.username?.toLowerCase(),p]));
   profile=person(session.user.id);await hydrateProfileMedia();if(session?.user.id!==userId||revision!==socialRevision)return;$('user-name').textContent=profile.display_name;setSelfHandle(profile.username);
   setAvatar($('user-avatar'),profile);
   renderSocial();renderMembers();if(home)renderFriends();if(room)updateCallUI();
