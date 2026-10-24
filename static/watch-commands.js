@@ -3,7 +3,7 @@ import {youtubeLink} from './media-utils.js';
 
 export const QUEUE_LIMIT=200;
 export const COMMANDS=[
-  ['tocar','<link ou busca>','Toca agora um vídeo (ou playlist) do YouTube.'],
+  ['tocar','<link ou busca>','Toca agora um vídeo ou playlist. Link de vídeo dentro de playlist toca a playlist a partir dele; termine com “só” para tocar só o vídeo.'],
   ['playlist','<link>','Adiciona uma playlist inteira à fila (até 200 itens).'],
   ['pular','','Vai para o próximo da fila.'],
   ['pausar','','Pausa para todos.'],
@@ -28,12 +28,12 @@ export function parseWatchInput(text){
   if(!raw.startsWith('/')){
     const link=youtubeLink(raw.split(/\s+/)[0]);
     if(link)return {cmd:link.list&&!link.video?'playlist':'tocar',arg:raw,link,queue:true};
-    return {error:'Este chat só aceita comandos do Ouvir juntos. Ex.: /tocar <link>, /pular, /pausar. Use /ajuda.'};
+    return {error:'Este canal só aceita comandos do Ouvir juntos. Ex.: /tocar <link>, /pular, /pausar. Use /ajuda.'};
   }
   const m=raw.slice(1).match(/^(\S+)\s*([\s\S]*)$/);const word=(m?.[1]||'').toLowerCase();const cmd=NAMES.has(word)?word:ALIASES[word];
   if(!cmd)return {error:`Comando “/${word}” não existe. Use /ajuda.`};
   const arg=(m[2]||'').trim();
-  if(cmd==='tocar'){if(!arg)return {error:'Use /tocar <link ou busca>.'};const link=youtubeLink(arg.split(/\s+/)[0]);return link?{cmd,arg,link}:{cmd,arg,search:arg.slice(0,100)};}
+  if(cmd==='tocar'){if(!arg)return {error:'Use /tocar <link ou busca>.'};const link=youtubeLink(arg.split(/\s+/)[0]);return link?{cmd,arg,link,only:/\s(s[óo]|video|vídeo)$/i.test(arg)}:{cmd,arg,search:arg.slice(0,100)};}
   if(cmd==='playlist'){const link=youtubeLink(arg.split(/\s+/)[0]);if(!link?.list)return {error:'Use /playlist <link de playlist do YouTube>.'};return {cmd,arg,link};}
   if(cmd==='remover'){const n=Number(arg);if(!Number.isInteger(n)||n<1)return {error:'Use /remover <número da fila>, ex.: /remover 2.'};return {cmd,n};}
   if(cmd==='volume'){if(!arg)return {cmd};const n=Number(arg.replace('%',''));if(!Number.isFinite(n)||n<0||n>100)return {error:'Use /volume <0 a 100>.'};return {cmd,n:Math.round(n)};}

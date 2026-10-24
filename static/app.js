@@ -1,3 +1,4 @@
+import {initMusicChannel} from './music-channel.js';
 import {configureUiSounds,uiSoundsEnabled,setUiSoundsEnabled,uiSound} from './ui-sounds.js';
 import {chatMedia,renderChatMedia} from './chat-media.js';
 import {createAuthRecovery,isInvalidSessionError} from './auth-recovery.js';
@@ -196,7 +197,7 @@ function renderChannels() {
     }
     node.orbitaChannel = channel;
     const name = node.querySelector('.channel-name'); if (name.textContent !== channel.name) name.textContent = channel.name;
-    const icon=node.querySelector('.channel-icon'),symbol=channel.kind==='text'?'#':'◖';if(icon.textContent!==symbol)icon.textContent=symbol;icon.dataset.kind=channel.kind;node.dataset.kind=channel.kind;
+    const icon=node.querySelector('.channel-icon'),symbol=channel.is_music?'♪':channel.kind==='text'?'#':'◖';if(icon.textContent!==symbol)icon.textContent=symbol;icon.dataset.kind=channel.kind;node.dataset.kind=channel.kind;
     node.classList.toggle('active', selected?.id === channel.id && !home); node.classList.toggle('connected', callChannel?.id === channel.id);
     node.setAttribute('aria-label', channel.name + ' · ' + (channel.kind === 'voice' ? 'Sala de voz' : 'Canal de texto'));
     node.setAttribute('aria-pressed', String(selected?.id === channel.id && !home));
@@ -1253,9 +1254,9 @@ function channelEditFields(form,channel){
 }
 $('create-channel').onclick=()=>showDialog('Novo canal',container=>{
   const form=el('form'),name=inputField(form,'Nome do canal','',40),type=el('select');
-  for(const [value,text]of[['text','Canal de texto'],['voice','Sala de voz e vídeo']]){const opt=el('option','',text);opt.value=value;type.append(opt);}form.append(type);
+  for(const [value,text]of[['text','Canal de texto'],['music','Canal do Ouvir juntos (só comandos)'],['voice','Sala de voz e vídeo']]){const opt=el('option','',text);opt.value=value;type.append(opt);}form.append(type);
   const options=channelEditFields(form,null),save=el('button','primary','Criar canal');save.type='submit';form.append(save);container.append(form);
-  form.onsubmit=async e=>{e.preventDefault();save.disabled=true;try{if(type.value==='text'&&options.defaultBox.checked)await checked(db.from('channels').update({default_for_new_members:false}).eq('community_id',activeCommunity).eq('kind','text').eq('default_for_new_members',true));const c=await insertChannel({name:name.value.trim(),kind:type.value,position:channels.length+1,community_id:activeCommunity,is_stage:type.value==='voice'&&options.stageBox.checked,is_private:options.privateBox.checked,is_announcement:type.value==='text'&&options.announceBox.checked,default_for_new_members:type.value==='text'&&options.defaultBox.checked});
+  form.onsubmit=async e=>{e.preventDefault();save.disabled=true;try{if(type.value==='text'&&options.defaultBox.checked)await checked(db.from('channels').update({default_for_new_members:false}).eq('community_id',activeCommunity).eq('kind','text').eq('default_for_new_members',true));const c=await insertChannel({name:name.value.trim(),kind:type.value==='music'?'text':type.value,is_music:type.value==='music',position:channels.length+1,community_id:activeCommunity,is_stage:type.value==='voice'&&options.stageBox.checked,is_private:options.privateBox.checked,is_announcement:type.value!=='voice'&&type.value!=='music'&&options.announceBox.checked,default_for_new_members:type.value!=='voice'&&options.defaultBox.checked});
     if(c.is_private){const ids=[...new Set([session.user.id,...[...options.memberSelect.selectedOptions].map(o=>o.value)])];await checked(db.from('channel_members').insert(ids.map(user_id=>({channel_id:c.id,user_id,added_by:session.user.id}))).select());}
     if(c.default_for_new_members)channels=channels.map(old=>old.community_id===c.community_id&&old.kind==='text'?{...old,default_for_new_members:false}:old);
     channels.push(c);$('app-dialog').close();await selectChannel(c);
@@ -1678,6 +1679,13 @@ enhancements=initEnhancements({clearDrafts:()=>{drafts.erase();if(selected?.kind
   revealMessage:message=>{messages.set(message.id,message);renderMessages();requestAnimationFrame(()=>{const node=document.querySelector('[data-message-id="'+CSS.escape(message.id)+'"]');node?.scrollIntoView({block:'center'});node?.classList.add('message-target');});},
   loadMessages:()=>loadMessages(generation)
 });
+// Canal #ouvir-juntos: card fixo, validação de comandos e execução na chamada do autor.
+const music=initMusicChannel({el,toast,checked,state:()=>({db,selected,home:home||!!selected?.private,callChannel,room}),watchCommand:raw=>enhancements.watchCommand(raw)});
+$('message-form').addEventListener('submit',music.guard,true);
+{const rowBeforeMusic=createMessageRow;createMessageRow=(message,grouped)=>music.decorateRow(rowBeforeMusic(message,grouped),message);}
+{const renderBeforeMusic=renderMessages;renderMessages=(...args)=>{const out=renderBeforeMusic(...args);music.sync();return out;};}
+{const completeBeforeMusic=completeMessage;completeMessage=(record,data)=>{const out=completeBeforeMusic(record,data);const musicChannel=data&&!record.target.private&&channels.find(c=>c.id===record.target.id&&c.is_music);if(musicChannel)music.execute(data,musicChannel).then(result=>{const m=messages.get(data.id);if(!result||!m)return;messages.set(data.id,{...m,command_result:result});if(!home&&selected?.id===record.target.id)renderMessages(lastViewport?.atBottom);});return out;};}
+
 const selectBeforeEnhancements=selectChannel;
 selectChannel=async channel=>{await selectBeforeEnhancements(channel);await enhancements.channelChanged();};
 const friendsBeforeEnhancements=showFriends;
@@ -2003,7 +2011,7 @@ document.addEventListener('contextmenu',event=>{if(!session||!siteRoles.some(r=>
  if(!document.querySelector('.ux-context-menu'))event.preventDefault();loadAdmin().then(m=>m.adminContextMenu(info)).catch(error=>toast(errorText(error)));});
 const settingsBeforeLazyAdmin=$('settings').onclick;
 $('settings').onclick=()=>{settingsBeforeLazyAdmin();if(siteRoles.some(r=>r.user_id===session?.user.id)){const box=$('dialog-content').querySelector('.dialog-body')||$('dialog-content');box.append(button('Administração',async()=>{const admin=await loadAdmin();admin.panel();}),button('Administração da Órbita',async()=>{const admin=await loadAdmin();admin.management();}));}};
-$('message-form').addEventListener('submit',event=>{const value=$('message-input').value.trim();if(!/^\/(admin|adm|removeradm|silenciar|liberar|banir|desbanir|auditoria|ajuda)(?:\s|$)/i.test(value))return;if(window.orbitaAdminReady)return;event.preventDefault();event.stopImmediatePropagation();const uid=session?.user.id;loadAdmin().then(admin=>{if(session?.user.id===uid&&$('message-input').value.trim()===value)admin.command(value);}).catch(error=>toast(errorText(error)));},true);
+$('message-form').addEventListener('submit',event=>{if(document.body.dataset.ouvirCanal==='1')return;const value=$('message-input').value.trim();if(!/^\/(admin|adm|removeradm|silenciar|liberar|banir|desbanir|auditoria|ajuda)(?:\s|$)/i.test(value))return;if(window.orbitaAdminReady)return;event.preventDefault();event.stopImmediatePropagation();const uid=session?.user.id;loadAdmin().then(admin=>{if(session?.user.id===uid&&$('message-input').value.trim()===value)admin.command(value);}).catch(error=>toast(errorText(error)));},true);
 
 initAppUpdates({room:()=>room,dirty:()=>!!$('message-input').value.trim()||!!document.querySelector('.sf-composer textarea')?.value.trim(),beforeReload:()=>saveComposerDraft()});
 

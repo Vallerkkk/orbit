@@ -26,14 +26,13 @@ export function initWatchParty(ctx){
     let d;try{d=JSON.parse(new TextDecoder().decode(bytes));}catch{return;}if(!d||typeof d!=='object'||Array.isArray(d))return;
     if(d.type==='request'){const now=Date.now();if(now-(requests.get(participant.identity)||0)<1000)return;requests.set(participant.identity,now);if(snapshot)publish({type:'snapshot',...packet()}).catch(()=>{});if(qclock)sendQueue().catch(()=>{});return;}
     if(d.type==='queue'){if(validQueue(d)&&(d.n>qclock||d.n===qclock&&d.actor>qactor))takeQueue(d);return;}
-    if(d.type==='log'){if(typeof d.by==='string'&&typeof d.text==='string'&&d.by.length<=40&&d.text.length<=240)log(d.by,d.text);return;}
     if(!valid(d))return;
     if(d.type==='command'&&d.actor===participant.identity&&newer(d))accept(d);
     else if(d.type==='snapshot'&&newer(d))accept(d);
     else if(d.type==='tick'&&participant.identity===leader()&&sameVersion(d)&&Number.isSafeInteger(d.tick)&&d.tick>lastTick){lastTick=d.tick;snapshot.position=d.position;snapshot.received=performance.now();if(ready)apply();}
   }
   function connected(next,events){ended();room=next;room.on(events.DataReceived,receive);room.on(events.ParticipantConnected,()=>{if(snapshot)publish({type:'snapshot',...packet()}).catch(()=>{});if(qclock)sendQueue().catch(()=>{});});room.on(events.ParticipantDisconnected,p=>requests.delete(p.identity));timer=setInterval(()=>{if(snapshot&&self()===leader())publish({type:'tick',...packet(),tick:Date.now()}).catch(()=>{});},5000);publish({type:'request'}).catch(()=>{});}
-  function ended(){generation++;room=null;snapshot=null;queue=[];qclock=0;qactor='';loop=false;history=[];parts.clear();lines.length=0;clock=0;ready=false;loading=null;loadedVideo=null;lastTick=0;requests.clear();clearInterval(timer);clearInterval(rateTimer);clearInterval(progressTimer);clearTimeout(suppressTimer);clearTimeout(readyTimer);try{player?.destroy?.();}catch{}player=null;suppressed=false;error='';$('watch-panel')?.remove();ctx.updateCallUI();}
+  function ended(){generation++;room=null;snapshot=null;queue=[];qclock=0;qactor='';loop=false;history=[];parts.clear();clock=0;ready=false;loading=null;loadedVideo=null;lastTick=0;requests.clear();clearInterval(timer);clearInterval(rateTimer);clearInterval(progressTimer);clearTimeout(suppressTimer);clearTimeout(readyTimer);try{player?.destroy?.();}catch{}player=null;suppressed=false;error='';$('watch-panel')?.remove();ctx.updateCallUI();}
   function label(){const status=$('watch-status');if(status){status.textContent=error||(snapshot?'Todos na chamada podem pausar, silenciar e trocar o vídeo.':'Cole um link do YouTube para assistir com a chamada.');status.classList.toggle('is-error',!!error);const info=$('watch-info');if(info)info.title=status.textContent;}for(const id of ['watch-play','watch-pause','watch-back','watch-forward'])if($(id))$(id).disabled=!ready||!snapshot;const link=$('watch-external');if(link){link.hidden=!snapshot;link.href=snapshot?'https://www.youtube.com/watch?v='+snapshot.video:'https://www.youtube.com/';}const mute=$('watch-mute');if(mute){const t=muted?'Ouvir áudio':'Mutar para mim';mute.setAttribute('aria-label',t);mute.title=t;mute.setAttribute('aria-pressed',String(muted));mute.dataset.icon=muted?'muted':'volume';}const shared=$('watch-global-mute');if(shared){shared.disabled=!snapshot;{const t=snapshot?.sharedMuted?'Liberar áudio para todos':'Silenciar para todos';shared.setAttribute('aria-label',t);shared.title=t;}shared.setAttribute('aria-pressed',String(!!snapshot?.sharedMuted));}ctx.updateCallUI();}
   // O YouTube escolhe a qualidade pelo tamanho do player; o pedido de HD é só uma preferência (a API pode ignorar).
   const preferredQuality=()=>{const c=navigator.connection;if(c?.saveData||/^(slow-2g|2g|3g)$/.test(c?.effectiveType||''))return 'large';return matchMedia('(max-width:780px), (pointer:coarse)').matches?'hd720':'hd1080';};
@@ -95,64 +94,53 @@ export function initWatchParty(ctx){
     // Fila e busca num painel próprio, fora do vídeo.
     const side=el('aside','wp-side');side.setAttribute('aria-label','Fila do Ouvir juntos');
     const form=el('form','wp-search'),url=el('input'),start=el('button','primary','Colocar vídeo'),add=el('button','wp-add','Adicionar à fila');url.placeholder='Cole um link ou busque no YouTube';url.setAttribute('aria-label','Link do vídeo no YouTube');start.type='submit';add.type='button';form.append(url,start,add);
-    const pick=()=>{const v=url.value.trim();if(!v)return null;if(youtubeLink(v)?.list){url.value='';run(v.startsWith('/')?v:'/playlist '+v);return null;}const id=youtubeId(v);if(!id){open('https://www.youtube.com/results?search_query='+encodeURIComponent(v),'_blank','noopener');toast('Abrimos a busca no YouTube. Copie o link do vídeo e cole aqui.');return null;}return id;};
+    const pick=()=>{const v=url.value.trim();if(!v)return null;if(youtubeLink(v)?.list){url.value='';run('/playlist '+v).then(toast,e=>toast(e?.message||'Falhou.'));return null;}const id=youtubeId(v);if(!id){open('https://www.youtube.com/results?search_query='+encodeURIComponent(v),'_blank','noopener');toast('Abrimos a busca no YouTube. Copie o link do vídeo e cole aqui.');return null;}return id;};
     form.onsubmit=e=>{e.preventDefault();const raw=url.value.trim(),id=pick();if(!id)return;nowTitle='';nowBy=myName();titleFor(id).then(t=>{if(snapshot?.video===id){nowTitle=t;renderQueue();}});command({video:id,position:youtubeStart(raw),playing:true});url.value='';};
     add.onclick=async()=>{const id=pick();if(!id)return;if(queue.length>=QUEUE_LIMIT)return toast('A fila aceita até '+QUEUE_LIMIT+' vídeos.');url.value='';const t=await titleFor(id);if(!snapshot){nowTitle=t;nowBy=myName();command({video:id,position:0,playing:true});return;}setQueue([...queue,{v:id,t,by:myName()}]);};
     const nowBox=el('div','wp-now');nowBox.id='watch-now';const qh=el('h3','wp-q-title');qh.append(icon('queue'),el('span','','Próximos na fila'));const list=el('ol','wp-queue');list.id='watch-queue';
     const more=el('details','wp-more'),summary=el('summary','','Opções do vídeo');more.append(summary,button('Reproduzir áudio aqui',async()=>{await ensure();if(!ready)return toast('Aguarde o player carregar.');muted=false;localStorage.setItem('orbita-youtube-muted','false');error='';sound();apply();label();}),button('Tentar novamente',async()=>{generation++;clearTimeout(readyTimer);clearTimeout(suppressTimer);try{player?.destroy?.();}catch{}player=null;ready=false;loading=null;loadedVideo=null;suppressed=false;error='';stage.replaceChildren();const h=el('div');h.id='youtube-player';stage.append(h);await ensure();label();}));const external=el('a','text-button','Abrir vídeo no YouTube');external.id='watch-external';external.target='_blank';external.rel='noopener noreferrer';more.append(external);
-    side.append(form,nowBox,qh,list,more,chatPanel());body.append(main,side);box.append(body);
+    side.append(form,nowBox,qh,list,more);body.append(main,side);box.append(body);
     const grid=document.querySelector('#voice-view .call-grid');(grid||$('voice-stage')).append(box);label();renderQueue();await ensure();publish({type:'request'}).catch(()=>{});
   }
 
   // ——— Chat de comandos (só controla o Ouvir juntos; sincroniza pelo mesmo canal 'orbita-watch') ———
-  const lines=[];
-  function log(by,text,kind='sys',actions){const line={by,text,kind,actions,at:Date.now()};lines.push(line);if(lines.length>120)lines.shift();const box=$('watch-chat-log');if(box){box.append(lineEl(line));while(box.children.length>120)box.firstElementChild.remove();box.scrollTop=box.scrollHeight;}}
-  function lineEl(line){const li=el('li','wp-chat-line is-'+line.kind);if(line.by)li.append(el('b','',line.by+' '));li.append(el('span','',line.text));if(line.actions){const row=el('div','wp-chat-actions');for(const [label,fn,primary] of line.actions){const b=button(label,()=>{row.remove();line.actions=null;fn();});if(primary)b.classList.add('primary');row.append(b);}li.append(row);}return li;}
-  const hint=text=>log('',text,'hint');
-  function announce(text){log(myName(),text);publish({type:'log',by:myName(),text:text.slice(0,240)}).catch(()=>{});}
+  // Comandos vêm do canal de texto #ouvir-juntos (music-channel.js): run() devolve o texto de resposta.
+  const hint=text=>text,announce=text=>text.charAt(0).toUpperCase()+text.slice(1);
   function setVolume(n){volume=n;localStorage.setItem('orbita-youtube-volume',String(n));if(n>0&&muted){muted=false;localStorage.setItem('orbita-youtube-muted','false');}const r=document.querySelector('#watch-panel .wp-volume');if(r)r.value=String(n);sound();label();}
   function startVideo(v,t,start=0){remember();nowTitle=t||'';nowBy=myName();if(!t)titleFor(v).then(x=>{if(snapshot?.video===v){nowTitle=x;renderQueue();}});command({video:v,position:start,playing:true,...(t?{title:t.slice(0,90)}:{}),by:myName()});}
   async function fetchJSON(path){const r=await ctx.apiFetch(path);let j={};try{j=await r.json();}catch{}if(!r.ok)throw Error(j.detail||'O YouTube não respondeu.');return j;}
   // Usa o proxy existente /api/youtube/playlist (24 por página): pagina até QUEUE_LIMIT itens.
   async function fetchPlaylist(list){let page='',title='',items=[],truncated=false;for(let i=0;i<20;i++){const j=await fetchJSON('/api/youtube/playlist?id='+encodeURIComponent(list)+(page?'&page='+encodeURIComponent(page):''));title=title||j.playlist?.title||'';for(const x of j.items||[])if(/^[-\w]{11}$/.test(x?.id||''))items.push({v:x.id,t:String(x.title||'Vídeo do YouTube')});page=j.next||'';if(!page)break;if(items.length>=QUEUE_LIMIT){truncated=true;break;}}return {title,items:items.slice(0,QUEUE_LIMIT),truncated:truncated||items.length>QUEUE_LIMIT};}
-  async function loadPlaylist(link,mode){if(link.list.length<10)return hint('Link de playlist inválido.');hint('Carregando playlist…');let j;try{j=await fetchPlaylist(link.list);}catch(e){const msg=/YOUTUBE_API_KEY|configurado/.test(e.message||'')?'Playlists precisam da chave da API do YouTube (YOUTUBE_API_KEY) no servidor.':(e.message||'Não foi possível carregar a playlist.');if(link.video){hint(msg+' Adicionando só o vídeo do link.');return mode==='queue'&&snapshot?enqueue(link.video):(startVideo(link.video,'',link.start),announce('tocou um vídeo.'));}return hint(msg);}
+  async function loadPlaylist(link,mode){if(link.list.length<10)return hint('Link de playlist inválido.');let j;try{j=await fetchPlaylist(link.list);}catch(e){const msg=/YOUTUBE_API_KEY|configurado/.test(e.message||'')?'Playlists precisam da chave da API do YouTube (YOUTUBE_API_KEY) no servidor.':(e.message||'Não foi possível carregar a playlist.');if(link.video){const done=mode==='queue'&&snapshot?await enqueue(link.video):(startVideo(link.video,'',link.start),'Tocando o vídeo do link.');return msg+' '+done;}return msg;}
     const by=myName(),items=orderFrom(j.items,link.video).map(x=>({v:x.v,t:x.t.slice(0,90),by}));if(!items.length)return hint('Playlist vazia.');
     const name=j.title?'“'+j.title.slice(0,60)+'”':'a playlist';
-    if(mode==='now'||!snapshot){const [first,...rest]=items;const r=appendLimited(rest,queue);startVideo(first.v,first.t,link.video===first.v?link.start:0);setQueue(r.queue);announce(`tocou ${name} (${items.length} vídeos${j.truncated?', limite de '+QUEUE_LIMIT:''}).`);}
-    else{const r=appendLimited(queue,items);if(!r.added)return hint('A fila está cheia ('+QUEUE_LIMIT+').');setQueue(r.queue);announce(`adicionou ${r.added} vídeos de ${name} à fila${r.dropped?` (${r.dropped} ficaram de fora: limite de ${QUEUE_LIMIT})`:''}.`);}}
-  async function enqueue(v){if(queue.length>=QUEUE_LIMIT)return hint('A fila está cheia ('+QUEUE_LIMIT+').');const t=await titleFor(v);setQueue([...queue,{v,t,by:myName()}]);announce('adicionou “'+t+'” à fila.');}
-  function chooseList(link,queued){log('','Este link é de um vídeo dentro de uma playlist. O que adicionar?','hint',[['Playlist inteira (a partir deste)',()=>loadPlaylist(link,queued?'queue':'now'),true],['Só este vídeo',()=>queued&&snapshot?enqueue(link.video):(startVideo(link.video,'',link.start),announce('tocou um vídeo.'))]]);setTimeout(()=>document.querySelector('#watch-chat-log .wp-chat-actions .primary')?.focus(),0);}
+    if(mode==='now'||!snapshot){const [first,...rest]=items;const r=appendLimited(rest,queue);startVideo(first.v,first.t,link.video===first.v?link.start:0);setQueue(r.queue);return announce(`tocou ${name} (${items.length} vídeos${j.truncated?', limite de '+QUEUE_LIMIT:''}).`);}
+    else{const r=appendLimited(queue,items);if(!r.added)return hint('A fila está cheia ('+QUEUE_LIMIT+').');setQueue(r.queue);return announce(`adicionou ${r.added} vídeos de ${name} à fila${r.dropped?` (${r.dropped} ficaram de fora: limite de ${QUEUE_LIMIT})`:''}.`);}}
+  async function enqueue(v){if(queue.length>=QUEUE_LIMIT)return hint('A fila está cheia ('+QUEUE_LIMIT+').');const t=await titleFor(v);setQueue([...queue,{v,t,by:myName()}]);return announce('adicionou “'+t+'” à fila.');}
   async function run(raw){const r=parseWatchInput(raw);if(r.error)return hint(r.error);
-    if(room?.state!=='connected')return hint('Entre em uma chamada primeiro.');
-    log(myName(),raw.trim().slice(0,200),'cmd');publish({type:'log',by:myName(),text:raw.trim().slice(0,200)}).catch(()=>{});
+    if(room?.state!=='connected')return 'Entre em uma sala de voz deste servidor para controlar o Ouvir juntos.';
+    if((r.cmd==='tocar'||r.cmd==='playlist')&&!$('watch-panel'))await show().catch(()=>{});
     const pos=position();
     switch(r.cmd){
       case 'tocar':{if(r.search){let found;try{found=(await fetchJSON('/api/youtube/search?type=video&q='+encodeURIComponent(r.search))).videos?.[0];}catch{}if(!found?.id){open('https://www.youtube.com/results?search_query='+encodeURIComponent(r.search),'_blank','noopener');return hint('Não deu para buscar aqui. Abrimos a busca no YouTube: copie o link e cole com /tocar.');}const t=String(found.title||'Vídeo do YouTube').slice(0,90);startVideo(found.id,t);return announce('tocou “'+t+'”.');}
         const l=r.link;if(l.mix&&l.video){startVideo(l.video,'',l.start);return hint('Mixes automáticos não podem ser importados; tocando só o vídeo.');}
-        if(l.list&&l.video)return chooseList(l,!!r.queue);
-        if(l.list)return loadPlaylist(l,r.queue?'queue':'now');
+        if(l.list&&l.video&&!r.only)return loadPlaylist(l,r.queue?'queue':'now');
+        if(l.list&&!l.video)return loadPlaylist(l,r.queue?'queue':'now');
         if(r.queue&&snapshot)return enqueue(l.video);
         startVideo(l.video,'',l.start);return announce('tocou um vídeo.');}
       case 'playlist':if(r.link.mix)return hint('Mixes automáticos do YouTube não podem ser importados. Use uma playlist salva.');return loadPlaylist(r.link,'queue');
-      case 'pular':if(!playNext())hint('A fila está vazia.');else announce('pulou para o próximo.');return;
+      case 'pular':return playNext()?'Pulou para o próximo: “'+(nowTitle||'Vídeo do YouTube')+'”.':'A fila está vazia.';
       case 'pausar':if(!snapshot)return hint('Nada tocando.');command({playing:false,position:pos});return announce('pausou.');
       case 'continuar':if(!snapshot)return hint('Nada tocando.');command({playing:true,position:pos});return announce('continuou.');
       case 'voltar':{if(!snapshot)return hint('Nada tocando.');const prev=history[history.length-1];if(!prev){command({position:0,playing:true});return announce('reiniciou o vídeo.');}history=history.slice(0,-1);const cur={v:snapshot.video,t:(nowTitle||'Vídeo do YouTube').slice(0,90),by:(nowBy||'Alguém').slice(0,40)};nowTitle=prev.t;nowBy=prev.by;setQueue([cur,...queue]);command({video:prev.v,position:0,playing:true,title:prev.t,by:prev.by});return announce('voltou para “'+prev.t+'”.');}
-      case 'fila':if(!queue.length)return hint('A fila está vazia.');return hint(queue.slice(0,10).map((x,i)=>`${i+1}. ${x.t}`).join('\n')+(queue.length>10?`\n… e mais ${queue.length-10}.`:''));
+      case 'fila':if(!queue.length)return hint('A fila está vazia.');return hint(queue.slice(0,8).map((x,i)=>`${i+1}. ${x.t.slice(0,38)}`).join('\n')+(queue.length>8?`\n… e mais ${queue.length-8}.`:''));
       case 'remover':{const next=removeAt(queue,r.n);if(!next)return hint(`Não existe o item ${r.n}. A fila tem ${queue.length}.`);const gone=queue[r.n-1];setQueue(next);return announce(`removeu “${gone.t}”.`);}
       case 'limpar':setQueue([]);return announce('limpou a fila.');
       case 'embaralhar':if(queue.length<2)return hint('Poucos itens para embaralhar.');setQueue(shuffled(queue));return announce('embaralhou a fila.');
       case 'repetir':loop=!loop;setQueue(queue);return announce(loop?'ligou repetir o vídeo atual.':'desligou repetir.');
       case 'volume':if(r.n===undefined)return hint(`Seu volume: ${volume}%${muted?' (mudo)':''}.`);setVolume(r.n);return hint(`Volume ajustado para ${r.n}% (só para você).`);
       case 'agora':return hint(snapshot?`Tocando: ${nowTitle||'Vídeo do YouTube'} · ${clockText(pos)}${snapshot.playing?'':' (pausado)'}${loop?' · repetir ligado':''}`:'Nada tocando.');
-      case 'ajuda':return hint(COMMANDS.map(([n,a,d])=>`/${n}${a?' '+a:''} — ${d}`).join('\n'));
+      case 'ajuda':return 'Comandos: '+COMMANDS.map(([n])=>'/'+n).join(' ')+'. A descrição de cada um está no card fixo no topo do canal.';
     }}
-  function chatPanel(){const wrap=el('section','wp-chat');wrap.setAttribute('aria-label','Chat de comandos do Ouvir juntos');
-    const card=el('div','wp-chat-card');card.append(el('strong','','Chat de comandos'),el('p','','Controle o Ouvir juntos digitando. Tudo vale para todos na chamada (menos o volume). Cole um link ou playlist do YouTube para adicionar.'));
-    const cmds=el('ul','wp-chat-cmds');for(const [n,a,d] of COMMANDS){const li=el('li');li.title=d;const c=el('code','','/'+n+(a?' '+a:''));li.append(c,el('span','',d));li.onclick=()=>{input.value='/'+n+(a?' ':'');input.focus();};cmds.append(li);}card.append(cmds);
-    const box=el('ol','wp-chat-log');box.id='watch-chat-log';box.setAttribute('role','log');box.setAttribute('aria-live','polite');for(const l of lines)box.append(lineEl(l));
-    const form=el('form','wp-chat-form'),input=el('input'),send=el('button','primary','Enviar');input.id='watch-chat-input';input.placeholder='/tocar <link>, /pular, /ajuda…';input.setAttribute('aria-label','Comando do Ouvir juntos');input.autocomplete='off';input.maxLength=500;send.type='submit';form.append(input,send);
-    form.onsubmit=e=>{e.preventDefault();const v=input.value;if(!v.trim())return;input.value='';run(v).catch(err=>hint(err?.message||'Falhou.'));};
-    wrap.append(card,box,form);return wrap;}
   return {connected,ended,show,run};
 }

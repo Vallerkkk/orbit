@@ -393,5 +393,6 @@ export function initEnhancements(context) {
   const brand=$('friends-nav');brand.replaceChildren();const brandImage=el('img');brandImage.src='/static/icons/icon.svg';brandImage.alt='Órbita';reserveImage(brandImage,32,32);brand.append(brandImage);
   $('toast').setAttribute('role','status');$('toast').setAttribute('aria-live','polite');
   runTimers();
-  return { setAudioOutput:id=>appSounds.setOutput(id),soundFields:box=>appSounds.fields(box,el,button),realtimeChanged, sessionChanged, channelChanged, enhanceMessage, decorateVideo, callUpdated, connected, callEnded, dispatchPush, messageReceived, messageDeleted, disablePush, decorateNavigation, presenceStatus, showMediaPicker, sendFiles, showReports, showModeration, showAudit, historyLoaded };
+  async function watchCommand(raw){await loadWatch();return watch.run(raw);}
+return { watchCommand, setAudioOutput:id=>appSounds.setOutput(id),soundFields:box=>appSounds.fields(box,el,button),realtimeChanged, sessionChanged, channelChanged, enhanceMessage, decorateVideo, callUpdated, connected, callEnded, dispatchPush, messageReceived, messageDeleted, disablePush, decorateNavigation, presenceStatus, showMediaPicker, sendFiles, showReports, showModeration, showAudit, historyLoaded };
 }
