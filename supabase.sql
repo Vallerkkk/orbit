@@ -3306,3 +3306,9 @@ language sql stable security definer set search_path='' as $$
 $$;
 revoke all on function public.dm_ringing_calls() from public,anon;
 grant execute on function public.dm_ringing_calls() to authenticated;
+
+-- Migration: 20261024100000_community_theme.sql
+-- Tema de servidor (item da Loja) salvo na comunidade, visível para todos os membros.
+-- Quem pode alterar: a policy communities_manage (orbita_private.can_edit_community).
+alter table public.communities add column if not exists theme text check (theme is null or theme ~ '^[a-z0-9-]{1,64}$');
+grant update(theme) on public.communities to authenticated;
