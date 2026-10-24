@@ -2,9 +2,17 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.24+3ee8632",
+   "version": "2026.10.24+a7b0a1e",
    "date": "24 out 2026",
    "highlights": [
+    [
+     "visual",
+     "Avisa pedidos de amizade novos"
+    ],
+    [
+     "chamadas",
+     "Botão 'Mutar para mim' no menu de volume do participante"
+    ],
     [
      "correcoes",
      "Esconde a pílula 'Tempo real ativo' quando a conexão está ok"
@@ -12,17 +20,15 @@
     [
      "correcoes",
      "'Manter a tela acesa' só aparece em celular/tablet"
-    ],
-    [
-     "correcoes",
-     "Não toca/mostra 'chamando' para quem já está na chamada da DM"
-    ],
-    [
-     "correcoes",
-     "Oculta botões de baixar/instalar quando já está rodando como app"
     ]
    ],
    "items": {
+    "visual": [
+     "Avisa pedidos de amizade novos"
+    ],
+    "chamadas": [
+     "Botão 'Mutar para mim' no menu de volume do participante"
+    ],
     "correcoes": [
      "Esconde a pílula 'Tempo real ativo' quando a conexão está ok",
      "'Manter a tela acesa' só aparece em celular/tablet",
