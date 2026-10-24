@@ -188,7 +188,7 @@ export function createDmCalls(ctx) {
     catch (e) { current = null; clear(); ctx.refreshLog?.(); throw e; }
     current = { ...event, ...(updated || {}), status: next };
     clear();
-    if (next === 'accepted') { const c = conversationOf(event.conversation_id) || await ctx.loadConversation(event.conversation_id); await ctx.joinCall(c, event.kind); }
+    if (next === 'accepted' && !ctx.inCall?.(event.conversation_id)) { const c = conversationOf(event.conversation_id) || await ctx.loadConversation(event.conversation_id); await ctx.joinCall(c, event.kind); }
     ctx.refreshLog?.();
   }
 
@@ -200,6 +200,8 @@ export function createDmCalls(ctx) {
       seen.add(event.id);
       // Glare: we are already ringing them in this same DM → just answer their call.
       if (current && current.status === 'ringing' && current.caller_id === me() && current.conversation_id === event.conversation_id && current.id !== event.id) { current = { ...event, status: 'ringing' }; respond('accepted').catch(e => toast(e?.message || 'Não foi possível atender.')); return; }
+      // Já estou dentro da sala dessa DM: não toca nem mostra "chamando" — apenas aceita em silêncio.
+      if (ctx.inCall?.(event.conversation_id)) { current = { ...event, status: 'ringing' }; respond('accepted').catch(() => {}); return; }
       if (current && ACTIVE.has(current.status) && current.id !== event.id) { transition(event.id, 'declined').catch(() => {}); return; }
       current = { ...event, status: 'ringing' };
       render('incoming', current, event.kind === 'video' ? 'Chamada de vídeo recebida' : 'Chamada de voz recebida'); alertIncoming(event);
