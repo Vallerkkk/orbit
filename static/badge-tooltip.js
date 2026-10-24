@@ -13,6 +13,8 @@ function place(node){const r=node.getBoundingClientRect(),t=tip.getBoundingClien
   let left=r.left+r.width/2-t.width/2;left=Math.max(m,Math.min(left,vw-m-t.width));
   tip.style.left=left+'px';tip.style.top=top+'px';tip.dataset.side=below?'bottom':'top';}
 export function showBadgeTip(node){const d=info(node);if(!d)return;ensure();current=node;
+  // Diálogos modais ficam na top layer: o tooltip precisa morar dentro do diálogo aberto para não ficar atrás do perfil.
+  const host=node.closest('dialog[open]')||document.body;if(tip.parentNode!==host)host.append(tip);
   tip.style.setProperty('--rc',d.color);tip.replaceChildren();
   const ico=document.createElement('span');ico.className='bt-ico';ico.innerHTML=badgeSvg(d.b,Math.max(1,d.level),{locked:d.locked,size:30});
   const body=document.createElement('span');body.className='bt-body';
