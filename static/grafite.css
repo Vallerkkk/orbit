@@ -539,3 +539,5 @@ body.yt-open .mv2-edge-btn,body.yt-open #btn-members-toggle,body.yt-open #member
 .paste-remove{position:absolute;top:3px;right:3px;width:20px;height:20px;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:13px;line-height:20px;cursor:pointer}
 .paste-remove:hover,.paste-remove:focus-visible{background:var(--ac);color:var(--onac,#fff)}
 .paste-hint{color:var(--t3);font-size:11px;margin-left:auto}
+/* Dentro do app instalado (PWA/APK/desktop) não mostramos o atalho de baixar/instalar */
+html[data-app-window=true] #install-nav,html[data-app-window=true] [data-pwa-install],html[data-app-window=true] .rail-install-link{display:none!important}

@@ -1,5 +1,9 @@
 let deferredPrompt, installed = false, prompting = false;
-export const isAppWindow = () => installed || matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+// Rodando como app (PWA instalada, APK/TWA Android ou desktop Electron): não faz sentido oferecer download/instalação.
+export const runningAsApp = () => matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true || !!window.orbitaDesktop || /Electron\//.test(navigator.userAgent) || document.referrer.startsWith('android-app://');
+const markApp = () => { if (runningAsApp()) document.documentElement.dataset.appWindow = 'true'; else delete document.documentElement.dataset.appWindow; };
+markApp(); matchMedia('(display-mode: standalone)').addEventListener?.('change', markApp);
+export const isAppWindow = () => installed || runningAsApp() || matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 const changed = () => window.dispatchEvent(new Event('orbita-install-state'));
 window.addEventListener('beforeinstallprompt', event => {
   event.preventDefault(); deferredPrompt = event; changed();

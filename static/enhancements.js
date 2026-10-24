@@ -3,7 +3,7 @@ import {createAppSounds,SOUND_EFFECTS} from './app-sounds.js';
 import { relativeTime, safeLink, stickerNames, youtubeId } from './media-utils.js';
 import { reserveImage, focusElement } from './dom-utils.js';
 import { requestWithDeadline } from './chat-state.js';
-import { requestAppInstall } from './app-install.js';
+import { requestAppInstall, runningAsApp } from './app-install.js';
 import { watchUploadedVideo } from './uploaded-video.js';
 import { attachmentMedia } from './media-viewer.js';
 
@@ -49,7 +49,7 @@ export function initEnhancements(context) {
     parent.append(button('Central de ajuda e sugestões',()=>showDialog('Ajuda e sugestões',box=>{box.append(el('p','','Use Ctrl+K para encontrar canais e conversas. Durante uma chamada, abra a seta ao lado do microfone para trocar a entrada ou a saída de áudio.'),button('Reportar problema',()=>{const url=new URL('https://github.com/Vallerkkk/calldojoao/issues/new');url.searchParams.set('title','Problema no Órbita');window.open(url.href,'_blank','noopener,noreferrer');}));const suggestions=state().channels.find(c=>c.kind==='text'&&['sugestoes','sugestões'].includes(c.name.toLowerCase().replace(/^#/,'')));box.append(button('Abrir #sugestões',async()=>{const server=state().communities.find(c=>c.is_default),channel=suggestions||await checked(state().db.from('channels').select('*').eq('community_id',server?.id||state().activeCommunity).eq('name','sugestões').maybeSingle());if(!channel)throw Error('O canal de sugestões ainda não está disponível.');document.getElementById('app-dialog').close();await context.selectChannel(channel);}));})));
     appSounds.fields(parent,el,button);
     checkbox(parent, 'Sons de avisos e chamadas', 'sounds'); checkbox(parent, 'Manter a tela acesa durante chamadas', 'wake-lock');
-    parent.append(button('Instalar Órbita', installApp), button('Ativar notificações e push', enableNotifications), button('Desativar push neste dispositivo', disablePush),button('Sair da conta',()=>{$('app-dialog').close();$('logout').click();},'danger'));
+    parent.append(...(runningAsApp()?[]:[button('Instalar Órbita', installApp)]), button('Ativar notificações e push', enableNotifications), button('Desativar push neste dispositivo', disablePush),button('Sair da conta',()=>{$('app-dialog').close();$('logout').click();},'danger'));
   }
 
   const appSounds=createAppSounds(()=>state().deafened||state().profile?.presence_status==='dnd'||isQuiet(state().session?.user.id));
