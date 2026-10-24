@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://psreyaufhrquixfjzuek.supabase.co" crossorigin>
 <title>Órbita — Comunidade, Chat & Voz em Tempo Real</title>
-<link rel="stylesheet" href="/static/dist/style-ef63fa4d5866ffa9.css">
+<link rel="stylesheet" href="/static/dist/style-66be5b65cd0613f2.css">
 <meta name="theme-color" content="#10101b">
 <link rel="manifest" href="/static/manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="/static/icons/icon.svg">
@@ -22,10 +22,10 @@
 <link rel="stylesheet" href="/static/dist/orbita-v2-0d176b43aab898b0.css">
 <link rel="stylesheet" href="/static/dist/profile-studio-2945f3cd485c28f5.css">
 <link rel="stylesheet" href="/static/dist/store-v2-497d86db13d87b1a.css">
-<link rel="stylesheet" href="/static/dist/grafite-cc829130e1a8b640.css">
+<link rel="stylesheet" href="/static/dist/grafite-ee70d0e34c3d8b81.css">
 <link rel="preload" href="/static/vendor/fonts/inter-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/fonts/space-grotesk-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
-<meta name="orbita-version" content="6ae2542a6e694fda"></head>
+<meta name="orbita-version" content="c746c891ae3eb7d5"></head>
 <body>
 <div id="entry-animation" class="entry-animation" role="status" aria-live="polite"><img src="/static/icons/icon.svg" width="72" height="72" alt=""><strong>Entrando na sua Órbita</strong><span>Preparando suas conversas…</span><div class="entry-progress" aria-hidden="true"></div></div>
 
@@ -257,6 +257,8 @@
           <span class="ch-desc" id="channel-description">Conversa livre do servidor</span>
         </div>
         <div class="chat-actions">
+          <button id="dm-voice-call" class="dm-call-action" type="button" title="Iniciar chamada de voz" aria-label="Iniciar chamada de voz" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg></button>
+          <button id="dm-video-call" class="dm-call-action" type="button" title="Iniciar chamada de vídeo" aria-label="Iniciar chamada de vídeo" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="12" height="12" rx="2"/><path d="m15 10 6-3v10l-6-3"/></svg></button>
           <button id="btn-free-setup" class="free-setup-pill" title="Estado da conexão">
             <span class="conn-dot" id="conn-dot"></span>
             <span id="conn-label">Supabase conectado</span>
@@ -477,10 +479,10 @@
 
 <div id="toast" role="status" hidden></div>
 <input type="file" id="file-input" hidden>
-<button id="private-call" class="private-call primary" hidden>Ligar em particular ↗</button>
+
 <button id="drive-info" class="drive-shortcut" title="Sobre esta versão">▱</button>
 <span id="friends-badge" hidden></span>
 <button id="back-to-call-dock" hidden>Voltar à chamada</button>
-<div id="incoming-call" class="incoming-call" hidden><strong id="incoming-name"></strong><button id="answer-call" class="primary">Atender</button><button id="decline-call" class="danger">Recusar</button></div>
+
 <dialog id="app-dialog" aria-labelledby="dialog-title"><div class="dialog-header"><h2 id="dialog-title"></h2><button id="dialog-close" aria-label="Fechar">×</button></div><div id="dialog-content"></div></dialog>
-<script type="module" src="/static/dist/app-WGEW3MXK.js"></script><div id="creators-credit" class="creators-credit"></div></body></html>
+<script type="module" src="/static/dist/app-SQRUNITD.js"></script><div id="creators-credit" class="creators-credit"></div></body></html>

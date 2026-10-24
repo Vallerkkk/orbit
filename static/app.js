@@ -29,7 +29,8 @@ import { initEnhancements } from './enhancements.js';
 import { DraftStore, serialToggle } from './runtime-utils.js';
 import { ConversationCache, MessageOutbox, conversationKey, requestWithDeadline } from './chat-state.js';
 import { reconcileNodes, reserveImage, focusElement } from './dom-utils.js';
-import { choosePrivateCall } from './private-call-menu.js';
+import { createDmCalls, callLogText } from './dm-call.js';
+import { createDmUnread } from './dm-unread.js';
 let shareReceiver, enhancements, feed, youtube, callLayout, communityUX, audioTools, callReactions;
 const drafts = new DraftStore(), pendingSends = new Set();
 const draftKey = target => session && target ? session.user.id + ':' + (target.private ? 'dm:' : 'channel:') + target.id : '';
@@ -157,7 +158,7 @@ async function showSession(next) {
   attachmentUrls.clear();messageRows.clear();renderedScope='';
   $('auth-view').hidden = !!next; $('app-view').hidden = !next;
   if (!next) {
-    $('app-dialog').close();closeMobileMenu();$('incoming-call').hidden=true;
+    $('app-dialog').close();closeMobileMenu();dmCalls?.reset();dmUnread?.reset();
     generation++; if (subscription) { db.removeChannel(subscription); subscription = null; }
     await leaveCall();
     for(const channel of [socialSubscription,presenceChannel,extraSubscription])if(channel)db.removeChannel(channel);
@@ -275,7 +276,7 @@ async function selectChannel(channel) {
   $('text-view').hidden = channel.kind !== 'text'; $('voice-view').hidden = channel.kind !== 'voice'; requestAnimationFrame(resizeComposer);
   $('channel-description').textContent = channel.private ? 'Conversa privada · só vocês dois' : channel.kind === 'text' ? 'O começo de boas conversas.' : 'Voz, vídeo e boas companhias.';
   {const title=$('channel-title'),head=title.parentElement;head.querySelector('.dm-head-av')?.remove();title.classList.toggle('dm-head-name',!!channel.private);head.classList.toggle('dm-head',!!channel.private);if(channel.private&&channel.friend){const f=channel.friend;title.dataset.userId=f.id;const w=el('span','dm-av-wrap dm-head-av'),av=el('span','avatar dm-av');setAvatar(av,f);const dot=el('span','dm-presence');dot.dataset.status=online.has(f.id)?(f.presence_status==='invisible'?'offline':f.presence_status||'online'):'offline';w.append(av,dot);title.before(w);$('channel-description').textContent='@'+f.username+' · Conversa privada';applyAppearanceEverywhere(head,appearanceOwner,appearanceOf);}else{delete title.dataset.userId;title.className='';}}
-  $('private-call').hidden = !channel.private || channel.kind !== 'text';
+  syncDmHeader(channel);
   if (channel.kind === 'voice') { $('voice-title').textContent = channel.name; updateCallUI(); return; }
   const cached = conversationCache.get(conversationKey(session.user.id, channel));
   messages = cached?.messages || new Map(); oldest = cached?.oldest || null; hasMore = cached?.hasMore || false;
@@ -703,7 +704,7 @@ function updateSpeakingUI() {
 }
 async function leaveCall({preserveJoin=false}={}) {
   if(!preserveJoin)cancelCallJoin();
-  cameraTask=null;const previous = room;if(previous)microphoneSwitch.set(previous.localParticipant,false);room = null;callChannel = null;talkHeld=false;
+  cameraTask=null;const previous = room,leftTarget=callChannel;if(previous)microphoneSwitch.set(previous.localParticipant,false);room = null;callChannel = null;talkHeld=false;
   lulaDroid?.stop();lulaDroid=null;lulaDroidTask=null;screenWatch.reset();
   enhancements?.callEnded(previous);callReactions?.clear();
   if (previous) previous.removeAllListeners();
@@ -711,6 +712,7 @@ async function leaveCall({preserveJoin=false}={}) {
   document.querySelectorAll('[data-remote-audio]').forEach(node => node.remove());callMediaSession();
   $('media-grid').replaceChildren(); updateCallUI();
   if (previous) {try{await previous.disconnect();}finally{await audioTools?.ended(previous);}}
+  if(leftTarget?.private&&!preserveJoin)dmCalls?.left(leftTarget.id);
 }
 $('join-call').onclick = async () => {
   if (joining || !session || selected?.kind !== 'voice') return;
@@ -999,9 +1001,10 @@ async function initSocial() {
     .on('postgres_changes',{event:'*',schema:'public',table:'community_members'},scheduleAccessRefresh)
     .on('postgres_changes',{event:'*',schema:'public',table:'community_member_roles'},scheduleAccessRefresh)
     .on('postgres_changes',{event:'*',schema:'public',table:'community_roles'},scheduleAccessRefresh)
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'call_events'},payload=>incomingCall(payload.new))
+    .on('postgres_changes',{event:'*',schema:'public',table:'call_events'},payload=>dmCalls?.onEvent(payload.new,payload.eventType))
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'direct_messages'},payload=>{const m=payload.new;if(m?.author_id!==session?.user.id&&!(selected?.private&&selected.id===m?.conversation_id&&!document.hidden))dmUnread?.refresh();else if(selected?.private&&selected.id===m?.conversation_id)dmUnread?.markRead(m.conversation_id);})
     .on('postgres_changes',{event:'*',schema:'public',table:'reactions'},()=>{if(!home&&selected?.kind==='text')refreshMessages();})
-    .subscribe();
+    .subscribe();dmUnread?.refresh();
   if(presenceChannel) await db.removeChannel(presenceChannel);
   if(!current())return;
   presenceChannel=db.channel('community:main',{config:{private:true,presence:{key:uid}}});
@@ -1084,7 +1087,7 @@ function showFriends() {
   navigationEpoch++;saveComposerDraft();saveConversation();stopConversation();home=true;generation++;
   $('friends-view').hidden=false;$('text-view').hidden=true;$('voice-view').hidden=true;
   $('channel-title').textContent='Amigos';$('channel-description').textContent='Sua galera, sempre por perto.';
-  $('private-call').hidden=true;renderFriends();
+  syncDmHeader(null);renderFriends();
 }
 function renderFriends() {
   $('friends-list').replaceChildren();
@@ -1178,27 +1181,53 @@ async function startConversation(p,call=false){
   if(!c){const [user_a,user_b]=[session.user.id,p.id].sort();const result=await db.from('conversations').insert({user_a,user_b}).select().single();
     if(result.error&&result.error.code==='23505')c=await checked(db.from('conversations').select('*').eq('user_a',user_a).eq('user_b',user_b).single());
     else {if(result.error)throw result.error;c=result.data;}await loadSocial();}
-  await openConversation(c,call);
-  if(call){await checked(db.from('call_events').insert({conversation_id:c.id,caller_id:session.user.id}));$('join-call').click();}
+  if(!call)await openConversation(c);
+  if(call)await dmCalls.start(c,call==='video'?'video':'voice');
 }
 async function openConversation(c,voice=false){const p=person(otherUser(c));await selectChannel({id:c.id,name:p.display_name,kind:voice?'voice':'text',private:true,friend:p});renderSocial();}
-$('private-call').onclick=()=>{
-  const c=conversations.find(c=>c.id===selected?.id);if(!c)return;
-  const integrated=()=>{$('app-dialog').close();return startConversation(person(otherUser(c)),true).catch(e=>toast(errorText(e)));};
-  if(!config?.videochamadaConfigured)return integrated();
-  choosePrivateCall({el,button,showDialog,apiFetch,state:()=>({session,selected,room}),insertInvitation:text=>{
-    const input=$('message-input');input.value+=(input.value?'\n':'')+text;drafts.set(draftKey(selected),input.value);input.dispatchEvent(new Event('input'));$('app-dialog').close();input.focus();
-  }},c,integrated);
-};
-function incomingCall(event){
-  if(event.caller_id===session?.user.id||Date.now()-Date.parse(event.created_at)>60000)return;
-  const p=person(event.caller_id);$('incoming-name').textContent=p.display_name+' está chamando…';$('incoming-call').hidden=false;ringIncoming();
-  $('answer-call').onclick=async()=>{try{const c=await checked(db.from('conversations').select('*').eq('id',event.conversation_id).single());$('incoming-call').hidden=true;await openConversation(c,true);$('join-call').click();}catch(e){toast(errorText(e));}};
-  setTimeout(()=>{$('incoming-call').hidden=true;},30000);
+// --- PV: chamadas privadas 1:1, registro de chamadas e não lidas na barra de servidores ---
+const PRESENCE_TEXT={online:'Online',idle:'Ausente',dnd:'Não perturbe',offline:'Offline'};
+function syncDmHeader(channel){
+  const dm=!!(channel?.private&&channel.kind==='text');
+  $('dm-voice-call').hidden=!dm;$('dm-video-call').hidden=!dm;$('text-view').classList.toggle('is-dm',dm);document.body.classList.toggle('dm-open',dm);
+  if(dm&&channel.friend){const f=person(channel.friend.id)||channel.friend,state=online.has(f.id)?(f.presence_status==='invisible'?'offline':f.presence_status||'online'):'offline';
+    const desc=$('channel-description');desc.replaceChildren();const handle=el('span','dm-handle','@'+(f.username||'')),status=el('span','dm-status',PRESENCE_TEXT[state]||'Offline');status.dataset.status=state;desc.append(handle,status);
+    if(f.custom_status&&state!=='offline')desc.append(el('span','dm-custom',f.custom_status));}
+  if(dm)refreshCallLog();
 }
-$('decline-call').onclick=()=>{$('incoming-call').hidden=true;};
-// Toque de chamada recebida: repete o chime até atender, recusar ou expirar (30 s).
-let ringTimer=0;function ringIncoming(){clearInterval(ringTimer);const started=Date.now();const ring=()=>{if($('incoming-call').hidden||Date.now()-started>30000){clearInterval(ringTimer);return;}uiSound('chime',{gap:1500});};ring();ringTimer=setInterval(ring,2500);}
+const dmCallLog=new Map();let callLogTask=0;
+async function refreshCallLog(){
+  const target=selected;if(!target?.private||!db)return;const ticket=++callLogTask;
+  const {data,error}=await db.from('call_events').select('id,conversation_id,caller_id,kind,status,created_at,answered_at,ended_at').eq('conversation_id',target.id).order('created_at',{ascending:false}).limit(30);
+  if(error||ticket!==callLogTask||selected?.id!==target.id)return;dmCallLog.set(target.id,(data||[]).filter(e=>e.created_at));injectCallLog();
+}
+function injectCallLog(){
+  const list=$('message-list');list.querySelectorAll('.dm-call-log').forEach(n=>n.remove());
+  if(!selected?.private||selected.kind!=='text'||!session)return;
+  const events=[...(dmCallLog.get(selected.id)||[])].sort((a,b)=>Date.parse(a.created_at)-Date.parse(b.created_at));
+  const rows=[...list.querySelectorAll('[data-message-id]')].map(row=>({row,at:Date.parse(messages.get(row.dataset.messageId)?.created_at||'')})).filter(r=>Number.isFinite(r.at));
+  const first=rows[0]?.at??-Infinity;
+  for(const event of events){const at=Date.parse(event.created_at);if(hasMore&&at<first)continue;
+    const info=callLogText(event,session.user.id),node=el('div','dm-call-log');node.dataset.tone=info.tone;node.dataset.callId=event.id;
+    const icon=el('span','dm-call-log-icon',info.icon);icon.setAttribute('aria-hidden','true');
+    const time=el('time','',new Date(at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}));time.dateTime=event.created_at;
+    node.append(icon,el('span','dm-call-log-text',(event.caller_id===session.user.id?'Você ligou · ':person(event.caller_id).display_name+' ligou · ')+info.text),time);
+    const after=rows.find(r=>r.at>at);if(after)after.row.before(node);else list.append(node);}
+}
+{const renderBeforeCallLog=renderMessages;renderMessages=(...args)=>{$('message-list').querySelectorAll('.dm-call-log').forEach(n=>n.remove());const out=renderBeforeCallLog(...args);injectCallLog();return out;};}
+async function joinDmCall(c,kind){
+  await openConversation(c,true);await $('join-call').onclick();
+  if(kind==='video'){for(let i=0;i<60&&!(room&&callChannel?.id===c.id);i++)await new Promise(r=>setTimeout(r,250));
+    if(room&&callChannel?.id===c.id&&!room.localParticipant.isCameraEnabled)$('camera').click();}
+}
+const dmCalls=createDmCalls({db:()=>db,el,me:()=>session?.user.id,person,setAvatar,toast,uiSound,conversations:()=>conversations,
+  loadConversation:id=>checked(db.from('conversations').select('*').eq('id',id).single()),joinCall:joinDmCall,leaveCall:()=>room&&callChannel?.private?leaveCall():undefined,refreshLog:()=>refreshCallLog().catch(()=>{})});
+const dmUnread=createDmUnread({db:()=>db,el,me:()=>session?.user.id,person,setAvatar,rail:()=>$('rail-servers-list'),home:()=>$('friends-nav'),
+  open:async id=>{let c=conversations.find(c=>c.id===id);if(!c)c=await checked(db.from('conversations').select('*').eq('id',id).single());await openConversation(c);},
+  isOpen:id=>!!(selected?.private&&selected.id===id&&selected.kind==='text'&&!home&&!document.hidden)});
+function startDmCall(kind){const c=conversations.find(c=>c.id===selected?.id);if(!c||!selected?.private)return;dmCalls.start(c,kind).catch(e=>toast(errorText(e)));}
+$('dm-voice-call').onclick=()=>startDmCall('voice');$('dm-video-call').onclick=()=>startDmCall('video');
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&selected?.private&&selected.kind==='text'&&!home)dmUnread.markRead(selected.id);});
 $('friends-nav').onclick=showFriends;
 // Central única de configurações: toda entrada (engrenagem, 'Editar perfil', painel do usuário, chamada, boas-vindas) cai aqui.
 function openSettingsHub(section='perfil'){$('app-dialog').dataset.stStart=section;$('settings').click();}
@@ -1464,7 +1493,7 @@ selectChannel=async channel=>{
   replyTarget=null;$('reply-banner').classList.add('hidden');
   await baseSelect(channel);syncVoiceChat().catch(error=>toast(errorText(error)));syncLuladroid().catch(error=>toast(errorText(error)));navigation(!!channel.private);renderCommunityRail();rememberCommunity();
   $('message-input').placeholder=channel.private?'Mensagem para '+channel.name:'Conversar em #'+channel.name;
-  $('private-call').hidden=!channel.private||channel.kind==='voice';
+  syncDmHeader(channel);if(channel.private&&channel.kind==='text')dmUnread?.markRead(channel.id);
   $('message-form').hidden=!!channel.is_announcement&&!hasCommunityPermission('manage_messages');
 };
 const baseShowFriends=showFriends;
