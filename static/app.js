@@ -1907,11 +1907,20 @@ function loadServerTheme() {
   catch { return {}; }
 }
 // Tema da Loja aplicado ao servidor (communities.theme): vale para todos os membros, atualiza via realtime.
-function serverThemePack(){const c=!home&&communities.find(x=>x.id===activeCommunity),item=c?.theme&&COSMETIC_ITEMS.find(i=>i.id===c.theme&&i.kind==='server');return item?packOf(item.pack):null;}
+function personalServerTheme(){try{return localStorage.getItem('orbita-personal-server-theme:'+(session?.user.id||'guest'))||'';}catch{return '';}}
+function serverThemePack(){const c=!home&&communities.find(x=>x.id===activeCommunity),id=c?.theme||personalServerTheme(),item=id&&COSMETIC_ITEMS.find(i=>i.id===id&&i.kind==='server');return item?packOf(item.pack):null;}
+const THEME_VARS=['--bg','--s1','--s2','--s3','--bd','--bdh','--hl','--ac','--ac-h','--ac2','--onac','--acs','--t2','--t3','--server-bg-image'];
+// Tema de servidor completo: recalcula toda a paleta Grafite (fundos, painéis, bordas, texto, destaque) a partir do pacote, no body (vence data-theme).
+function paintServerPalette(pack){const b=document.body,hex=v=>/^#[0-9a-f]{6}$/i.test(v||'')?v:null;for(const k of THEME_VARS)b.style.removeProperty(k);if(!pack)return;
+  const a=hex(pack.c?.[0]),a2=hex(pack.c?.[1])||a,bg=hex(pack.bg)||(a?`color-mix(in srgb,${a} 8%,#0a0b0f)`:null);if(!a&&!bg)return;
+  const mix=(c,p,w)=>`color-mix(in srgb,${c} ${p}%,${w})`,set=(k,v)=>v&&b.style.setProperty(k,v);
+  set('--bg',bg);set('--s1',mix(bg,92,'#ffffff'));set('--s2',mix(bg,86,'#ffffff'));set('--s3',mix(bg,79,'#ffffff'));
+  if(a){set('--ac',a);set('--ac-h',mix(a,80,'#ffffff'));set('--ac2',a2);set('--acs',mix(a,14,'transparent'));set('--bd',mix(a,18,'#2e3039'));set('--bdh',mix(a,30,'#3a3c47'));set('--hl',mix(a,10,'rgba(255,255,255,.06)'));set('--t2',mix(a,10,'#b4b7c2'));set('--t3',mix(a,12,'#8b8f9c'));}
+  set('--server-bg-image',`radial-gradient(120% 70% at 100% 0%,${mix(a||bg,16,'transparent')},transparent 60%),radial-gradient(90% 60% at 0% 100%,${mix(a2||bg,12,'transparent')},transparent 60%)`);}
 function applyServerTheme() {
   const pack=serverThemePack(),hex=v=>/^#[0-9a-f]{6}$/i.test(v||'')?v:null;
   const t = {...(pack?{accent:hex(pack.c?.[0]),bg:hex(pack.bg)}:{}),...Object.fromEntries(Object.entries(!home&&session ? loadServerTheme() : {}).filter(([,v])=>v))};
-  document.body.classList.toggle('server-themed',!!pack);document.documentElement.style.setProperty('--server-c2',hex(pack?.c?.[1])||'');if(pack&&hex(pack.c?.[0])){document.documentElement.style.setProperty('--ac',pack.c[0]);document.documentElement.style.setProperty('--acs',pack.c[0]+'26');}else if(!pack){document.documentElement.style.removeProperty('--ac');document.documentElement.style.removeProperty('--acs');}
+  document.body.classList.toggle('server-themed',!!pack);paintServerPalette(pack);document.documentElement.style.setProperty('--server-c2',hex(pack?.c?.[1])||'');if(pack&&hex(pack.c?.[0])){document.documentElement.style.setProperty('--ac',pack.c[0]);document.documentElement.style.setProperty('--acs',pack.c[0]+'26');}else if(!pack){document.documentElement.style.removeProperty('--ac');document.documentElement.style.removeProperty('--acs');}
   const root = document.documentElement;
   for(const [key,value] of [['--accent',t.accent],['--bg-main',t.bg]]){if(/^#[0-9a-f]{6}$/i.test(value||''))root.style.setProperty(key,value);else root.style.removeProperty(key);}
   const banner=$('server-banner-box');let url;try{url=new URL(t.banner);if(url.protocol!=='https:')url=null;}catch{}
@@ -2011,7 +2020,7 @@ function loadStudio(){if(!studioTask)studioTask=import('./profile-studio.js').th
   saveProfile:async fields=>{const uid=session.user.id;await checked(db.from('profiles').update(fields).eq('id',uid).select('id'));if(session?.user.id===uid){Object.assign(profile,fields);const cur=peopleById.get(uid);if(cur)Object.assign(cur,fields);}},
   roleOf:id=>{if(home||!activeCommunity)return null;const link=memberRoles.find(r=>r.user_id===id);return link?communityRoleList.find(r=>r.id===link.role_id)||null:null;},
   spotifyBlock:id=>spotify().block(id),
-  serverTheme:{community:()=>home?null:communities.find(c=>c.id===activeCommunity)||null,canApply:()=>!home&&canEditActiveServer(),
+  serverTheme:{personal:()=>personalServerTheme(),setPersonal:id=>{try{const k='orbita-personal-server-theme:'+(session?.user.id||'guest');id?localStorage.setItem(k,id):localStorage.removeItem(k);}catch{}applyServerTheme();},community:()=>home?null:communities.find(c=>c.id===activeCommunity)||null,canApply:()=>!home&&canEditActiveServer(),
     apply:async id=>{const c=!home&&communities.find(x=>x.id===activeCommunity);if(!c)throw Error('Abra um servidor para aplicar o tema.');await checked(db.from('communities').update({theme:id||null}).eq('id',c.id));c.theme=id||null;applyServerTheme();}},
   inCall:()=>room&&callChannel?callChannel.name:null,openSettings:section=>openSettingsHub(section||'perfil')})).catch(error=>{studioTask=null;throw error;});return studioTask;}
 async function studio(method,...args){const uid=session?.user.id;try{const s=await loadStudio();if(session?.user.id===uid)return s[method](...args);}catch(error){toast(errorText(error));}}

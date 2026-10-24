@@ -2,9 +2,13 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.24+555cab0",
+   "version": "2026.10.24+cc9bb2f",
    "date": "24 out 2026",
    "highlights": [
+    [
+     "perfil",
+     "Configurações › Perfil: estúdio redesenhado"
+    ],
     [
      "perfil",
      "Perfil: prévia vertical também em Configurações › Perfil"
@@ -16,14 +20,11 @@
     [
      "chamadas",
      "Call v3: mudo/ensurdecido, sem engrenagem, ícones de chamada, duplo clique, botão Entrar central"
-    ],
-    [
-     "chamadas",
-     "Ícone de desligar vermelho"
     ]
    ],
    "items": {
     "perfil": [
+     "Configurações › Perfil: estúdio redesenhado",
      "Perfil: prévia vertical também em Configurações › Perfil",
      "Prévia do perfil: fundo grafite com brilho e fótons animados"
     ],

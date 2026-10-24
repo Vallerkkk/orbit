@@ -728,3 +728,8 @@ body.server-themed .main{background-image:radial-gradient(120% 60% at 100% 0%,co
 .desk-ctl{position:fixed;top:6px;right:8px;z-index:9999;display:flex;gap:4px}
 .desk-ctl button{width:30px;height:24px;border:0;border-radius:7px;background:#ffffff0d;color:var(--t2,#bbb);display:grid;place-items:center}
 .desk-ctl button:hover{background:#ffffff1f;color:#fff}.desk-ctl .desk-close:hover{background:#e5484d;color:#fff}
+/* Tema de servidor completo */
+body.server-themed{background:var(--bg)}
+body.server-themed .main,body.server-themed .chat,body.server-themed #voice-view{background-color:var(--bg);background-image:var(--server-bg-image)}
+body.server-themed .sidebar,body.server-themed .channels,body.server-themed .members{background-color:var(--s1)}
+body.server-themed .rail{background-color:color-mix(in srgb,var(--bg) 85%,#000)}
