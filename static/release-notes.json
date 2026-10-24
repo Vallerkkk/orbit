@@ -2,9 +2,13 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.24+4477d3c",
+   "version": "2026.10.24+078100b",
    "date": "24 out 2026",
    "highlights": [
+    [
+     "feed",
+     "Feed: Mais recentes/Em alta + filtro mais antigas, video com som e pausa fora da tela"
+    ],
     [
      "loja",
      "Temas da Loja: efeito ambiente do tema no app inteiro, painéis translúcidos, Equipados…"
@@ -16,13 +20,12 @@
     [
      "perfil",
      "Configurações › Perfil: estúdio redesenhado"
-    ],
-    [
-     "perfil",
-     "Perfil: prévia vertical também em Configurações › Perfil"
     ]
    ],
    "items": {
+    "feed": [
+     "Feed: Mais recentes/Em alta + filtro mais antigas, video com som e pausa fora da tela"
+    ],
     "loja": [
      "Temas da Loja: efeito ambiente do tema no app inteiro, painéis translúcidos, Equipados…"
     ],
