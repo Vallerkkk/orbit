@@ -734,7 +734,7 @@ body.server-themed .main,body.server-themed .chat,body.server-themed #voice-view
 body.server-themed .sidebar,body.server-themed .channels,body.server-themed .members{background-color:var(--s1)}
 body.server-themed .rail{background-color:color-mix(in srgb,var(--bg) 85%,#000)}
 /* Efeito ambiente do tema de servidor */
-#server-fx{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.6;contain:strict}
+#server-fx{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.9;contain:strict}
 #server-fx canvas{width:100%!important;height:100%!important;display:block}
 body.server-themed .app{position:relative;z-index:1}
 body.server-themed .main,body.server-themed .sidebar,body.server-themed .members,body.server-themed .rail{background-color:color-mix(in srgb,var(--bg) 82%,transparent)!important}
@@ -748,3 +748,8 @@ body.server-themed #app-view .main{background:color-mix(in srgb,var(--bg) 45%,tr
 body.server-themed #app-view .rail,body.server-themed #server-rail{background:color-mix(in srgb,var(--bg) 70%,transparent)!important}
 body.server-themed #app-view .sidebar{background:color-mix(in srgb,var(--s1) 78%,transparent)!important}
 body.server-themed #app-view .members{background:color-mix(in srgb,var(--s1) 78%,transparent)!important}
+
+body.server-themed #app-view .main{background:color-mix(in srgb,var(--bg) 25%,transparent)!important}
+body.server-themed #message-list .message{text-shadow:0 1px 2px color-mix(in srgb,var(--bg) 85%,transparent)}
+.sf-oldest{min-width:40px;justify-content:center}.sf-oldest.active{color:var(--ac);background:var(--acs)}
+body.server-themed #text-view,body.server-themed #voice-view{background:transparent!important}

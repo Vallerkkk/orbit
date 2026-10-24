@@ -1,6 +1,7 @@
 // Only uploaded clips use this controller; call tracks and YouTube stay independent.
 const clips=new Map();
-let visibilityObserver,removalObserver;
+let visibilityObserver,removalObserver,soundBlocked=false,armed=false;
+function armUnmute(){if(armed)return;armed=true;const go=()=>{armed=false;soundBlocked=false;for(const [video,record] of clips)if(video.dataset.sound==='1'&&!record.userMuted&&visible(video,record)){record.quiet=true;video.muted=false;record.quiet=false;}for(const t of ['pointerdown','keydown','touchstart'])document.removeEventListener(t,go,true);};for(const t of ['pointerdown','keydown','touchstart'])document.addEventListener(t,go,{capture:true,passive:true});}
 
 function visible(video,record){
   return !record.disposed&&record.visible&&video.isConnected&&!document.hidden;
@@ -11,10 +12,12 @@ function pause(video,record){
 function start(video,record){
   if(!visible(video,record)||record.manualPause||record.pending||!video.paused||video.ended)return;
   record.pending=true;
+  // Som ligado por padrão; se o navegador bloquear, toca sem som e liga o som no primeiro toque/tecla.
+  const done=()=>{if(!visible(video,record)||record.manualPause)pause(video,record);};
+  const muted=()=>{record.quiet=true;video.muted=true;return Promise.resolve(video.play()).then(()=>{done();armUnmute();});};
   try{
-    Promise.resolve(video.play()).then(()=>{
-      if(!visible(video,record)||record.manualPause)pause(video,record);
-    }).catch(()=>{}).finally(()=>{record.pending=false;});
+    if(video.dataset.sound==='1'&&!record.userMuted&&!soundBlocked){record.quiet=true;video.muted=false;record.quiet=false;}
+    Promise.resolve(video.play()).then(done).catch(err=>{if(err?.name==='NotAllowedError'&&!video.muted){soundBlocked=true;return muted();}}).catch(()=>{}).finally(()=>{record.pending=false;record.quiet=false;});
   }catch{record.pending=false;}
 }
 async function enlarge(video){
@@ -55,13 +58,14 @@ function init(){
 export function watchUploadedVideo(video){
   if(clips.has(video))return video;
   init();video.classList.add('uploaded-video');video.controls=true;video.playsInline=true;
-  video.defaultMuted=true;video.muted=true;video.preload='metadata';
+  video.defaultMuted=false;video.muted=true;video.preload='metadata';
   const output=localStorage.getItem('orbita-audio-output');if(output&&video.setSinkId)video.setSinkId(output).catch(()=>{});
   // Calling play only for visible clips avoids background downloads and playback.
   const record={visible:!visibilityObserver,manualPause:false,autoPause:false,pending:false,disposed:false,events:[]};
   record.events=[
     ['loadeddata',()=>{expandButton(video,record);start(video,record);}],
     ['play',()=>{record.manualPause=false;if(!visible(video,record))pause(video,record);}],
+    ['volumechange',()=>{if(!record.quiet&&!record.pending)record.userMuted=video.muted;}],
     ['pause',()=>{if(record.autoPause)record.autoPause=false;else if(visible(video,record)&&video.getClientRects().length)record.manualPause=true;}],
   ];
   clips.set(video,record);for(const [name,handler] of record.events)video.addEventListener(name,handler);

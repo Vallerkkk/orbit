@@ -1914,7 +1914,7 @@ let ambientKey='';
 function ambientServerFx(pack){const key=pack?pack.id:'';if(key===ambientKey)return;ambientKey=key;let host=document.getElementById('server-fx');
   if(host)import('./fx-engine.js').then(m=>m.destroyFxIn(host)).finally(()=>host.replaceChildren());if(!pack?.fx)return host?.remove();
   if(!host){host=document.createElement('div');host.id='server-fx';host.setAttribute('aria-hidden','true');document.body.prepend(host);}
-  import('./fx-engine.js').then(m=>{if(ambientKey!==key)return;host.replaceChildren();m.mountFx(host,{preset:pack.fx,colors:pack.c,bg:'transparent',mode:'hero',radius:0});}).catch(()=>{});}
+  import('./fx-engine.js').then(m=>{if(ambientKey!==key)return;host.replaceChildren();m.mountFx(host,{preset:pack.fx,colors:pack.c,bg:'transparent',mode:'hero',radius:0,density:Math.min(3.2,Math.max(1.6,innerWidth*innerHeight/420000))});}).catch(()=>{});}
 const THEME_VARS=['--bg','--s1','--s2','--s3','--bd','--bdh','--hl','--ac','--ac-h','--ac2','--onac','--acs','--t2','--t3','--server-bg-image'];
 // Tema de servidor completo: recalcula toda a paleta Grafite (fundos, painéis, bordas, texto, destaque) a partir do pacote, no body (vence data-theme).
 function paintServerPalette(pack){const b=document.body,hex=v=>/^#[0-9a-f]{6}$/i.test(v||'')?v:null;for(const k of THEME_VARS)b.style.removeProperty(k);if(!pack)return;

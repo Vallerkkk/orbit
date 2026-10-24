@@ -2,9 +2,13 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.24+2596e89",
+   "version": "2026.10.24+4477d3c",
    "date": "24 out 2026",
    "highlights": [
+    [
+     "loja",
+     "Temas da Loja: efeito ambiente do tema no app inteiro, painéis translúcidos, Equipados…"
+    ],
     [
      "visual",
      "Tema de servidor completo: paleta inteira"
@@ -16,13 +20,12 @@
     [
      "perfil",
      "Perfil: prévia vertical também em Configurações › Perfil"
-    ],
-    [
-     "perfil",
-     "Prévia do perfil: fundo grafite com brilho e fótons animados"
     ]
    ],
    "items": {
+    "loja": [
+     "Temas da Loja: efeito ambiente do tema no app inteiro, painéis translúcidos, Equipados…"
+    ],
     "visual": [
      "Tema de servidor completo: paleta inteira",
      "Avisa pedidos de amizade novos"
