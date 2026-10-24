@@ -9,6 +9,10 @@ import './ui-polish.js';
 import {nicknameProblem} from './identity-rules.js';
 import {canEditServer,isSiteAdmin} from './server-permissions.js';
 import {initSocialLogin} from './social-login.js';
+import {initPasswordReset,parseRecovery,pendingReset} from './password-reset.js';
+// Captura o link de recuperação antes que o supabase-js limpe o hash.
+const initialRecovery=parseRecovery(location.href,{pendingReset:pendingReset()});
+let passwordReset=null;
 import {initNavigationMotion} from './navigation-motion.js';
 import {DECORATIONS} from './profile-decoration-catalog.js';
 import {LEGACY_DECOR} from './store-collections.js';
@@ -111,6 +115,7 @@ $('toggle-auth').onclick = () => {
   $('toggle-auth').textContent = signup ? 'Já tem conta? Entre aqui' : 'Ainda não tem conta? Cadastre-se';
   $('password').autocomplete = signup ? 'new-password' : 'current-password'; $('auth-status').textContent = '';
 };
+$('forgot-password').onclick=()=>{if(!db)return;passwordReset?.showRequest('',$('email').value.trim());};
 $('auth-form').onsubmit = async event => {
   event.preventDefault(); if (!db) return;
   $('auth-submit').disabled = true; $('auth-status').textContent = '';
@@ -874,8 +879,11 @@ async function boot() {
     const {createClient} = await requestWithDeadline(()=>import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm'),{timeout:30000});
     if(!db){db=createClient(config.supabaseUrl,config.supabaseKey,{realtime:{worker:true}});
     // Supabase calls run outside the Auth callback to avoid locking the session.
-    db.auth.onAuthStateChange((_event,next)=>{setTimeout(()=>showSession(next).catch(error=>toast(errorText(error))),0);});}
+    passwordReset=initPasswordReset({$,el,db,enter:next=>showSession(next).catch(error=>toast(errorText(error)))});
+    db.auth.onAuthStateChange((event,next)=>{if(event==='PASSWORD_RECOVERY'){setTimeout(()=>{if(!passwordReset.active()||!document.getElementById('reset-form'))passwordReset.showNewPassword();},0);return;}if(passwordReset.active())return;setTimeout(()=>showSession(next).catch(error=>toast(errorText(error))),0);});}
     await socialLogin.ready(db,config);
+    if(initialRecovery&&!passwordReset.active()&&await passwordReset.begin(initialRecovery)){$('auth-submit').disabled=false;return;}
+    if(passwordReset.active()){$('auth-submit').disabled=false;return;}
     const {data, error} = await requestWithDeadline(()=>db.auth.getSession(),{timeout:30000}); if(error){if(isInvalidSessionError(error)){await showSession(null);$('auth-status').textContent='Sua sessão expirou. Entre novamente para continuar.';$('auth-submit').disabled=false;return;}throw error;}
     await showSession(data.session);$('auth-submit').disabled=false;
   }catch(error){$('auth-status').textContent='Não foi possível conectar. '+errorText(error);$('auth-submit').disabled=true;startupRetry.hidden=false;}finally{booting=false;if(!sessionInitializing)setEntryBusy(false);}

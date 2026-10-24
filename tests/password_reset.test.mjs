@@ -1,0 +1,12 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {parseRecovery,cleanUrl,passwordProblem,resetErrorText,pendingReset,PENDING_KEY} from '../static/password-reset.js';
+const O='https://orbita-8nwu.onrender.com/';
+test('detects implicit hash recovery',()=>{assert.deepEqual(parseRecovery(O+'#access_token=a&refresh_token=b&type=recovery'),{kind:'hash'});assert.equal(parseRecovery(O+'#access_token=a&type=signup'),null);});
+test('detects token_hash recovery',()=>{assert.deepEqual(parseRecovery(O+'?token_hash=xyz&type=recovery'),{kind:'token_hash',tokenHash:'xyz'});});
+test('PKCE code needs type or pending request',()=>{assert.deepEqual(parseRecovery(O+'?code=c1&type=recovery'),{kind:'code',code:'c1'});assert.equal(parseRecovery(O+'?code=c1'),null);assert.deepEqual(parseRecovery(O+'?code=c1',{pendingReset:true}),{kind:'code',code:'c1'});});
+test('detects expired link errors',()=>{const r=parseRecovery(O+'#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired');assert.equal(r.kind,'error');assert.equal(r.code,'otp_expired');assert.match(resetErrorText(r.description),/expirou/);});
+test('ignores normal urls',()=>{assert.equal(parseRecovery(O),null);assert.equal(parseRecovery(O+'#convite=abc'),null);});
+test('cleanUrl strips tokens and keeps the rest',()=>{assert.equal(cleanUrl(O+'?code=1&type=recovery&x=2#access_token=a&type=recovery'),'/?x=2');assert.equal(cleanUrl(O+'#access_token=a&convite=k'),'/#convite=k');assert.equal(cleanUrl(O+'?token_hash=t&type=recovery'),'/');});
+test('password rules match signup (8+) and confirmation',()=>{assert.match(passwordProblem('1234567','1234567'),/8/);assert.match(passwordProblem('12345678','12345679'),/iguais/);assert.equal(passwordProblem('12345678','12345678'),'');});
+test('error texts',()=>{assert.match(resetErrorText({message:'New password should be different from the old password.'}),/diferente/);assert.match(resetErrorText({message:'For security purposes, you can only request this after 30 seconds.'}),/Aguarde/);});
+test('pending reset expires after an hour',()=>{const m=new Map();const s={getItem:k=>m.get(k)??null};assert.equal(pendingReset(s),false);m.set(PENDING_KEY,String(Date.now()));assert.equal(pendingReset(s),true);m.set(PENDING_KEY,String(Date.now()-4e6));assert.equal(pendingReset(s),false);});

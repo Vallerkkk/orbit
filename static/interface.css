@@ -85,3 +85,10 @@ body[data-color-mode=light] .main::before{opacity:.35}body[data-color-mode=light
 @media(max-width:780px){.message-form #message-input{font-size:16px}.message-form .send-live{margin-bottom:0}.network-notice{padding:8px 14px}}
 
 .member[role=button]:focus-visible{outline:3px solid var(--accent-hover);outline-offset:1px}
+/* Recuperação de senha */
+.forgot-link{align-self:flex-end;justify-self:end;margin:-4px 0 2px;padding:2px 0;font-size:13px;width:auto}
+.reset-box{display:grid;gap:10px}.reset-form{display:grid;gap:14px}
+.pw-field{position:relative;display:block}.pw-field input{width:100%;padding-right:84px}
+.pw-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);min-height:32px;padding:4px 10px;border:0;border-radius:8px;background:transparent;color:var(--muted,#9aa);font:inherit;font-size:13px;cursor:pointer}
+.pw-eye:hover,.pw-eye:focus-visible{color:var(--text,#fff);background:var(--accent-soft,rgba(255,255,255,.08))}
+.reset-status[data-tone=error]{color:var(--danger,#ff6b6b)}.reset-status[data-tone=ok]{color:var(--success,#3ddc97)}
