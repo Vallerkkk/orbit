@@ -660,17 +660,24 @@ body.server-themed .main{background-image:radial-gradient(120% 60% at 100% 0%,co
 .ap-chat footer button{border:0;border-radius:6px;padding:4px 9px;font-size:10px;font-weight:700;color:#fff;background:var(--pv-ac);transition:background .2s}
 @media (prefers-reduced-motion:reduce){.ap-preview,.ap-preview *{transition:none}}
 .ap-preview{font-weight:400;text-transform:none;letter-spacing:0}.ap-preview b,.ap-chan strong,.ap-chat header{font-weight:700}.ap-chat footer button{min-height:0;height:auto;line-height:1.3;width:auto}
-/* Abertura */
-.orbita-intro{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:#0d0e10;color:#e6e7ea;cursor:pointer;transition:opacity .3s ease}
-.orbita-intro.out{opacity:0;pointer-events:none}
-.oi-inner{display:flex;flex-direction:column;align-items:center;text-align:center}
-.oi-inner img{animation:oiLogo .7s cubic-bezier(.2,.8,.2,1) both;filter:drop-shadow(0 0 24px color-mix(in srgb,var(--ac,#9b87ff) 45%,transparent))}
-.oi-name{margin:10px 0 22px;font-size:20px;font-weight:800;letter-spacing:.02em;animation:oiUp .5s .2s ease both}
-.oi-inner small{font-size:10.5px;letter-spacing:.32em;text-transform:uppercase;color:#8b8f97;animation:oiUp .5s .5s ease both}
-.oi-inner strong{margin-top:6px;font-size:22px;font-weight:700;letter-spacing:.01em;animation:oiUp .5s .62s ease both}
-@keyframes oiLogo{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:none}}
-@keyframes oiUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.orbita-intro.reduce *{animation:none!important}.orbita-intro.reduce{transition:none}
+/* Abertura v2 */
+.orbita-intro{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;cursor:pointer;color:#eceef2;background:radial-gradient(60% 50% at 50% 45%,#1a1b20 0%,#0e0f12 60%,#0a0b0d 100%);transition:opacity .42s cubic-bezier(.4,0,.2,1),transform .42s cubic-bezier(.4,0,.2,1)}
+.orbita-intro.out{opacity:0;transform:scale(1.02);pointer-events:none}
+.oi-stage{display:flex;flex-direction:column;align-items:center;gap:18px}
+.oi-logo{overflow:visible;filter:drop-shadow(0 10px 30px #5b3df555)}
+.oi-tile{opacity:0;transform-origin:32px 32px;transform:scale(.6);animation:oiTile .55s .75s cubic-bezier(.2,.9,.25,1) forwards}
+.oi-planet{transform-origin:32px 32px;transform:scale(0);animation:oiPop .45s .15s cubic-bezier(.3,1.4,.5,1) forwards}
+.oi-ring{stroke-dasharray:100;stroke-dashoffset:100;animation:oiDraw .7s cubic-bezier(.65,0,.35,1) forwards}
+.oi-dot{offset-path:path("M56 32A24 9 0 1 1 8 32A24 9 0 1 1 56 32");offset-rotate:0deg;offset-distance:0%;opacity:0;animation:oiOrbit .9s .2s cubic-bezier(.45,0,.25,1) forwards}
+.oi-word{font-size:30px;font-weight:700;letter-spacing:.6em;margin-right:-.6em;opacity:0;animation:oiWord .8s .85s cubic-bezier(.16,1,.3,1) forwards}
+.oi-sign{position:absolute;bottom:max(28px,env(safe-area-inset-bottom));font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:#6f737c;opacity:0;animation:oiFade .6s 1.15s ease forwards}
+@keyframes oiDraw{to{stroke-dashoffset:0}}
+@keyframes oiPop{to{transform:scale(1)}}
+@keyframes oiOrbit{0%{opacity:0;offset-distance:0%}12%{opacity:1}100%{opacity:1;offset-distance:93%}}
+@keyframes oiTile{to{opacity:1;transform:scale(1)}}
+@keyframes oiWord{to{opacity:1;letter-spacing:.04em;margin-right:-.04em}}
+@keyframes oiFade{to{opacity:1}}
+.orbita-intro.reduce *{animation:none!important}.orbita-intro.reduce .oi-tile,.orbita-intro.reduce .oi-word,.orbita-intro.reduce .oi-sign,.orbita-intro.reduce .oi-dot{opacity:1}.orbita-intro.reduce .oi-planet{transform:none}.orbita-intro.reduce .oi-ring{stroke-dashoffset:0}.orbita-intro.reduce .oi-dot{offset-distance:93%}.orbita-intro.reduce .oi-word{letter-spacing:.04em;margin-right:0}.orbita-intro.reduce{transition:none}
 /* Reportar bug */
 .bug-modal textarea{width:100%;min-height:110px;resize:vertical;border-radius:10px;padding:10px;font:inherit}
 .bug-when{margin:0 0 8px;font-size:12px;color:var(--text-muted,#9aa0a6)}
