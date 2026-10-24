@@ -246,7 +246,19 @@ export function initEnhancements(context) {
       if(state().selected?.id===target.id)await context.refreshMessages();if(root&&threadRoot===root)await loadThread(true);dispatchPush();toast('Arquivo enviado.');
     }catch(error){report(error);}finally{uploading=false;$('attach-file').disabled=false;}
   }
-  document.addEventListener('paste',event=>{if(!state().session||!event.target.closest('#text-view,.thread-form'))return;const files=[...(event.clipboardData?.items||[])].filter(item=>item.kind==='file'&&item.type.startsWith('image/')).map(item=>item.getAsFile()).filter(Boolean);if(files.length){event.preventDefault();sendFiles(files);}});
+  // Imagens coladas não são mais enviadas na hora: ficam numa bandeja de pré-visualização e saem junto com o Enter.
+  let pasted=[],pastedFor=null;const tray=el('div','paste-tray');tray.hidden=true;tray.setAttribute('aria-label','Imagens coladas');
+  $('message-form').before(tray);
+  function renderTray(){tray.replaceChildren();tray.hidden=!pasted.length;pasted.forEach((item,index)=>{const card=el('div','paste-item'),img=document.createElement('img');img.src=item.url;img.alt=item.file.name;
+    const remove=el('button','paste-remove','×');remove.type='button';remove.onclick=()=>{URL.revokeObjectURL(item.url);pasted.splice(index,1);renderTray();$('message-input').focus();};remove.setAttribute('aria-label','Remover '+item.file.name);card.append(img,remove);tray.append(card);});
+    if(pasted.length){const hint=el('small','paste-hint','Enter para enviar · Esc para descartar');tray.append(hint);}}
+  function clearTray(){pasted.forEach(item=>URL.revokeObjectURL(item.url));pasted=[];pastedFor=null;renderTray();}
+  document.addEventListener('paste',event=>{if(!state().session||!event.target.closest('#text-view,.thread-form'))return;const files=[...(event.clipboardData?.items||[])].filter(item=>item.kind==='file'&&item.type.startsWith('image/')).map(item=>item.getAsFile()).filter(Boolean);if(!files.length)return;event.preventDefault();
+    if(event.target.closest('.thread-form'))return sendFiles(files);
+    if(pastedFor!==state().selected?.id)clearTray();pastedFor=state().selected?.id;
+    for(const file of files){if(pasted.length>=5){toast('Envie até cinco arquivos por vez.');break;}const named=file.name&&file.name!=='image.png'?file:new File([file],'imagem-'+Date.now()+'.'+(file.type.split('/')[1]||'png'),{type:file.type});pasted.push({file:named,url:URL.createObjectURL(named)});}renderTray();});
+  $('message-form').addEventListener('submit',()=>{if(!pasted.length)return;if(pastedFor!==state().selected?.id)return clearTray();const files=pasted.map(item=>item.file);clearTray();sendFiles(files);},true);
+  $('message-input').addEventListener('keydown',event=>{if(event.key==='Escape'&&pasted.length)clearTray();if(event.key==='Enter'&&!event.shiftKey&&pasted.length&&!$('message-input').value.trim()){event.preventDefault();const files=pasted.map(item=>item.file);clearTray();sendFiles(files);}});
   let dragCount=0;const drop=el('div','file-drop-zone','Solte seus arquivos para enviar');drop.hidden=true;document.body.append(drop);
   document.addEventListener('dragenter',event=>{if(state().session&&!document.querySelector('#feed-view:not([hidden])')&&[...(event.dataTransfer?.types||[])].includes('Files')){dragCount++;drop.hidden=false;}});
   document.addEventListener('dragover',event=>{if([...(event.dataTransfer?.types||[])].includes('Files'))event.preventDefault();});
