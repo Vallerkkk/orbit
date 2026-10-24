@@ -800,7 +800,8 @@ $('join-call').onclick = async () => {
   finally { if(callJoin===operation){callJoin=null;joining=false;updateCallUI();} }
 };
 $('leave-call').onclick = () => leaveCall();
-if(!canShareScreen){$('screen').disabled=true;$('screen').dataset.unsupported=screenInfo.reason;$('screen').title=screenInfo.reason;$('screen').setAttribute('aria-label',screenInfo.reason);if(screenInfo.mobile)$('screen').hidden=true;}
+if(!canShareScreen){const mobileMsg='Seu navegador no celular não permite compartilhar a tela; use o app no PC.',msg=screenInfo.mobile?mobileMsg:screenInfo.reason;$('screen').dataset.unsupported=msg;$('screen').title=msg;$('screen').setAttribute('aria-label',msg);
+  if(screenInfo.mobile){$('screen').classList.add('unsupported');$('screen').addEventListener('click',e=>{e.stopImmediatePropagation();e.preventDefault();toast(mobileMsg);},true);}else $('screen').disabled=true;}
 for (const [id, property, method] of [['mic','isMicrophoneEnabled','setMicrophoneEnabled'],['camera','isCameraEnabled','setCameraEnabled'],['screen','isScreenShareEnabled','setScreenShareEnabled']]) {
   $(id).onclick = async () => {
     if (!room||id==='camera'&&cameraTask) return;const target=room,cameraWasEnabled=target.localParticipant.isCameraEnabled,operation=id==='camera'?{room:target}:null;if(operation)cameraTask=operation;$(id).disabled = true;
@@ -1774,7 +1775,7 @@ showFriends=()=>{friendsBeforeEnhancements();enhancements.channelChanged().catch
 const channelsBeforeEnhancements=renderChannels;
 renderChannels=()=>{channelsBeforeEnhancements();enhancements.decorateNavigation();};
 const callBeforeEnhancements=updateCallUI;
-updateCallUI=()=>{callBeforeEnhancements();enhancements.callUpdated();if(room?.state==='connected'){const canPublish=room.localParticipant.permissions?.canPublish!==false;for(const id of ['mic','camera','screen'])$(id).disabled=!canPublish||(id==='screen'&&!canShareScreen)||(id==='mic'&&deafened);if(pttButton)pttButton.disabled=!canPublish||deafened;$('vb-screen').disabled=$('screen').disabled;$('vb-screen').classList.toggle('active',$('screen').classList.contains('active')||$('screen').getAttribute('aria-pressed')==='true');if(room.orbitaStage)$('call-status').textContent+=' · '+(canPublish?'Orador':'Plateia — peça a um moderador para falar');}};
+updateCallUI=()=>{callBeforeEnhancements();enhancements.callUpdated();if(room?.state==='connected'){const canPublish=room.localParticipant.permissions?.canPublish!==false;for(const id of ['mic','camera','screen'])$(id).disabled=!canPublish||(id==='screen'&&!canShareScreen&&!screenInfo.mobile)||(id==='mic'&&deafened);if(pttButton)pttButton.disabled=!canPublish||deafened;$('vb-screen').disabled=$('screen').disabled;$('vb-screen').classList.toggle('active',$('screen').classList.contains('active')||$('screen').getAttribute('aria-pressed')==='true');if(room.orbitaStage)$('call-status').textContent+=' · '+(canPublish?'Orador':'Plateia — peça a um moderador para falar');}};
 gifButton.onclick=()=>enhancements.showMediaPicker();
 $('file-input').multiple=true;
 $('file-input').onchange=async()=>{const files=[...$('file-input').files];await enhancements.sendFiles(files);$('file-input').value='';$('file-input').accept='';};
