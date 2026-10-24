@@ -1,5 +1,5 @@
 {
-  "version": "62aac03af2015745",
+  "version": "20bf5dc5d58a3e9e",
   "entry": "/static/dist/app-H2PXOEGB.js",
   "files": [
     "/static/dist/app-H2PXOEGB.js",
@@ -37,7 +37,7 @@
     "/static/dist/community-ux-f1d2cee68ca44291.css",
     "/static/dist/enhancements-bae842f815459588.css",
     "/static/dist/fluency-e8bd643cf9fd04e1.css",
-    "/static/dist/grafite-f73d1e7608aac005.css",
+    "/static/dist/grafite-c93bb7b20ac8742e.css",
     "/static/dist/identity-fd4b34a93e86c63c.css",
     "/static/dist/interface-873e50655c276577.css",
     "/static/dist/modern-dfbf9772c6bc459c.css",
@@ -62,7 +62,7 @@
     "/static/orbita-v2.css": "/static/dist/orbita-v2-0cb77913a83177eb.css",
     "/static/profile-studio.css": "/static/dist/profile-studio-f065f939114165ca.css",
     "/static/store-v2.css": "/static/dist/store-v2-497d86db13d87b1a.css",
-    "/static/grafite.css": "/static/dist/grafite-f73d1e7608aac005.css"
+    "/static/grafite.css": "/static/dist/grafite-c93bb7b20ac8742e.css"
   },
   "integrity": {
     "/static/dist/app-H2PXOEGB.js": "41d8d2e40b414d32491b06032d4f620575cc0ef15bc5adc355fcf5b5d2c80f71",
@@ -100,7 +100,7 @@
     "/static/dist/community-ux-f1d2cee68ca44291.css": "f1d2cee68ca44291d6840a4c9869d718e48b64f9de9e12b578689eb124b89b01",
     "/static/dist/enhancements-bae842f815459588.css": "bae842f81545958813f23a617dd8b9843815de1fc3e0f0f8ad13d6a0a0ae41f3",
     "/static/dist/fluency-e8bd643cf9fd04e1.css": "e8bd643cf9fd04e1f6d96f9f981948f6be5c4f390becdb2db5c2ee41960774ce",
-    "/static/dist/grafite-f73d1e7608aac005.css": "f73d1e7608aac005af65accb685310a4d43cec27d7d6147f07c340324ed6d708",
+    "/static/dist/grafite-c93bb7b20ac8742e.css": "c93bb7b20ac8742eb6b80db0e09caa3f37b263b08ca4c746838e6fec122f2679",
     "/static/dist/identity-fd4b34a93e86c63c.css": "fd4b34a93e86c63c15775b8c4f65b026abbb2f5cfebf3d9f837c71554049638d",
     "/static/dist/interface-873e50655c276577.css": "873e50655c2765774b8ac2608bc75db554235c95bfca9420fdecf5021c2419b7",
     "/static/dist/modern-dfbf9772c6bc459c.css": "dfbf9772c6bc459cf02777db2a4552b159ad6db43b2be1f7969b7d686c52a25a",
