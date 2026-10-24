@@ -1070,6 +1070,9 @@ body[data-color-mode=light] .st-seg>button[aria-checked=true]{background:#fff;co
  #app-dialog.st-dialog .st-sticky-save{position:sticky;bottom:8px;width:100%}
 }
 @media(prefers-reduced-motion:reduce){#app-dialog.st-dialog .st-panel{animation:none}}
+/* Modo claro: o painel de configurações segue o tema claro (antes ficava sempre escuro). */
+body[data-color-mode=light] #app-dialog.st-dialog{--sg-bg:#f4f5f7;--sg-s1:#ffffff;--sg-s2:#eceef2;--sg-s3:#e2e4e9;--sg-b1:#dfe1e6;--sg-b2:#cfd2d9;--sg-tx:#15161a;--sg-dim:#5f6270;box-shadow:0 30px 80px -20px rgba(20,22,30,.35)!important}
+body[data-color-mode=light] #app-dialog.st-dialog .st-panel>button.danger.st-action{border-color:#f0c2c8!important;color:#c22b3d!important}
 
 /* alvo de toque mínimo de 44px no fechar do diálogo (mobile) */
 @media (max-width:760px),(pointer:coarse){#dialog-close{min-width:44px!important;min-height:44px!important}}
