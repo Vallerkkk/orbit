@@ -6,6 +6,16 @@ import {badgeSvg} from './badges-catalog.js';
 import {installBadgeTooltips,markBadge} from './badge-tooltip.js';
 
 const DAY=86400000;
+// Som de comemoração curto e leve (WebAudio, sem arquivo): arpejo C-E-G-C com brilho.
+let actx;
+export function cheer(){try{actx||=new (window.AudioContext||window.webkitAudioContext)();const t=actx.currentTime+.02,out=actx.createGain();out.gain.value=.16;out.connect(actx.destination);
+  [523.25,659.25,783.99,1046.5].forEach((f,i)=>{const o=actx.createOscillator(),g=actx.createGain();o.type=i===3?'sine':'triangle';o.frequency.value=f;const s=t+i*.07;g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(.9,s+.012);g.gain.exponentialRampToValueAtTime(.001,s+(i===3?.55:.22));o.connect(g).connect(out);o.start(s);o.stop(s+.6);});
+  const n=actx.createOscillator(),g=actx.createGain();n.type='sine';n.frequency.setValueAtTime(2093,t+.28);n.frequency.exponentialRampToValueAtTime(3136,t+.5);g.gain.setValueAtTime(0,t+.28);g.gain.linearRampToValueAtTime(.25,t+.3);g.gain.exponentialRampToValueAtTime(.001,t+.62);n.connect(g).connect(out);n.start(t+.28);n.stop(t+.65);}catch{}}
+// Pequena explosão de confete/brilhos a partir do botão (WAAPI, removida em ~1s).
+export function burst(from){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const r=from.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;const layer=document.createElement('div');layer.className='nm-burst';layer.setAttribute('aria-hidden','true');document.body.append(layer);
+  const cols=['#8b6cff','#c9b8ff','#7fe3ff','#ffd36e','#ff8fd1','#ffffff'];for(let i=0;i<22;i++){const d=document.createElement('i'),a=Math.random()*Math.PI*2,v=50+Math.random()*70,star=i%4===0;d.className=star?'nm-spark':'nm-conf';d.style.cssText=`left:${cx}px;top:${cy}px;background:${cols[i%cols.length]}`;layer.append(d);
+    d.animate([{transform:'translate(-50%,-50%) scale(.4) rotate(0)',opacity:1},{transform:`translate(calc(-50% + ${Math.cos(a)*v}px),calc(-50% + ${Math.sin(a)*v-18}px)) scale(1) rotate(${Math.random()*540-270}deg)`,opacity:1,offset:.6},{transform:`translate(calc(-50% + ${Math.cos(a)*v*1.15}px),calc(-50% + ${Math.sin(a)*v+26}px)) scale(.7) rotate(${Math.random()*720-360}deg)`,opacity:0}],{duration:850+Math.random()*350,easing:'cubic-bezier(.2,.7,.3,1)',fill:'forwards'});}
+  setTimeout(()=>layer.remove(),1400);}
 const tz='America/Sao_Paulo';
 const dayKey=d=>new Intl.DateTimeFormat('en-CA',{timeZone:tz}).format(new Date(d));
 function dayLabel(iso){const k=dayKey(iso),today=dayKey(Date.now()),yest=dayKey(Date.now()-DAY);
@@ -25,9 +35,11 @@ export function createNewMembers(api){
     const metrics=el('div','nm-metrics');for(const [n,l] of [[stats.total,'membros'],[stats.week,'nesta semana'],[stats.today,'hoje']]){const m=el('div','nm-metric');m.append(el('strong','',String(n??0)),el('small','',l));metrics.append(m);}
     copy.append(stack);box.append(glow,copy,metrics);return box;}
   function welcomeBtn(p,count){const btn=b('',async()=>{const me=api.uid;const was=p.welcomed;btn.setAttribute('aria-pressed',String(!was));p.welcomed=!was;p.welcomes=Number(p.welcomes)+(was?-1:1);paint();
-      try{const q=was?api.db.from('member_welcomes').delete().eq('member_id',p.id).eq('user_id',me):api.db.from('member_welcomes').insert({member_id:p.id});const {error}=await q;if(error&&error.code!=='23505')throw error;}
-      catch(e){p.welcomed=was;p.welcomes=Number(p.welcomes)+(was?1:-1);paint();throw e;}},'sf-button nm-act nm-wave');
-    const paint=()=>{btn.replaceChildren(el('span','nm-emoji','👋'),el('span','',p.welcomed?'Boas-vindas dadas':'Dar boas-vindas'),el('span','nm-count',String(p.welcomes||0)));btn.setAttribute('aria-pressed',String(!!p.welcomed));btn.setAttribute('aria-label',(p.welcomed?'Remover boas-vindas para ':'Dar boas-vindas a ')+p.display_name+' ('+(p.welcomes||0)+')');btn.classList.toggle('active',!!p.welcomed);};
+      if(!was){cheer();burst(btn);btn.classList.remove('nm-pop');void btn.offsetWidth;btn.classList.add('nm-pop');}
+      try{const q=was?api.db.from('member_welcomes').delete().eq('member_id',p.id).eq('user_id',me):api.db.from('member_welcomes').insert({member_id:p.id});const {error}=await q;if(error&&error.code!=='23505')throw error;
+        if(!was){window.orbitaDispatchPush?.();api.toast?.('Boas-vindas enviadas para '+(p.display_name||'o novo membro')+' ✨');}}
+      catch(e){p.welcomed=was;p.welcomes=Number(p.welcomes)+(was?1:-1);paint();throw e;}},'nm-act nm-wave');
+    const paint=()=>{const ico=el('span','nm-wave-ico','👋');btn.replaceChildren(ico,el('span','nm-wave-label',p.welcomed?'Boas-vindas dadas':'Dar boas-vindas'),el('span','nm-count',String(p.welcomes||0)));btn.setAttribute('aria-pressed',String(!!p.welcomed));btn.setAttribute('aria-label',(p.welcomed?'Remover boas-vindas para ':'Dar boas-vindas a ')+p.display_name+' ('+(p.welcomes||0)+')');btn.classList.toggle('active',!!p.welcomed);};
     paint();if(p.id===api.uid){btn.disabled=true;btn.dataset.tip='Suas boas-vindas aparecem aqui';}return btn;}
   function followBtn(p){const btn=b(p.following?'Seguindo':'Seguir',async()=>{const me=api.uid;
       if(p.following){const {error}=await api.db.from('social_follows').delete().eq('follower_id',me).eq('following_id',p.id);if(error)throw error;p.following=false;}

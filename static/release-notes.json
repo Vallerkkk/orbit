@@ -2,9 +2,13 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.24+078100b",
+   "version": "2026.10.24+53c78b2",
    "date": "24 out 2026",
    "highlights": [
+    [
+     "feed",
+     "Feed: autoplay de video confiavel"
+    ],
     [
      "feed",
      "Feed: Mais recentes/Em alta + filtro mais antigas, video com som e pausa fora da tela"
@@ -16,14 +20,11 @@
     [
      "visual",
      "Tema de servidor completo: paleta inteira"
-    ],
-    [
-     "perfil",
-     "Configurações › Perfil: estúdio redesenhado"
     ]
    ],
    "items": {
     "feed": [
+     "Feed: autoplay de video confiavel",
      "Feed: Mais recentes/Em alta + filtro mais antigas, video com som e pausa fora da tela"
     ],
     "loja": [

@@ -93,6 +93,10 @@ export function initEnhancements(context) {
     if (subscription) { try { await context.apiFetch('/api/push/subscribe', {method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify(subscription.toJSON())}); } finally { await subscription.unsubscribe(); } }
     if(!quiet)toast('Push desativado neste dispositivo.');
   }
+  // Boas-vindas recebidas: aviso no app; notificação do sistema só se a aba estiver oculta e não houver push.
+  function welcomed(data){const s=state();if(!s.session||!data||data.actor_id===s.session.user.id)return;const text=String(data.text||((data.actor_name||'Alguém')+' te deu boas-vindas na Órbita')).slice(0,140);
+    toast('👋 '+text);if(s.profile?.presence_status==='dnd'||isQuiet(s.session.user.id))return;audio();
+    if(document.hidden&&'Notification' in window&&Notification.permission==='granted'&&!s.config?.pushConfigured){try{new Notification('Boas-vindas · Órbita',{body:text,tag:'orbita-welcome-'+data.actor_id,icon:'/static/icons/icon-192.png'});}catch{}}}
   let dispatchTask,retryPush;
   async function dispatchPush() {
     const uid=state().session?.user.id;if(!state().config?.pushConfigured||!uid||dispatchTask)return;
@@ -149,6 +153,7 @@ export function initEnhancements(context) {
     try { unread = JSON.parse(localStorage.getItem('orbita-unread-' + uid) || '{}'); } catch { unread = {}; }
     for (const target of [...s.channels, ...s.conversations]) unread[target.id] ||= {count:0, seen:new Date().toISOString()};
     inbox = s.db.channel('user:' + uid, {config:{private:true}}).on('broadcast', {event:'activity'}, ({payload}) => notifyActivity(payload).catch(() => {}))
+      .on('broadcast', {event:'welcome'}, ({payload}) => welcomed(payload))
       .on('postgres_changes',{event:'*',schema:'public',table:'community_moderation',filter:'user_id=eq.'+uid},payload=>context.moderationChanged(payload.new).catch(report));
     inbox.subscribe(status => { if (status === 'SUBSCRIBED') refreshUnread().catch(() => {}); });
     await channelChanged();

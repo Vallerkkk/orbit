@@ -1769,6 +1769,7 @@ renderChannels=()=>{initialRenderChannels();for(const node of channelNodes.value
 const priorCallUpdate=updateCallUI;
 updateCallUI=()=>{if(!room)talkHeld=false;priorCallUpdate();if(pttButton){const active=!!room&&callChannel?.id===selected?.id&&selected?.kind==='voice';pttButton.hidden=!active||!pushToTalk;pttButton.textContent=talkHeld?'Falando…':'Segure para falar';pttButton.setAttribute('aria-pressed',String(talkHeld));}};
 
+window.orbitaDispatchPush=()=>enhancements?.dispatchPush?.();
 enhancements=initEnhancements({clearDrafts:()=>{drafts.erase();if(selected?.kind==='text')$('message-input').value='';},
   state:()=>({db,config,session,selected,messages,room,callChannel,profile,people,channels,conversations,communities,activeCommunity,home,deafened,communityMemberList}),
   el,button,toast,checked,showDialog,inputField,errorText,apiFetch,insertText:insertComposer,
