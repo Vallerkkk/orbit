@@ -20,6 +20,7 @@ from integrations import install
 from public_pages import install_public_pages
 from luladroid import install_luladroid
 from diagnostics import install_diagnostics
+from spotify import install_spotify
 from community_features import install_features
 from site_admin import install_site_admin
 from media_search import install_media_search
@@ -240,6 +241,7 @@ install_badges(app, current_user, settings)
 install_public_pages(app, settings)
 install_luladroid(app, current_user, settings)
 install_diagnostics(app, current_user, settings)
+install_spotify(app, current_user)
 
 
 # ===== IA de Chamadas =====

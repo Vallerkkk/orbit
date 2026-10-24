@@ -20,6 +20,7 @@ import {DECORATIONS} from './profile-decoration-catalog.js';
 import {LEGACY_DECOR} from './store-collections.js';
 import {applyAppearanceEverywhere} from './appearance-runtime.js';
 import {createBugReports} from './bug-report.js';
+import {createSpotify} from './spotify.js';
 import {compactAppearance,stripAdminOnly,packOf,ITEMS as COSMETIC_ITEMS} from './cosmetics.js';
 import {initShareReceiver} from './share-target.js';
 import {initThemeAccessibility,foreground} from './theme-accessibility.js';
@@ -1637,7 +1638,7 @@ $('settings').onclick=()=>{
   const layout=el('div','theme-layout');layout.append(prev,themeGrid);themeLabel.append(layout);appearance.append(themeLabel);
   const densityLabel=el('label','field','Densidade'),density=el('select');for(const value of ['cozy','compact']){const option=el('option','',value==='cozy'?'Confortável':'Compacta');option.value=value;density.append(option);}density.value=localStorage.getItem('orbita-density')||'cozy';densityLabel.append(density);appearance.append(densityLabel);
   for(const [input,key]of[[density,'density']])input.onchange=()=>{localStorage.setItem('orbita-'+key,input.value);document.body.dataset[key]=input.value;};
-  container.append(appearance,button('🐞 Reportar bug',()=>bugReports().open()),button('Aceitar convite de criador',()=>showCreatorInvite()),button('Sobre esta versão',()=>openCloud()));if(isAdmin())container.append(button('Relatórios de bug (ADM)',()=>bugReports().admin()));
+  container.append(spotify().settingsCard());container.append(appearance,button('🐞 Reportar bug',()=>bugReports().open()),button('Aceitar convite de criador',()=>showCreatorInvite()),button('Sobre esta versão',()=>openCloud()));if(isAdmin())container.append(button('Relatórios de bug (ADM)',()=>bugReports().admin()));
   if(isAdmin())container.append(button('Administrar o site',()=>openManagement(),'primary'));
 };
 function showCreatorInvite(){showDialog('Convite de criador — Kalil',container=>{
@@ -2009,6 +2010,7 @@ function loadStudio(){if(!studioTask)studioTask=import('./profile-studio.js').th
   state:()=>({db,session,profile,isAdmin:siteRoles.some(r=>r.user_id===session?.user.id&&['admin','creator'].includes(r.role))}),
   saveProfile:async fields=>{const uid=session.user.id;await checked(db.from('profiles').update(fields).eq('id',uid).select('id'));if(session?.user.id===uid){Object.assign(profile,fields);const cur=peopleById.get(uid);if(cur)Object.assign(cur,fields);}},
   roleOf:id=>{if(home||!activeCommunity)return null;const link=memberRoles.find(r=>r.user_id===id);return link?communityRoleList.find(r=>r.id===link.role_id)||null:null;},
+  spotifyBlock:id=>spotify().block(id),
   serverTheme:{community:()=>home?null:communities.find(c=>c.id===activeCommunity)||null,canApply:()=>!home&&canEditActiveServer(),
     apply:async id=>{const c=!home&&communities.find(x=>x.id===activeCommunity);if(!c)throw Error('Abra um servidor para aplicar o tema.');await checked(db.from('communities').update({theme:id||null}).eq('id',c.id));c.theme=id||null;applyServerTheme();}},
   inCall:()=>room&&callChannel?callChannel.name:null,openSettings:section=>openSettingsHub(section||'perfil')})).catch(error=>{studioTask=null;throw error;});return studioTask;}
@@ -2277,7 +2279,7 @@ initSidebarToggle();
    const header=el('div','orb-card-head'),av=el('span','avatar');setAvatar(av,p);const txt=el('div','orb-card-txt');txt.append(el('strong','',p.display_name||'Participante'),el('small','muted','@'+(p.username||'')));header.append(av,txt);
    const act=el('div','orb-card-activity',memberActivity(p,online,voice));if(voice)voiceJoinable(act,voice.channel_id);header.after?.(act);
    const items=[{label:'Ver perfil',action:()=>p.id===session?.user.id?openSettingsHub('perfil'):showProfile(p)}];if(p.id!==session?.user.id)items.push({label:'Enviar mensagem',action:()=>startConversation(p)});
-   const r=row.getBoundingClientRect(),m=openMenu({x:r.left-310,y:r.top,items,header,card:true,label:'Mini perfil',noFocus:true});m.classList.add('orb-hover-card');header.after(act);shownFor=row;},450);});
+   const r=row.getBoundingClientRect(),m=openMenu({x:r.left-310,y:r.top,items,header,card:true,label:'Mini perfil',noFocus:true});m.classList.add('orb-hover-card');header.after(act);act.after(spotify().block(p.id));shownFor=row;},450);});
 }
 
 // Anexos: sem nome nem botão embaixo; só um "⋯" no canto superior direito com Baixar/Compartilhar.
@@ -2297,3 +2299,6 @@ async function shareAttachment(a){try{
 // Reportar bug: botão no painel do usuário (ao lado de Configurações), Configurações e gaveta mobile.
 let bugApi;function bugReports(){return bugApi??=createBugReports({db,session:()=>session,isAdmin,showDialog,el,button,toast});}
 document.getElementById('bug-report-btn')?.addEventListener('click',()=>{if(session)bugReports().open();});
+
+let spotifyApi;function spotify(){return spotifyApi??=createSpotify({session:()=>session,el,button,toast});}
+if(/^#spotify=/.test(location.hash)){const ok=location.hash==='#spotify=conectado';history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>toast(ok?'Spotify conectado! Ele aparece no seu perfil enquanto você ouve.':'Não foi possível conectar o Spotify.'),1200);}
