@@ -24,6 +24,8 @@
 <link rel="stylesheet" href="/static/profile-studio.css">
 <link rel="stylesheet" href="/static/store-v2.css">
 <link rel="stylesheet" href="/static/grafite.css">
+<link rel="stylesheet" href="/static/refino.css">
+<link rel="stylesheet" href="/static/cosmos.css">
 <link rel="preload" href="/static/vendor/fonts/inter-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/fonts/space-grotesk-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
 </head>
@@ -292,7 +294,7 @@
             </svg>
           </button>
           <div class="header-search-wrap">
-            <input type="text" class="header-search-input" id="search-messages" placeholder="Buscar no canal...">
+            <input type="text" class="header-search-input" id="search-messages" placeholder="Buscar">
             <button id="btn-search-toggle" title="Buscar" style="position:absolute;right:0;width:28px;height:28px;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                 <circle cx="11" cy="11" r="8"/>
@@ -381,11 +383,39 @@
           <div class="friends-tabs">
             <button class="friends-tab active" data-ftab="online">Online</button>
             <button class="friends-tab" data-ftab="all">Todos</button>
-            <button class="friends-tab add-friend" id="btn-open-add-friend">Adicionar Amigo</button>
+            <button class="friends-tab add-friend" id="btn-open-add-friend" data-ftab="add">Adicionar Amigo</button>
           </div>
         </div>
       </header>
-      <div class="friends-list-wrap"><form id="add-friend-form" class="add-friend-form"><input id="friend-username" placeholder="Nome de usuário do amigo" required maxlength="24"><button class="primary" type="submit">Enviar pedido</button></form><p id="friend-total"></p><div id="friends-list"></div></div>
+      <div class="friends-list-wrap">
+        <section class="friends-hero" aria-label="Sua órbita social">
+          <div class="fh-copy">
+            <p class="fh-eyebrow">Sua órbita social</p>
+            <h1>Pessoas na sua <em>órbita</em></h1>
+            <p class="fh-sub">Veja quem está por perto, retome uma conversa ou chame alguém para entrar na sua comunidade.</p>
+          </div>
+          <div class="fh-art" aria-hidden="true">
+            <span class="fh-ring r1"></span>
+            <span class="fh-ring r2"></span>
+            <span class="fh-core">◉</span>
+            <span class="fh-sat s1"></span>
+            <span class="fh-sat s2"></span>
+            <span class="fh-sat s3"></span>
+          </div>
+        </section>
+        <form id="add-friend-form" class="add-friend-form" hidden>
+          <div class="add-friend-copy">
+            <h3>ADICIONAR AMIGO</h3>
+            <p>Você pode adicionar amigos com o nome de usuário.</p>
+          </div>
+          <div class="add-friend-fields">
+            <input id="friend-username" placeholder="Nome de usuário do amigo" required maxlength="24">
+            <button class="primary" type="submit">Enviar pedido</button>
+          </div>
+        </form>
+        <p id="friend-total"></p>
+        <div id="friends-list"></div>
+      </div>
     </div>
 
     <!-- VOICE VIEW -->

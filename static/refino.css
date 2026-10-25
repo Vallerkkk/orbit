@@ -1,0 +1,842 @@
+/* ==========================================================================
+   Órbita — refino final
+   Gramática visual do Discord (app) + corte de custo de composição.
+   Carregado por último: só sobrescreve o que precisa.
+   ========================================================================== */
+
+:root{
+  --rf-fast:90ms;
+  --rf-base:150ms;
+  --rf-ease:cubic-bezier(.2,.7,.3,1);
+  --rf-toolbar:#111214;
+  --rf-toolbar-border:#24262c;
+  --rf-row-hover:rgba(255,255,255,.03);
+  --rf-row-active:rgba(255,255,255,.07);
+}
+
+/* --------------------------------------------------------------------------
+   1. Superfícies fixas opacas — blur contínuo custa GPU e não agrega leitura
+   -------------------------------------------------------------------------- */
+#server-rail,.chat-header,#app-view .sidebar,#app-view .server-header,
+body #app-view .user-panel,#server-dropdown,.header-popover,.status-popover,
+.composer-popover,.profile-card-popover,#pins-popover,.attach-popover,
+.emoji-popover,.message-menu .message-actions,.ux-message-tools,.media-picker,
+#members-sidebar.mv2,.feature-panel{
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+
+#app-view .sidebar,#members-sidebar.mv2,.chat-header,#app-view .server-header{
+  background:var(--s1)!important;
+}
+
+body #app-view .user-panel{
+  background:var(--s2)!important;
+  border:0!important;
+  border-radius:8px!important;
+  box-shadow:none!important;
+  margin:0 8px 8px!important;
+  padding:4px 6px!important;
+  min-height:50px!important;
+}
+
+#server-dropdown,.header-popover,.status-popover,.composer-popover,
+.profile-card-popover{
+  background:var(--s1)!important;
+  border:1px solid var(--bd)!important;
+  box-shadow:0 8px 24px rgba(0,0,0,.55)!important;
+  border-radius:8px!important;
+}
+
+/* Backdrops de modal: só escurecem, sem custo de desfoque */
+#app-dialog::backdrop,dialog::backdrop{
+  background:rgba(0,0,0,.66)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+
+/* Troca do painel de membros sem animar largura de layout */
+@media (min-width:1100px){
+  body.mv2-open #app-view .main{margin-right:var(--mv2-w,256px);transition:none!important}
+}
+
+/* --------------------------------------------------------------------------
+   2. Cabeçalhos e barra lateral — densidade e estados do Discord
+   -------------------------------------------------------------------------- */
+#app-view .server-header{
+  height:56px!important;
+  min-height:56px!important;
+  padding:0 12px!important;
+  border-bottom:1px solid var(--bd)!important;
+  box-shadow:none!important;
+}
+#app-view .server-header h1{
+  gap:8px!important;
+  min-width:0;
+  font-size:15px!important;
+  letter-spacing:-.01em!important;
+}
+#app-view .server-header .logo-mark{
+  width:30px!important;
+  height:30px!important;
+  padding:6px!important;
+  border-radius:8px!important;
+}
+#sidebar-server-title{
+  flex:1 1 auto!important;
+  min-width:0!important;
+  font-size:15px!important;
+  font-weight:650!important;
+  letter-spacing:-.015em!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+
+.chat-header{
+  height:52px!important;
+  min-height:52px!important;
+  padding:0 16px!important;
+  border-bottom:1px solid var(--bd)!important;
+  box-shadow:none!important;
+}
+.chat-header .chat-title{gap:8px;min-width:0}
+.chat-header #channel-title,#friends-view .chat-header h2{
+  font-size:16px!important;
+  font-weight:600!important;
+  letter-spacing:-.01em!important;
+}
+.chat-header .ch-icon{width:20px!important;height:20px!important;color:var(--t2)!important}
+.chat-header .ch-desc{font-size:12.5px!important;color:var(--t3)!important}
+
+/* Campos e botões do cabeçalho mais baixos, como no app */
+.chat-header .header-search-wrap{width:168px!important;min-width:168px!important}
+.chat-header .header-search-input{
+  height:30px!important;
+  min-height:30px!important;
+  width:168px!important;
+  border-radius:4px!important;
+  background:var(--bg)!important;
+  border:1px solid transparent!important;
+  padding:0 8px 0 30px!important;
+  box-shadow:none!important;
+  font-size:12.5px!important;
+  transition:background-color var(--rf-fast) linear,border-color var(--rf-fast) linear!important;
+}
+.chat-header .header-search-input:focus{
+  width:168px!important;
+  padding:0 8px 0 30px!important;
+  background:#0c0d11!important;
+  border-color:var(--bdh)!important;
+  box-shadow:none!important;
+}
+.chat-header .header-search-wrap #btn-search-toggle{
+  left:2px!important;
+  right:auto!important;
+  width:26px!important;
+  height:26px!important;
+  opacity:1!important;
+  color:var(--t3)!important;
+  background:transparent!important;
+}
+.chat-header .header-search-wrap #btn-search-toggle:hover{color:var(--t2)!important}
+.chat-header .chat-title{overflow:hidden!important}
+.chat-header .chat-title h2{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+@media(max-width:1460px){
+  .chat-header .ch-desc{display:none!important}
+}
+.chat-header .chat-actions button,.chat-header .icon-btn{
+  width:30px!important;
+  height:30px!important;
+  min-width:30px!important;
+  border-radius:4px!important;
+  transition:background-color var(--rf-fast) linear,color var(--rf-fast) linear!important;
+}
+.chat-header .chat-actions button:hover,.chat-header .icon-btn:hover{
+  background:rgba(255,255,255,.06)!important;
+  transform:none!important;
+}
+
+/* Canais: pílula ativa discreta, sem borda rosa */
+.channel{
+  min-height:32px!important;
+  height:32px;
+  margin:1px 8px!important;
+  padding:0 8px!important;
+  gap:6px!important;
+  border:0!important;
+  border-radius:4px!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:var(--t3)!important;
+  font-size:14px!important;
+  font-weight:500!important;
+  transition:background-color var(--rf-fast) linear,color var(--rf-fast) linear!important;
+}
+.channel .ch-icon{width:20px!important;height:20px!important;color:var(--t3)!important;transition:color var(--rf-fast) linear!important}
+.channel:hover{background:rgba(255,255,255,.04)!important;color:var(--t1)!important;transform:none!important}
+.channel:hover .ch-icon{color:var(--t2)!important}
+.channel.active{
+  background:var(--rf-row-active)!important;
+  border:0!important;
+  box-shadow:none!important;
+  color:#fff!important;
+  font-weight:600!important;
+}
+.channel.active .ch-icon{color:var(--t2)!important}
+
+.category-header{
+  min-height:28px!important;
+  padding:8px 8px 2px 16px!important;
+  color:var(--t3)!important;
+  font-size:11px!important;
+  font-weight:700!important;
+  letter-spacing:.02em!important;
+}
+.category-header button{opacity:0;transition:opacity var(--rf-fast) linear,background-color var(--rf-fast) linear!important}
+.category-header:hover button,.category-header:focus-within button{opacity:1}
+@media (hover:none){.category-header button{opacity:1}}
+
+#dm-channels .dm-row{border-radius:4px!important}
+#dm-channels .dm-item{
+  min-height:42px!important;
+  margin:1px 8px!important;
+  padding:5px 8px!important;
+  border-radius:4px!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  transition:background-color var(--rf-fast) linear,color var(--rf-fast) linear!important;
+}
+#dm-channels .dm-item:hover,#dm-channels .dm-row:hover .dm-item{background:rgba(255,255,255,.04)!important;color:var(--t1)!important}
+#dm-channels .dm-item.active{background:var(--rf-row-active)!important;color:#fff!important;box-shadow:none!important}
+#dm-channels .dm-row:hover .dm-pin,#dm-channels .dm-row:hover .dm-close{color:var(--t2)}
+
+/* --------------------------------------------------------------------------
+   3. Chat — linhas planas, hover de linha inteira e barra de ações compacta
+   -------------------------------------------------------------------------- */
+#message-list.messages{
+  --content-max:100%;
+  padding:12px 16px 8px!important;
+  scrollbar-gutter:stable!important;
+  scroll-behavior:auto!important;
+  -webkit-mask-image:none!important;
+  mask-image:none!important;
+}
+#message-list .message{
+  margin:0!important;
+  padding:2px 48px 2px 16px!important;
+  gap:16px!important;
+  background:transparent!important;
+  border:0!important;
+  border-radius:4px!important;
+  box-shadow:none!important;
+  transition:background-color 70ms linear!important;
+}
+#message-list .message:not(.message-grouped){margin-top:10px!important}
+#message-list .message.message-grouped{
+  margin:0!important;
+  padding-top:1px!important;
+  padding-bottom:1px!important;
+  min-height:0!important;
+}
+#message-list .message:hover,#message-list .message:focus-within{
+  background:var(--rf-row-hover)!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+#message-list .message.mentions-me,#message-list .message.is-mention,#message-list .message.mentioned{
+  background:color-mix(in srgb,var(--ac) 6%,transparent)!important;
+  box-shadow:inset 2px 0 0 var(--ac)!important;
+}
+#message-list .message>.avatar{
+  width:40px!important;
+  height:40px!important;
+  min-width:40px!important;
+  margin-top:2px!important;
+  border-radius:50%!important;
+  box-shadow:none!important;
+  transition:filter var(--rf-fast) linear!important;
+}
+#message-list .message>.avatar:hover{
+  transform:none!important;
+  box-shadow:none!important;
+  filter:brightness(1.1);
+}
+#message-list .message-grouped::before{
+  left:16px!important;
+  top:3px!important;
+  width:40px!important;
+  font-size:11px!important;
+  line-height:22px;
+  color:var(--t3)!important;
+  text-align:center;
+  font-variant-numeric:tabular-nums;
+}
+#message-list .message-meta{gap:8px!important;margin-bottom:2px!important}
+#message-list .message-meta strong{font-size:15px!important;font-weight:600!important;letter-spacing:-.005em!important}
+#message-list .message-meta time{font-size:11.5px!important;color:var(--t3)!important;font-weight:400!important}
+#message-list .message p,#message-list .message .message-text{
+  font-size:15px!important;
+  line-height:1.45!important;
+  color:var(--t1)!important;
+}
+#message-list .message .message-content>p,#message-list .message .message-content .rich-text{max-width:100%!important}
+#message-list .message a{color:var(--ac-h)!important;text-decoration:none!important;border-bottom:1px solid color-mix(in srgb,var(--ac) 35%,transparent);transition:border-color var(--rf-fast) linear!important}
+#message-list .message a:hover{border-bottom-color:currentColor}
+
+/* Anexos sem moldura pesada */
+#message-list .message-content img:not(.emoji):not(.avatar-img),
+#message-list .message-content video,
+#message-list .message-content .attachment,
+#message-list .message-content .link-preview,
+#message-list .message-content .embed{
+  border-radius:6px!important;
+  border:0!important;
+  max-width:min(520px,100%)!important;
+  box-shadow:none!important;
+}
+#message-list .message-content .link-preview,#message-list .message-content .embed{
+  background:var(--s1)!important;
+  border-left:3px solid var(--ac)!important;
+  border-radius:0 6px 6px 0!important;
+  padding:10px 12px!important;
+}
+#message-list .message .reply-preview,#message-list .message .message-reply,#message-list .message .reply-card{
+  border-left:2px solid var(--bdh)!important;
+  background:transparent!important;
+  border-radius:0!important;
+  padding:1px 0 1px 10px!important;
+  margin:2px 0 4px!important;
+  font-size:13px!important;
+  color:var(--t2)!important;
+}
+
+/* Barra de ações flutuante e menu ⋯ */
+#message-list .message-menu{top:2px!important;right:12px!important;z-index:6}
+#message-list .message-menu>summary{
+  width:32px!important;
+  height:32px!important;
+  min-width:32px!important;
+  padding:0!important;
+  border-radius:4px!important;
+  background:var(--rf-toolbar)!important;
+  border:1px solid var(--rf-toolbar-border)!important;
+  box-shadow:0 2px 6px rgba(0,0,0,.35)!important;
+  color:var(--t2)!important;
+  font-size:18px!important;
+  line-height:1!important;
+  opacity:0;
+  transform:none!important;
+  transition:opacity 70ms linear,background-color 70ms linear,color 70ms linear!important;
+}
+#message-list .message:hover .message-menu>summary,
+#message-list .message:focus-within .message-menu>summary,
+#message-list .message-menu[open]>summary{opacity:1}
+#message-list .message-menu>summary:hover{background:#1b1d22!important;color:var(--t1)!important;transform:none!important}
+#message-list .ux-message-tools{
+  top:2px!important;
+  right:52px!important;
+  gap:0!important;
+  padding:1px!important;
+  border-radius:4px!important;
+  background:var(--rf-toolbar)!important;
+  border:1px solid var(--rf-toolbar-border)!important;
+  box-shadow:0 2px 6px rgba(0,0,0,.35)!important;
+  transform:none!important;
+  transition:opacity 70ms linear!important;
+}
+#message-list .ux-message-tools button{
+  width:30px!important;
+  height:30px!important;
+  min-width:30px!important;
+  border-radius:3px!important;
+  color:var(--t2)!important;
+  font-size:16px!important;
+  transition:background-color 70ms linear,color 70ms linear!important;
+}
+#message-list .ux-message-tools button:hover{
+  background:rgba(255,255,255,.08)!important;
+  color:var(--t1)!important;
+  transform:none!important;
+}
+#message-list .message-menu .message-actions{
+  top:36px!important;
+  border-radius:8px!important;
+  background:var(--rf-toolbar)!important;
+  border:1px solid var(--rf-toolbar-border)!important;
+  box-shadow:0 8px 22px rgba(0,0,0,.5)!important;
+  padding:6px!important;
+  backdrop-filter:none!important;
+  animation:rf-pop var(--rf-base) var(--rf-ease) both;
+}
+#message-list .message-menu .tiny-button,#message-list .message-menu .reaction{
+  border-radius:3px!important;
+  transition:background-color var(--rf-fast) linear,color var(--rf-fast) linear!important;
+}
+#message-list .message-menu .tiny-button:hover{background:rgba(255,255,255,.07)!important;color:var(--t1)!important}
+#message-list .message-menu .reaction:hover{background:rgba(255,255,255,.07)!important;border-color:transparent!important;transform:none!important}
+
+/* Reações */
+#message-list .reactions button,#message-list .reaction-pill,#message-list .message .reactions .reaction{
+  min-height:26px!important;
+  padding:1px 8px!important;
+  border-radius:8px!important;
+  background:rgba(255,255,255,.04)!important;
+  border:1px solid transparent!important;
+  color:var(--t2)!important;
+  font-size:13px!important;
+  font-weight:600!important;
+  transition:background-color var(--rf-fast) linear,border-color var(--rf-fast) linear!important;
+}
+#message-list .reactions button:hover,#message-list .message .reactions .reaction:hover{
+  background:rgba(255,255,255,.07)!important;
+  border-color:var(--bdh)!important;
+  transform:none!important;
+}
+#message-list .reactions button[aria-pressed=true],#message-list .reactions .mine,#message-list .message .reactions .reaction.mine{
+  background:color-mix(in srgb,var(--ac) 14%,transparent)!important;
+  border-color:color-mix(in srgb,var(--ac) 42%,transparent)!important;
+  color:var(--t1)!important;
+}
+
+/* Introdução do canal/chamada sem cartão */
+#message-list .welcome{
+  margin:0 0 8px!important;
+  padding:28px 8px 14px!important;
+  border:0!important;
+  border-radius:0!important;
+  background:none!important;
+  box-shadow:none!important;
+}
+#message-list .welcome-icon{
+  width:68px!important;
+  height:68px!important;
+  border-radius:50%!important;
+  background:var(--s3)!important;
+  color:var(--t1)!important;
+  font-size:32px!important;
+  box-shadow:none!important;
+  border:0!important;
+}
+#message-list .welcome h1{font-size:28px!important;font-weight:700!important;color:#fff!important;margin:12px 0 6px!important;letter-spacing:-.02em!important}
+#message-list .welcome p{font-size:15px!important;line-height:1.4!important;color:var(--t2)!important}
+#message-list .welcome button{
+  margin-top:12px!important;
+  min-height:34px!important;
+  padding:0 14px!important;
+  border-radius:4px!important;
+  background:var(--s3)!important;
+  border:0!important;
+  color:var(--t1)!important;
+  box-shadow:none!important;
+  font-weight:600!important;
+}
+#message-list .welcome button:hover{background:var(--bdh)!important}
+
+/* Divisor de dia */
+.ux-day-divider,.date-divider{
+  margin:16px 0 8px!important;
+  font-size:11px!important;
+  color:var(--t3)!important;
+}
+.ux-day-divider::before,.date-divider::before{background:var(--bd)!important}
+.ux-day-divider>*,.ux-day-divider span,.date-divider span{
+  background:var(--s1)!important;
+  border:0!important;
+  color:var(--t3)!important;
+  box-shadow:none!important;
+}
+
+/* --------------------------------------------------------------------------
+   4. Composer — barra única do Discord, sem CTA gigante
+   -------------------------------------------------------------------------- */
+.message-form-wrap{padding:0 16px 16px!important}
+.message-form{
+  min-height:44px!important;
+  border-radius:8px!important;
+  padding:0 6px!important;
+  gap:2px!important;
+  background:var(--s2)!important;
+  border:1px solid transparent!important;
+  box-shadow:none!important;
+  transition:border-color var(--rf-fast) linear,background-color var(--rf-fast) linear!important;
+}
+.message-form:focus-within{
+  background:#1c1d24!important;
+  border-color:color-mix(in srgb,var(--ac) 40%,var(--bdh))!important;
+  box-shadow:none!important;
+}
+.message-form .add-btn,.message-form .icon-btn{
+  width:32px!important;
+  height:32px!important;
+  min-width:32px!important;
+  border-radius:4px!important;
+  border:0!important;
+  background:transparent!important;
+  color:var(--t2)!important;
+  box-shadow:none!important;
+  transform:none!important;
+  transition:background-color var(--rf-fast) linear,color var(--rf-fast) linear!important;
+}
+.message-form .add-btn:hover,.message-form .icon-btn:hover{
+  background:rgba(255,255,255,.06)!important;
+  color:var(--t1)!important;
+  transform:none!important;
+}
+#message-input{
+  font-size:15px!important;
+  line-height:24px!important;
+  padding:10px 4px!important;
+  min-height:24px!important;
+  color:var(--t1)!important;
+}
+#send.send-live{
+  width:32px!important;
+  height:32px!important;
+  min-width:32px!important;
+  border-radius:4px!important;
+  background:transparent!important;
+  color:var(--t2)!important;
+  box-shadow:none!important;
+  padding:0!important;
+  margin-left:2px;
+  transform:none!important;
+  transition:background-color var(--rf-fast) linear,color var(--rf-fast) linear,opacity var(--rf-fast) linear!important;
+}
+#send.send-live:hover{
+  background:color-mix(in srgb,var(--ac) 18%,transparent)!important;
+  color:var(--ac-h)!important;
+  transform:none!important;
+}
+#send.send-live svg{width:20px!important;height:20px!important}
+#send.send-live:disabled{opacity:.35!important}
+
+/* --------------------------------------------------------------------------
+   5. Amigos — abas reais, formulário só quando ativo, linhas densas
+   -------------------------------------------------------------------------- */
+.friends-tabs{gap:4px!important;background:transparent!important;border:0!important;padding:0!important}
+.friends-tab{
+  padding:4px 8px!important;
+  border:0!important;
+  border-radius:4px!important;
+  background:transparent!important;
+  color:var(--t2)!important;
+  font-size:13px!important;
+  font-weight:500!important;
+  transition:background-color var(--rf-fast) linear,color var(--rf-fast) linear!important;
+}
+.friends-tab:hover{background:rgba(255,255,255,.05)!important;color:var(--t1)!important}
+.friends-tab.active{background:rgba(255,255,255,.08)!important;color:#fff!important}
+.friends-tab.add-friend{
+  margin-left:6px;
+  padding-left:12px!important;
+  border-left:1px solid var(--bd)!important;
+  border-radius:0 4px 4px 0!important;
+  background:transparent!important;
+  color:var(--ok)!important;
+}
+.friends-tab.add-friend:hover{background:color-mix(in srgb,var(--ok) 12%,transparent)!important;color:#8df0b8!important}
+.friends-tab.add-friend.active{background:color-mix(in srgb,var(--ok) 16%,transparent)!important;color:#b8ffd4!important}
+
+.friends-list-wrap{max-width:1000px!important;padding:18px clamp(16px,3vw,28px) 32px!important}
+#add-friend-form{
+  align-items:flex-end!important;
+  gap:8px!important;
+  margin:0 0 14px!important;
+  padding:0 0 22px!important;
+  border-bottom:1px solid var(--bd)!important;
+}
+#add-friend-form .add-friend-copy{flex:1 0 100%!important;display:block!important}
+#add-friend-form .add-friend-copy h3{
+  margin:0 0 4px!important;
+  font-size:16px!important;
+  font-weight:650!important;
+  letter-spacing:-.01em!important;
+  color:var(--t1)!important;
+}
+#add-friend-form .add-friend-copy p{margin:0 0 6px!important;font-size:13px!important;line-height:1.4!important;color:var(--t2)!important}
+#add-friend-form .add-friend-fields{display:flex;gap:8px;flex:1;min-width:0}
+#add-friend-form input{
+  height:40px!important;
+  flex:1;
+  min-width:0;
+  padding:0 12px!important;
+  border-radius:4px!important;
+  border:1px solid var(--bdh)!important;
+  background:var(--bg)!important;
+  box-shadow:none!important;
+  font-size:14px!important;
+}
+#add-friend-form input:focus{outline:none!important;border-color:var(--ac)!important;box-shadow:none!important}
+#add-friend-form button{
+  min-height:40px!important;
+  padding:0 16px!important;
+  border-radius:4px!important;
+  border:0!important;
+  background:var(--ac)!important;
+  color:var(--onac)!important;
+  box-shadow:none!important;
+  font-size:13px!important;
+  font-weight:650!important;
+  transform:none!important;
+}
+#add-friend-form button:hover{background:var(--ac-h)!important;transform:none!important}
+#friend-total{
+  margin:4px 0 8px!important;
+  padding:0 8px;
+  font-size:12px!important;
+  font-weight:600!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+  color:var(--t3)!important;
+}
+
+.friend-card{
+  min-height:56px!important;
+  margin:1px 0!important;
+  padding:0 8px!important;
+  gap:12px!important;
+  flex-wrap:nowrap!important;
+  border:0!important;
+  border-radius:4px!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  transition:background-color var(--rf-fast) linear!important;
+}
+.friend-card:hover{background:var(--rf-row-hover)!important}
+.friend-card .avatar{
+  width:32px!important;
+  height:32px!important;
+  flex:0 0 32px!important;
+  border-radius:50%!important;
+  box-shadow:none!important;
+}
+.friend-info strong{font-size:14px!important;font-weight:600!important;color:var(--t1)!important}
+.friend-info small{font-size:12px!important;color:var(--t3)!important}
+.friend-actions{gap:4px!important;opacity:0;pointer-events:none;transition:opacity var(--rf-fast) linear!important}
+.friend-card:hover .friend-actions,.friend-card:focus-within .friend-actions,.friend-card.friend-pending .friend-actions{
+  opacity:1;
+  pointer-events:auto;
+}
+.friend-actions button{
+  min-height:32px!important;
+  padding:0 12px!important;
+  border-radius:4px!important;
+  border:0!important;
+  background:var(--s3)!important;
+  color:var(--t1)!important;
+  box-shadow:none!important;
+  font-size:13px!important;
+  font-weight:500!important;
+  transform:none!important;
+}
+.friend-actions button:hover{background:var(--bdh)!important;color:#fff!important;transform:none!important}
+.friend-actions .text-button{background:transparent!important;color:var(--t3)!important}
+.friend-actions .text-button:hover{background:rgba(255,93,108,.12)!important;color:var(--err)!important}
+.friend-actions .primary{background:var(--ok)!important;color:#07130a!important;font-weight:650!important}
+.friend-actions .primary:hover{background:color-mix(in srgb,var(--ok) 80%,#fff)!important;color:#07130a!important}
+@media (hover:none){
+  .friend-actions{opacity:1;pointer-events:auto}
+}
+
+/* --------------------------------------------------------------------------
+   6. Membros — densidade e alinhamento com o cabeçalho
+   -------------------------------------------------------------------------- */
+#members-sidebar.mv2 .member-heading{
+  height:52px!important;
+  min-height:52px!important;
+  padding:0 12px!important;
+  font-size:11px!important;
+  letter-spacing:.02em!important;
+}
+#members-sidebar .mv2-head{padding:14px 8px 4px!important}
+#members-sidebar .mv2-row{
+  min-height:42px!important;
+  padding:4px 8px!important;
+  border-radius:4px!important;
+  transition:background-color var(--rf-fast) linear!important;
+}
+
+/* --------------------------------------------------------------------------
+   7. Modal e popovers — entrada curta, fechar quadrado e sem blur
+   -------------------------------------------------------------------------- */
+#app-dialog.st-dialog{border-radius:12px!important;box-shadow:0 24px 64px rgba(0,0,0,.6)!important}
+#app-dialog[open]{animation:rf-dialog var(--rf-base) var(--rf-ease) both!important}
+#app-dialog.st-dialog #dialog-close{
+  width:32px!important;
+  height:32px!important;
+  min-width:32px!important;
+  min-height:32px!important;
+  max-height:32px!important;
+  padding:0!important;
+  align-self:center;
+  border:0!important;
+  border-radius:8px!important;
+  background:transparent!important;
+  color:var(--t2)!important;
+  box-shadow:none!important;
+  font-size:22px!important;
+  line-height:1!important;
+  display:grid!important;
+  place-items:center;
+  transition:background-color var(--rf-fast) linear,color var(--rf-fast) linear!important;
+}
+#app-dialog.st-dialog #dialog-close:hover{
+  background:rgba(255,255,255,.08)!important;
+  color:var(--t1)!important;
+  transform:none!important;
+}
+#app-dialog.st-dialog #dialog-close:focus-visible{outline:2px solid var(--ac)!important;outline-offset:2px}
+#app-dialog .dialog-header{border-bottom:1px solid var(--bd)!important}
+#app-dialog.st-dialog .dialog-header{padding:12px 18px!important;min-height:60px!important}
+
+@keyframes rf-dialog{
+  from{opacity:0;transform:translateY(6px) scale(.99)}
+  to{opacity:1;transform:none}
+}
+@keyframes rf-pop{
+  from{opacity:0;transform:translateY(-3px) scale(.99)}
+  to{opacity:1;transform:none}
+}
+
+/* --------------------------------------------------------------------------
+   8. Animações decorativas de insígnias: paradas fora do hover/foco
+   (esta era a maior fonte de CPU parada: ~200 animações SVG simultâneas)
+   -------------------------------------------------------------------------- */
+.badge-art .bx-shine,.badge-art .bx-spark,.badge-art .bx-aura,.badge-art .bx-holo-layer,
+.bx-shine,.bx-spark,.bx-aura,.bx-holo-layer{
+  animation-play-state:paused!important;
+}
+:is(#message-list .message,#members-sidebar .member,#members-sidebar .mv2-row,
+.friend-card,.user-panel,.rich-profile,.rp-badges,.pv2,.badge-tip,
+.ps-badge-grid button,.member,.message-meta):hover .badge-art *,
+.badge-art:hover *,
+.ps-badge-grid button:hover .badge-art *,
+.ps-badge-grid button.selected .badge-art *{
+  animation-play-state:running!important;
+}
+@media (prefers-reduced-motion:reduce){
+  .badge-art *,.bx-shine,.bx-spark,.bx-aura,.bx-holo-layer{animation:none!important}
+}
+
+/* --------------------------------------------------------------------------
+   9. Scrollbar e foco — discretos, sem tirar contraste
+   -------------------------------------------------------------------------- */
+*{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.12) transparent}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{
+  background:rgba(255,255,255,.1);
+  border:2px solid transparent;
+  border-radius:4px;
+  background-clip:padding-box;
+}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.18);background-clip:padding-box}
+:focus-visible{outline:2px solid color-mix(in srgb,var(--ac) 75%,#fff 25%)!important;outline-offset:2px}
+
+/* --------------------------------------------------------------------------
+   10. Ajustes de tela pequena (o app desktop é o alvo principal)
+   -------------------------------------------------------------------------- */
+@media (max-width:760px){
+  #message-list.messages{padding:10px 8px 6px!important}
+  #message-list .message{padding-left:8px!important;padding-right:40px!important;gap:10px!important}
+  #message-list .message-grouped::before{left:8px!important;width:36px!important}
+  .message-form-wrap{padding:0 8px 10px!important}
+  .friends-tabs{gap:2px!important}
+  .friends-tab{padding:4px 6px!important;font-size:12.5px!important}
+  #add-friend-form .add-friend-fields{flex-direction:column}
+  #add-friend-form button{width:100%}
+}
+@media (prefers-reduced-motion:reduce){
+  #message-list .message,#message-list .message>.avatar,.channel,#dm-channels .dm-item,
+  .friend-card,.friend-actions,.chat-header input[type=search],#send.send-live{
+    transition:none!important;
+  }
+  #app-dialog[open],#message-list .message-menu .message-actions{animation:none!important}
+}
+
+
+/* --------------------------------------------------------------------------
+   11. Correções de layout observadas no app real
+   -------------------------------------------------------------------------- */
+
+/* O selo de conexão ocupava 30px e quebrava o texto em três linhas no header.
+   O banner de conexão já cobre estados offline/reconectando. */
+.chat-actions #btn-free-setup{display:none!important}
+.chat-header .chat-actions{align-items:center!important}
+.chat-header .chat-actions button{min-height:30px!important;max-height:30px!important}
+
+/* Composer: botões de 32px centrados, sem o emoji legado fora da barra. */
+.emoji-picker-btn{display:none!important}
+.message-form{align-items:center!important}
+.message-form .add-btn,.message-form .icon-btn,#send.send-live{
+  min-height:32px!important;
+  max-height:32px!important;
+  flex:0 0 32px!important;
+}
+.message-form .icon-btn,#send.send-live{min-width:32px!important}
+.message-form #message-input{flex:1 1 auto!important;min-width:0!important}
+.message-form .add-btn{min-width:32px!important}
+
+/* "Adicionar amigo": os campos caíam fora da área visível por falta de wrap. */
+#add-friend-form{flex-wrap:wrap!important;align-items:center!important}
+#add-friend-form .add-friend-fields{flex:1 0 100%!important}
+#add-friend-form input{
+  height:40px!important;
+  min-height:40px!important;
+  max-height:40px!important;
+}
+#add-friend-form button{
+  min-height:40px!important;
+  max-height:40px!important;
+}
+
+/* Painel do usuário: esconde o atalho de bug (não existe no Discord) e
+   devolve espaço para o nome em vez de truncar em "Valle...". */
+#bug-report-btn{display:none!important}
+body #app-view .user-panel .up-btn{
+  width:30px!important;
+  min-width:30px!important;
+  height:30px!important;
+  min-height:30px!important;
+  border-radius:4px!important;
+}
+body #app-view .user-panel .up-profile-trigger{gap:6px!important}
+body #app-view .user-panel .up-name,body #app-view .user-panel .up-handle{max-width:100%!important}
+
+/* Aviso de atualização no tom de toast do Discord, não banner roxo. */
+.update-notice{
+  bottom:82px!important;
+  width:min(420px,calc(100vw - 32px))!important;
+  padding:16px!important;
+  border:1px solid #2b2d31!important;
+  border-radius:8px!important;
+  background:#1e1f22!important;
+  color:#f2f3f5!important;
+  box-shadow:0 8px 24px rgba(0,0,0,.45)!important;
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  gap:8px!important;
+}
+.update-notice p{
+  flex:1 0 100%!important;
+  margin:0 0 4px!important;
+  font-size:14px!important;
+  line-height:1.45!important;
+}
+.update-notice button{
+  min-height:32px!important;
+  margin:0!important;
+  padding:0 12px!important;
+  border:0!important;
+  border-radius:4px!important;
+  background:#4e5058!important;
+  color:#fff!important;
+  font-size:13px!important;
+  font-weight:500!important;
+  transition:background-color 90ms linear!important;
+}
+.update-notice button:first-of-type{background:var(--ac)!important}
+.update-notice button:hover{background:#5d6069!important}
+.update-notice button:first-of-type:hover{background:var(--ac-h)!important}

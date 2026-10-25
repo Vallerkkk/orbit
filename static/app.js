@@ -50,21 +50,6 @@ let composerFrame;
 function resizeComposer() {if(composerFrame)return;composerFrame=requestAnimationFrame(()=>{composerFrame=null;const input=$('message-input');input.style.height='auto';input.style.height=Math.max(26,Math.min(160,input.scrollHeight))+'px';});}
 function insertComposer(text) { const input=$('message-input');input.setRangeText(text,input.selectionStart,input.selectionEnd,'end');input.dispatchEvent(new Event('input',{bubbles:true}));input.focus(); }
 function updateComposer() { 
-const emojiBtn = el('button','emoji-picker-btn','😊');
-emojiBtn.type='button';emojiBtn.title='Emojis';
-emojiBtn.onclick = () => {
-  const emojis = ['😀','😂','❤️','🔥','👍','🎉','😢','😡','🤔','👀'];
-  showDialog('Emojis', box => {
-    const grid = el('div'); grid.style.cssText='display:grid;grid-template-columns:repeat(5,1fr);gap:8px;';
-    for(const e of emojis){
-      const b = button(e, () => { insertComposer(e); $('app-dialog').close(); });
-      b.style.fontSize='22px'; grid.append(b);
-    }
-    box.append(grid);
-  });
-};
-$('message-input')?.parentElement?.prepend(emojiBtn);
-
 $('send').disabled=!navigator.onLine||pendingSends.has(draftKey(selected));resizeComposer(); }
 
 const $ = id => document.getElementById(id);
@@ -251,7 +236,7 @@ function renderChannels() {
 
 const conversationCache = new ConversationCache(), outbox = new MessageOutbox();
 let channelAbort, reconnectTimer, reconnectAttempt = 0, realtimeState = 'idle', latestQueued = false, historyError = '', initialHistory = false;
-let restoring,restoreFrame,lastViewport, scrollFrame, renderFrame, dialogReturnFocus, cacheValidationIds, cacheValidating=false;
+let restoring,restoreFrame,lastViewport, positionTimer, renderFrame, dialogReturnFocus, cacheValidationIds, cacheValidating=false;
 const PAGE_SIZE = 50;
 
 function capturePosition() {
@@ -280,7 +265,7 @@ function saveConversation() {
   conversationCache.save(conversationKey(session.user.id, selected), {messages, oldest, hasMore, scroll: capturePosition(), target: {...selected}});
 }
 function stopConversation() {
-  clearTimeout(reconnectTimer);cancelRestoration(); channelAbort?.abort(); latestQueued = false;
+  clearTimeout(reconnectTimer);clearTimeout(positionTimer);cancelRestoration(); channelAbort?.abort(); latestQueued = false;
   if (subscription) { const previous = subscription; subscription = null; db.removeChannel(previous).catch(() => {}); }
   setRealtimeState('idle');
 }
@@ -291,7 +276,11 @@ function scheduleMessageRender() {
   renderFrame = requestAnimationFrame(() => { renderFrame = null; if (!home && selected?.kind === 'text') renderMessages(lastViewport?.atBottom); });
 }
 $('message-list').addEventListener('scroll', () => {
-  if (!scrollFrame) scrollFrame = requestAnimationFrame(() => { scrollFrame = null; if (!home && selected?.kind === 'text') lastViewport = capturePosition(); });
+  if (home || selected?.kind !== 'text') return;
+  const list = $('message-list');
+  lastViewport = {top: list.scrollTop, atBottom: list.scrollHeight - list.scrollTop - list.clientHeight < 100};
+  clearTimeout(positionTimer);
+  positionTimer = setTimeout(() => { if (!home && selected?.kind === 'text') lastViewport = capturePosition(); }, 140);
 }, {passive: true});
 $('message-list').addEventListener('load', event => { if (event.target instanceof HTMLImageElement && !home && selected?.kind === 'text') restorePosition(lastViewport); }, true);
 
@@ -400,7 +389,7 @@ const messageRows=new Map(),dayDividers=new Map();
 const RENDER_WINDOW=150,renderWindows=new Map();let renderWindow=RENDER_WINDOW;
 function hiddenRenderRows(){if(!session||!selected)return 0;return Math.max(0,messages.size+outbox.rows(session.user.id,selected).length-renderWindow);}
 function expandRenderWindow(){if(!selected||hiddenRenderRows()<=0)return false;renderWindow+=100;renderMessages(false,capturePosition());return true;}
-{let windowTick=0;$('message-list').addEventListener('scroll',()=>{if(windowTick)return;windowTick=requestAnimationFrame(()=>{windowTick=0;const list=$('message-list');if(list.scrollTop<400&&hiddenRenderRows()>0)expandRenderWindow();});},{passive:true});}
+{let windowTimer=0;$('message-list').addEventListener('scroll',()=>{if(home||selected?.kind!=='text')return;clearTimeout(windowTimer);windowTimer=setTimeout(()=>{const list=$('message-list');if(!home&&selected?.kind==='text'&&list.scrollTop<320&&hiddenRenderRows()>0)expandRenderWindow();},180);},{passive:true});}
 let renderedScope='',rowStyleKey='',rowStyleRevision=0;
 
 let typingTimer;
@@ -458,7 +447,7 @@ function renderMessages(scroll = false, position) {
   if(renderedScope!==scope){messageRows.clear();dayDividers.clear();list.replaceChildren();if(renderedScope)renderWindows.set(renderedScope,renderWindow);renderedScope=scope;renderWindow=renderWindows.get(scope)||RENDER_WINDOW;}
   const nodes=[];list.classList.toggle('history-long',messages.size>200);list.setAttribute('aria-busy',String(loading||initialHistory));
   const welcome=list.querySelector('.welcome')||el('div','welcome');
-  if(!welcome.childNodes.length){welcome.append(el('div','welcome-icon','#'),el('h1','',(selected.private?'Sua conversa com ':'Bem-vindo a #')+selected.name),el('p','',selected.private?'Mensagens e chamadas visíveis apenas para vocês dois.':'Um espaço para conversar, compartilhar e estar junto.'));}
+  if(!welcome.childNodes.length){welcome.append(el('div','welcome-icon',selected.private?'◉':'#'),el('h1','',(selected.private?'Sua conversa com ':'Bem-vindo a #')+selected.name),el('p','',selected.private?'Mensagens e chamadas visíveis apenas para vocês dois.':'Um espaço para conversar, compartilhar e estar junto.'));}
   if(initialHistory&&!messages.size){const skeleton=el('div','history-skeleton');skeleton.setAttribute('aria-label','Carregando mensagens');skeleton.setAttribute('role','status');for(let i=0;i<6;i++)skeleton.append(el('div','skeleton-message'));nodes.push(skeleton);}else{nodes.push(welcome);if(!messages.size){let action=welcome.querySelector('button');if(!action){action=button('Escrever a primeira mensagem',()=>$('message-input').focus());welcome.append(action);}}}
   if(historyError){const warning=el('div','history-error');warning.append(el('span','',historyError),button('Tentar novamente',()=>loadMessages(generation,true)));nodes.push(warning);}
   const all=[...messages.values(),...outbox.rows(session.user.id,selected)].filter(m=>!m.thread_root&&(!pinsOnly||m.pinned||m.local_state)).sort((a,b)=>a.created_at.localeCompare(b.created_at)||a.id.localeCompare(b.id));
@@ -1270,12 +1259,25 @@ function showFriends() {
   $('channel-title').textContent='Amigos';$('channel-description').textContent='Sua galera, sempre por perto.';
   syncDmHeader(null);renderFriends();
 }
+function setFriendsFilter(filter) {
+  friendsFilter = filter;
+  document.querySelectorAll('[data-ftab]').forEach(t => t.classList.toggle('active', t.dataset.ftab === filter));
+  renderFriends();
+  if (filter === 'add') $('friend-username').focus();
+}
 function renderFriends() {
+  const addMode = friendsFilter === 'add';
+  $('add-friend-form').hidden = !addMode;
+  $('friends-list').hidden = addMode;
+  $('friend-total').hidden = addMode;
+  if (addMode) return;
   $('friends-list').replaceChildren();
   const accepted=friendships.filter(f=>f.status==='accepted'), pending=friendships.filter(f=>f.status==='pending');
-  $('friend-total').textContent=accepted.length+(accepted.length===1?' amigo':' amigos');
+  const onlineCount=accepted.filter(f=>online.has(f.requester_id===session.user.id?f.recipient_id:f.requester_id)).length;
+  $('friend-total').textContent=accepted.length+(accepted.length===1?' amigo':' amigos')+(onlineCount?' · '+onlineCount+' online':'');
   for(const f of [...pending,...accepted].filter(f=>f.status==='pending'||friendsFilter!=='online'||online.has(f.requester_id===session.user.id?f.recipient_id:f.requester_id))) {
     const p=person(f.requester_id===session.user.id?f.recipient_id:f.requester_id), row=el('article','friend-card');
+    row.classList.toggle('friend-pending',f.status==='pending');
     const avatar=el('span','avatar');setAvatar(avatar,p);
     const info=el('div','friend-info');info.append(el('strong','',p.display_name),el('small','', '@'+p.username+' · '+(f.status==='accepted'?(online.has(p.id)?'Online':'Offline'):(f.recipient_id===session.user.id?'Quer ser seu amigo':'Pedido enviado'))));
     const actions=el('div','friend-actions');row.append(avatar,info,actions);
@@ -1287,7 +1289,7 @@ function renderFriends() {
     }
     $('friends-list').append(row);
   }
-  if(!$('friends-list').children.length){const empty=el('div','empty-state');empty.append(el('p','',friendsFilter==='online'?'Nenhum amigo está online agora.':'As boas conversas começam com um oi.'));empty.append(button(friendsFilter==='online'?'Ver todos os amigos':'Adicionar alguém',()=>{if(friendsFilter==='online'){friendsFilter='all';renderFriends();}else $('friend-username').focus();}));$('friends-list').append(empty);}
+  if(!$('friends-list').children.length){const empty=el('div','empty-state');empty.append(el('p','',friendsFilter==='online'?'Nenhum amigo está online agora.':'As boas conversas começam com um oi.'));empty.append(button(friendsFilter==='online'?'Ver todos os amigos':'Adicionar alguém',()=>setFriendsFilter(friendsFilter==='online'?'all':'add')));$('friends-list').append(empty);}
 }
 async function removeFriend(f){
   showDialog('Remover conexão',container=>{container.append(el('p','','A amizade será removida. O histórico continua disponível, mas novas mensagens e chamadas exigirão uma nova amizade.'));
@@ -1596,7 +1598,7 @@ $('file-input').onchange=async()=>{
 let navigationEpoch=0;
 const communityViews=new Map(),communityNodes=new Map();
 function rememberCommunity(){if(!activeCommunity||!session)return;communityViews.delete(activeCommunity);communityViews.set(activeCommunity,{roles:communityRoleList,memberRoles,members:communityMemberList,emojis:communityEmojiList,emojiUrls:communityEmojiUrls,channels:channels.filter(c=>c.community_id===activeCommunity),lastChannel:selected?.community_id===activeCommunity?selected.id:null,expires:Date.now()+300000});while(communityViews.size>8)communityViews.delete(communityViews.keys().next().value);}
-let communities=[],activeCommunity='00000000-0000-4000-8000-000000000001',siteRoles=[],replyTarget=null,friendsFilter='all',extraSubscription;
+let communities=[],activeCommunity='00000000-0000-4000-8000-000000000001',siteRoles=[],replyTarget=null,friendsFilter='online',extraSubscription;
 const isAdmin=()=>isSiteAdmin(siteRoles,session?.user.id);
 const canEditActiveServer=()=>canEditServer({siteRoles,community:communities.find(c=>c.id===activeCommunity),userId:session?.user.id});
 const managesCommunity=()=>canEditActiveServer();
@@ -1754,9 +1756,8 @@ $('btn-attach').onclick=()=>$('attach-popover').classList.toggle('hidden');
 $('insert-code').onclick=()=>{insertComposer(' `seu código` ');$('message-input').focus();$('attach-popover').classList.add('hidden');};
 let mediaPickerTask;$('btn-emoji').onclick=()=>{$('emoji-popover').classList.add('hidden');if(!mediaPickerTask)mediaPickerTask=import('./media-picker.js').then(m=>m.initMediaPicker({apiFetch,insert:text=>{insertComposer(text);$('message-input').focus();},send:text=>{$('message-input').value=text;$('message-form').requestSubmit();},anchor:$('btn-emoji'),toast})).catch(e=>{mediaPickerTask=null;throw e;});mediaPickerTask.then(p=>p.toggle()).catch(e=>toast(errorText(e)));};
 for(const emoji of ['😀','😂','❤️','👍','🎉','🔥','👀','🚀','🎧','✨','💜','🙌'])$('emoji-grid').append(button(emoji,()=>{insertComposer(emoji);$('emoji-popover').classList.add('hidden');$('message-input').focus();},'emoji-button'));
-$('btn-open-add-friend').onclick=()=>{$('friend-username').focus();};
 document.querySelectorAll('[data-ftab]').forEach(t=>t.classList.toggle('active',t.dataset.ftab===friendsFilter));
-document.querySelectorAll('[data-ftab]').forEach(tab=>tab.onclick=()=>{friendsFilter=tab.dataset.ftab;document.querySelectorAll('[data-ftab]').forEach(t=>t.classList.toggle('active',t===tab));renderFriends();});
+document.querySelectorAll('[data-ftab]').forEach(tab=>tab.onclick=()=>setFriendsFilter(tab.dataset.ftab));
 $('server-header-btn').onclick=()=>$('server-dropdown').classList.toggle('hidden');
 document.querySelectorAll('.category-header').forEach(header=>header.onclick=e=>{if(!e.target.closest('button'))header.parentElement.classList.toggle('collapsed');});
 $('dd-create-channel-btn').onclick=()=>{$('server-dropdown').classList.add('hidden');$('create-channel').click();};

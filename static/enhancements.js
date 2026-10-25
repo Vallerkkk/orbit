@@ -17,7 +17,7 @@ export function initEnhancements(context) {
   let wakeLock, wakeRequest = false, focusedLink;
   let watch,watchTask,watchJoined;
   function loadWatch(){if(!watchTask)watchTask=import('./watch-party.js').then(module=>watch=module.initWatchParty({...context,report:error=>toast(context.errorText(error))})).catch(error=>{watchTask=null;throw error;});return watchTask;}
-  let lastSound = new Map(), searchTimer, searchVersion = 0, historyObserver, remoteSearch = false;
+  let lastSound = new Map(), searchTimer, searchVersion = 0, historyObserver, historyTimer, historyWanted = false, remoteSearch = false;
   const seenActivity = new Set(), typingUsers = new Map();
   const readSetting = (key, fallback) => localStorage.getItem('orbita-' + key) ?? fallback;
   const saveUnread = () => { if (state().session) localStorage.setItem('orbita-unread-' + state().session.user.id, JSON.stringify(unread)); };
@@ -396,8 +396,17 @@ export function initEnhancements(context) {
   const uiObserver=new MutationObserver(records=>{for(const record of records){for(const node of record.addedNodes)if(node instanceof Element)addedRoots.add(node);if(record.target===$('message-list')||$('message-list').contains(record.target))historyDirty=true;}
     if(!accessibilityFrame)accessibilityFrame=requestAnimationFrame(()=>{accessibilityFrame=null;for(const root of addedRoots)if(root.isConnected&&![...addedRoots].some(parent=>parent!==root&&parent.contains(root)))accessibility(root);addedRoots.clear();if(historyDirty){historyDirty=false;observeHistory();updateLatest();}});
   });uiObserver.observe($('app-view'),{childList:true,subtree:true});accessibility();
-  if('IntersectionObserver'in window)historyObserver=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)&&!remoteSearch)context.loadMessages();},{root:$('message-list'),rootMargin:'160px 0px 0px 0px'});
-  function observeHistory(){const more=$('message-list').querySelector('.load-more');if(more!==observedSentinel){historyObserver?.disconnect();observedSentinel=more;if(more)historyObserver?.observe(more);}}
+  function scheduleHistoryLoad(){
+    clearTimeout(historyTimer);
+    if(!historyWanted||remoteSearch)return;
+    historyTimer=setTimeout(()=>{
+      if(!historyWanted||remoteSearch||!$('message-list').querySelector('.load-more'))return;
+      context.loadMessages();
+    },240);
+  }
+  if('IntersectionObserver'in window)historyObserver=new IntersectionObserver(entries=>{historyWanted=entries.some(e=>e.isIntersecting);scheduleHistoryLoad();},{root:$('message-list'),rootMargin:'160px 0px 0px 0px'});
+  $('message-list').addEventListener('scroll',()=>{if(historyWanted)scheduleHistoryLoad();},{passive:true});
+  function observeHistory(){const more=$('message-list').querySelector('.load-more');if(more!==observedSentinel){historyObserver?.disconnect();historyWanted=false;clearTimeout(historyTimer);observedSentinel=more;if(more)historyObserver?.observe(more);}}
   const options=button('Mais opções',()=>showDialog('Sua Órbita',container=>{container.append(button('Mensagens fixadas',()=>{$('app-dialog').close();$('pins-toggle').click();}),button('Buscar mensagens',()=>{$('app-dialog').close();showSearch($('search-messages').value);}),button('GIFs e stickers',showMediaPicker),button('Ouvir juntos',()=>{$('app-dialog').close();return showWatch();}),button('Moderação',showModeration),button('Auditoria',showAudit));preferenceFields(container);}), 'feature-options');
   options.title='Recursos, aparência e moderação';options.setAttribute('aria-label',options.title);document.querySelector('#text-view .chat-actions').append(options);
   document.querySelector('#voice-view .chat-actions').append(button('Ouvir juntos',showWatch,'feature-options'));

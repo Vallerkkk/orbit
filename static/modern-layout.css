@@ -25,7 +25,7 @@ body {
 }
 
 /* Cards e dialogs */
-.dialog, .rich-profile, .card, .message, .sf-card {
+.dialog, .rich-profile, .card, .sf-card {
   background: var(--bg-card) !important;
   border: 1px solid var(--border) !important;
   border-radius: var(--radius) !important;
@@ -35,10 +35,7 @@ body {
 /* Botões */
 button, .rp-action, .soft-button {
   border-radius: var(--radius-sm) !important;
-  transition: background .18s ease, transform .12s ease, box-shadow .18s ease;
-}
-button:hover, .rp-action:hover {
-  transform: translateY(-1px);
+  transition: background-color .16s ease, border-color .16s ease, color .16s ease;
 }
 .primary, .accent, button.primary {
   background: linear-gradient(135deg, var(--accent), var(--accent-soft)) !important;
@@ -58,15 +55,6 @@ input, select, textarea {
 .topbar, .call-bar, header {
   background: var(--bg-elev) !important;
   border-bottom: 1px solid var(--border);
-}
-
-/* Mensagens */
-.message {
-  margin: 6px 0;
-  padding: 10px 12px;
-}
-.message:hover {
-  background: rgba(255,255,255,.03);
 }
 
 /* Feed */
