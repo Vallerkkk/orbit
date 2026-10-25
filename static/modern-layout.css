@@ -1,0 +1,81 @@
+/* Órbita — Novo visual moderno (mantém o logo) */
+:root {
+  --bg: #0f0d14;
+  --bg-elev: #16141e;
+  --bg-card: #1c1926;
+  --border: #2a2635;
+  --text: #f4f1ea;
+  --muted: #9b95a8;
+  --accent: #ff4d9e;
+  --accent-soft: #a855f7;
+  --radius: 14px;
+  --radius-sm: 10px;
+}
+
+body {
+  background: var(--bg) !important;
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Sidebar e painéis */
+.sidebar, .channel-list, .member-list, aside {
+  background: var(--bg-elev) !important;
+  border-right: 1px solid var(--border);
+}
+
+/* Cards e dialogs */
+.dialog, .rich-profile, .card, .message, .sf-card {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+
+/* Botões */
+button, .rp-action, .soft-button {
+  border-radius: var(--radius-sm) !important;
+  transition: background .18s ease, transform .12s ease, box-shadow .18s ease;
+}
+button:hover, .rp-action:hover {
+  transform: translateY(-1px);
+}
+.primary, .accent, button.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-soft)) !important;
+  border: none !important;
+  color: #fff !important;
+}
+
+/* Inputs */
+input, select, textarea {
+  background: #12101a !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-sm) !important;
+  color: var(--text) !important;
+}
+
+/* Top bar / call bar */
+.topbar, .call-bar, header {
+  background: var(--bg-elev) !important;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Mensagens */
+.message {
+  margin: 6px 0;
+  padding: 10px 12px;
+}
+.message:hover {
+  background: rgba(255,255,255,.03);
+}
+
+/* Feed */
+.sf-media, .sf-card {
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* Logo permanece intacto */
+.brand img, .logo, [class*="logo"] {
+  /* não alterar o logo */
+}

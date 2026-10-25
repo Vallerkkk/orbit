@@ -6,26 +6,22 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://psreyaufhrquixfjzuek.supabase.co" crossorigin>
 <title>Órbita — Comunidade, Chat & Voz em Tempo Real</title>
-<link rel="stylesheet" href="/static/dist/style-66be5b65cd0613f2.css">
+<link rel="stylesheet" href="/static/dist/style-12bc4d80368e29aa.css">
 <meta name="theme-color" content="#10101b">
 <link rel="manifest" href="/static/manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="/static/icons/icon.svg">
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 <link rel="stylesheet" href="/static/dist/enhancements-bae842f815459588.css">
-<link rel="stylesheet" href="/static/dist/interface-873e50655c276577.css">
+<link rel="stylesheet" href="/static/dist/interface-c30ad38a9a1b3db8.css">
 <link rel="stylesheet" href="/static/dist/fluency-e8bd643cf9fd04e1.css">
 <link rel="stylesheet" href="/static/dist/call-layout-41217c9121da3858.css">
-<link rel="stylesheet" href="/static/dist/community-ux-f1d2cee68ca44291.css">
-<link rel="stylesheet" href="/static/dist/identity-fd4b34a93e86c63c.css">
-<link rel="stylesheet" href="/static/dist/polish-361ad16353b8aeb6.css">
+<link rel="stylesheet" href="/static/dist/community-ux-a28b5109c4b7b2bc.css">
+<link rel="stylesheet" href="/static/dist/identity-6ebc994080d21c0a.css">
+<link rel="stylesheet" href="/static/dist/polish-f28e37d293e590b4.css">
 <link rel="stylesheet" href="/static/dist/modern-dfbf9772c6bc459c.css">
-<link rel="stylesheet" href="/static/dist/orbita-v2-1e3d698461c75575.css">
-<link rel="stylesheet" href="/static/dist/profile-studio-8d7243dfc3c469e6.css">
-<link rel="stylesheet" href="/static/dist/store-v2-497d86db13d87b1a.css">
-<link rel="stylesheet" href="/static/dist/grafite-5bb1f2793321fb8e.css">
 <link rel="preload" href="/static/vendor/fonts/inter-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/fonts/space-grotesk-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
-<meta name="orbita-version" content="bae430fa4e946127"></head>
+<meta name="orbita-version" content="5b851c89b551d7ff"></head>
 <body>
 <div id="entry-animation" class="entry-animation" role="status" aria-live="polite"><img src="/static/icons/icon.svg" width="72" height="72" alt=""><strong>Entrando na sua Órbita</strong><span>Preparando suas conversas…</span><div class="entry-progress" aria-hidden="true"></div></div>
 
@@ -33,7 +29,7 @@
   <div class="intro"><a class="wordmark" href="/">◉ ÓRBITA<span>BETA</span></a><div><p class="eyebrow">PERTO, DE QUALQUER LUGAR</p><h1>As melhores ideias<br>começam com<br><em>uma conversa.</em></h1><p class="intro-copy">Seu espaço para conversar, criar e estar junto.<br>Texto, voz e vídeo. Tudo na mesma órbita.</p><div class="orbit-art" aria-hidden="true"><div class="planet">◉</div><span class="sat s1">voz</span><span class="sat s2">ideias</span><span class="sat s3">conexões</span></div></div><small>Um espaço compartilhado. Infinitas conversas.</small></div>
   <div class="auth-card"><p class="eyebrow">BEM-VINDO À SUA COMUNIDADE</p><h2 id="auth-title">Bom ter você aqui.</h2><p id="auth-description" class="muted">Entre para encontrar a sua galera.</p>
   <div id="setup" class="notice" hidden>O site está pronto para configurar. Preencha o arquivo <code>.env</code> e execute <code>supabase.sql</code> no Supabase. Consulte o README da pasta.</div>
-  <form id="auth-form"><label id="name-label" hidden>Seu nickname (também será seu @)<input id="display-name" disabled maxlength="24" minlength="3" pattern="[A-Za-z0-9_]{3,24}" autocomplete="nickname" placeholder="Ex.: VallerJP"></label><label>E-mail<input id="email" type="email" autocomplete="email" required placeholder="voce@exemplo.com"></label><label>Senha<input id="password" type="password" minlength="8" autocomplete="current-password" required placeholder="Pelo menos 8 caracteres"></label><button id="forgot-password" class="text-button forgot-link" type="button">Esqueci minha senha</button><button id="auth-submit" class="primary" type="submit">Entrar na Órbita <span>↗</span></button></form>
+  <form id="auth-form"><label id="name-label" hidden>Seu nickname (também será seu @)<input id="display-name" disabled maxlength="24" minlength="3" pattern="[A-Za-z0-9_]{3,24}" autocomplete="nickname" placeholder="Ex.: VallerJP"></label><label>E-mail<input id="email" type="email" autocomplete="email" required placeholder="voce@exemplo.com"></label><label>Senha<input id="password" type="password" minlength="8" autocomplete="current-password" required placeholder="Pelo menos 8 caracteres"></label><button id="auth-submit" class="primary" type="submit">Entrar na Órbita <span>↗</span></button></form>
   <p id="auth-status" role="status" class="muted"></p><button id="toggle-auth" class="text-button">Ainda não tem conta? Cadastre-se</button><p class="fine">Microfone e câmera só são ativados com a sua permissão.</p><a class="auth-install-link" href="/instalar" target="_blank" rel="noopener noreferrer">↓ Baixar / instalar Órbita</a></div>
 </section>
 
@@ -167,14 +163,11 @@
             <rect x="1" y="5" width="15" height="14" rx="2"/>
           </svg>
         </button>
-        <button class="vb-btn" id="vb-screen" title="Compartilhar tela" aria-label="Compartilhar tela">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="4" width="20" height="13" rx="2"/>
-            <path d="M8 21h8M12 17v4M12 13V8M9.5 10.5 12 8l2.5 2.5"/>
-          </svg>
-        </button>
         <button class="vb-btn danger" id="dock-leave" title="Desconectar">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/>
+            <line x1="23" y1="1" x2="1" y2="23"/>
+          </svg>
         </button>
       </div>
     </div>
@@ -202,9 +195,6 @@
             <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
             <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
           </svg>
-        </button>
-        <button class="up-btn" id="bug-report-btn" title="Reportar bug" aria-label="Reportar bug">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2l1.9 1.9M16 2l-1.9 1.9M9 7.1V6a3 3 0 0 1 6 0v1.1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6zM12 20v-9M6.5 9C4.6 8.8 3 7.2 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>
         </button>
         <button class="up-btn" id="settings" title="Configurações">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -263,8 +253,6 @@
           <span class="ch-desc" id="channel-description">Conversa livre do servidor</span>
         </div>
         <div class="chat-actions">
-          <button id="dm-voice-call" class="dm-call-action" type="button" title="Iniciar chamada de voz" aria-label="Iniciar chamada de voz" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg></button>
-          <button id="dm-video-call" class="dm-call-action" type="button" title="Iniciar chamada de vídeo" aria-label="Iniciar chamada de vídeo" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="12" height="12" rx="2"/><path d="m15 10 6-3v10l-6-3"/></svg></button>
           <button id="btn-free-setup" class="free-setup-pill" title="Estado da conexão">
             <span class="conn-dot" id="conn-dot"></span>
             <span id="conn-label">Supabase conectado</span>
@@ -400,14 +388,6 @@
           <span class="ch-desc" id="call-status">Voz, câmera e tela em tempo real</span>
         </div>
         <div class="chat-actions">
-          <button id="call-id" title="ID da chamada (ponte com o Discord)" aria-label="ID da chamada" hidden>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="4" y1="9" x2="20" y2="9"/>
-              <line x1="4" y1="15" x2="20" y2="15"/>
-              <line x1="10" y1="3" x2="8" y2="21"/>
-              <line x1="16" y1="3" x2="14" y2="21"/>
-            </svg>
-          </button>
           <button id="back-to-call" title="Voltar ao chat de texto mantendo a call">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -457,7 +437,10 @@
           🎉
         </button>
         <button class="vc-btn danger" id="leave-call" title="Desconectar">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 9c-3.2 0-6.2.9-8.9 2.6-.7.4-1.1 1.2-1.1 2v2.3c0 .8.8 1.4 1.6 1.2l3.5-.9c.6-.2 1-.7 1-1.3v-1.8c2.5-.8 5.3-.8 7.8 0v1.8c0 .6.4 1.1 1 1.3l3.5.9c.8.2 1.6-.4 1.6-1.2v-2.3c0-.8-.4-1.6-1.1-2C18.2 9.9 15.2 9 12 9z"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/>
+            <line x1="23" y1="1" x2="1" y2="23"/>
+          </svg>
         </button>
       </div>
     </div>
@@ -490,10 +473,10 @@
 
 <div id="toast" role="status" hidden></div>
 <input type="file" id="file-input" hidden>
-
+<button id="private-call" class="private-call primary" hidden>Ligar em particular ↗</button>
 <button id="drive-info" class="drive-shortcut" title="Sobre esta versão">▱</button>
 <span id="friends-badge" hidden></span>
 <button id="back-to-call-dock" hidden>Voltar à chamada</button>
-
+<div id="incoming-call" class="incoming-call" hidden><strong id="incoming-name"></strong><button id="answer-call" class="primary">Atender</button><button id="decline-call" class="danger">Recusar</button></div>
 <dialog id="app-dialog" aria-labelledby="dialog-title"><div class="dialog-header"><h2 id="dialog-title"></h2><button id="dialog-close" aria-label="Fechar">×</button></div><div id="dialog-content"></div></dialog>
-<script type="module" src="/static/dist/app-QGDUP5KA.js"></script></body></html>
+<script type="module" src="/static/dist/app-EO6OMBMJ.js"></script><div id="creators-credit" class="creators-credit"></div></body></html>

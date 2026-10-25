@@ -1,8 +1,6 @@
 // Only uploaded clips use this controller; call tracks and YouTube stay independent.
 const clips=new Map();
-let visibilityObserver,removalObserver,soundBlocked=false,armed=false,gestureAt=0;
-const RATIO=0.55;
-function armUnmute(){if(armed)return;armed=true;const go=()=>{armed=false;gestureAt=Date.now();soundBlocked=false;for(const [video,record] of clips)if(video.dataset.sound==='1'&&!record.userMuted&&visible(video,record)){record.quiet=true;video.muted=false;record.quiet=false;}for(const t of ['pointerdown','keydown','touchstart'])document.removeEventListener(t,go,true);};for(const t of ['pointerdown','keydown','touchstart'])document.addEventListener(t,go,{capture:true,passive:true});}
+let visibilityObserver,removalObserver;
 
 function visible(video,record){
   return !record.disposed&&record.visible&&video.isConnected&&!document.hidden;
@@ -12,21 +10,12 @@ function pause(video,record){
 }
 function start(video,record){
   if(!visible(video,record)||record.manualPause||record.pending||!video.paused||video.ended)return;
-  // Sem fonte ainda (URL assinada chega depois): espera loadedmetadata/canplay para tentar de novo.
-  if(!video.currentSrc&&!video.getAttribute('src'))return;
   record.pending=true;
-  const done=()=>{if(!visible(video,record)||record.manualPause)pause(video,record);};
-  const playMuted=()=>{record.quiet=true;video.muted=true;return Promise.resolve(video.play()).then(()=>{done();if(video.dataset.sound==='1'&&!record.userMuted)armUnmute();});};
-  const finish=()=>{record.pending=false;setTimeout(()=>{record.quiet=false;},0);};
   try{
-    const wantSound=video.dataset.sound==='1'&&!record.userMuted&&!soundBlocked;
-    record.quiet=true;video.muted=!wantSound;
-    Promise.resolve(video.play()).then(done).catch(err=>{
-      if(err?.name==='AbortError')return; // fonte trocada; canplay tenta de novo
-      if(!video.muted){soundBlocked=true;return playMuted();} // som bloqueado: toca mudo já
-      throw err;
-    }).catch(()=>{}).finally(finish);
-  }catch{finish();}
+    Promise.resolve(video.play()).then(()=>{
+      if(!visible(video,record)||record.manualPause)pause(video,record);
+    }).catch(()=>{}).finally(()=>{record.pending=false;});
+  }catch{record.pending=false;}
 }
 async function enlarge(video){
   if(video.requestFullscreen){try{await video.requestFullscreen();return;}catch{}}
@@ -48,10 +37,10 @@ function init(){
   if(removalObserver)return;
   if('IntersectionObserver' in window)visibilityObserver=new IntersectionObserver(entries=>{
     for(const entry of entries){const record=clips.get(entry.target);if(!record)continue;
-      record.visible=entry.isIntersecting&&entry.intersectionRatio>=RATIO;
+      record.visible=entry.isIntersecting&&entry.intersectionRatio>=0.25;
       if(record.visible)start(entry.target,record);else pause(entry.target,record);
     }
-  },{threshold:[0,RATIO,0.8]});
+  },{threshold:[0,0.25]});
   removalObserver=new MutationObserver(()=>{
     for(const [video,record] of clips)if(!video.isConnected)release(video,record);
   });
@@ -66,20 +55,17 @@ function init(){
 export function watchUploadedVideo(video){
   if(clips.has(video))return video;
   init();video.classList.add('uploaded-video');video.controls=true;video.playsInline=true;
-  video.defaultMuted=false;video.muted=true;video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');video.preload='metadata';
+  video.defaultMuted=true;video.muted=true;video.preload='metadata';
   const output=localStorage.getItem('orbita-audio-output');if(output&&video.setSinkId)video.setSinkId(output).catch(()=>{});
   // Calling play only for visible clips avoids background downloads and playback.
-  const record={quiet:true,userMuted:false,visible:!visibilityObserver,manualPause:false,autoPause:false,pending:false,disposed:false,events:[]};
+  const record={visible:!visibilityObserver,manualPause:false,autoPause:false,pending:false,disposed:false,events:[]};
   record.events=[
     ['loadeddata',()=>{expandButton(video,record);start(video,record);}],
-    ['loadedmetadata',()=>start(video,record)],
-    ['canplay',()=>start(video,record)],
     ['play',()=>{record.manualPause=false;if(!visible(video,record))pause(video,record);}],
-    ['volumechange',()=>{if(!record.quiet&&!record.pending&&navigator.userActivation?.isActive!==false)record.userMuted=video.muted;}],
-    ['pause',()=>{if(record.autoPause)record.autoPause=false;else if(Date.now()-gestureAt<600&&visible(video,record)){record.quiet=true;video.muted=false;video.play().catch(()=>{}).finally(()=>{record.quiet=false;});}else if(visible(video,record)&&video.getClientRects().length)record.manualPause=true;}],
+    ['pause',()=>{if(record.autoPause)record.autoPause=false;else if(visible(video,record)&&video.getClientRects().length)record.manualPause=true;}],
   ];
-  setTimeout(()=>{if(!record.pending)record.quiet=false;},0);clips.set(video,record);for(const [name,handler] of record.events)video.addEventListener(name,handler);
-  if(visibilityObserver)visibilityObserver.observe(video);
+  clips.set(video,record);for(const [name,handler] of record.events)video.addEventListener(name,handler);
+  if(visibilityObserver)visibilityObserver.observe(video);else video.addEventListener('canplay',()=>start(video,record),{once:true});
   return video;
 }
 

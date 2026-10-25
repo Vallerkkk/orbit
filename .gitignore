@@ -13,16 +13,3 @@ supabase/.temp/
 
 static/dist/meta.json
 npm-debug.log
-artifacts/
-work-*.log
-work-*.err
-
-# Evite publicar credenciais
-.env.*
-!.env.example
-*.pem
-*.key
-secrets.json
-
-# Ambiente local da ponte Discord
-.venv-bridge/

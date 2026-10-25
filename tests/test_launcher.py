@@ -19,16 +19,3 @@ class LauncherTests(unittest.TestCase):
                 self.assertEqual(response.status_code,302)
                 self.assertEqual(response.headers['location'],'https://github.com/Vallerkkk/calldojoao/releases/download/v1.0.2/'+asset)
                 self.assertIn('no-store',response.headers['cache-control'])
-
-    def test_android_apk_and_asset_links(self):
-        with TestClient(app.app) as client:
-            r=client.get('/baixar/Orbita.apk')
-            self.assertEqual(r.status_code,200)
-            self.assertEqual(r.headers['content-type'],'application/vnd.android.package-archive')
-            self.assertTrue(r.content.startswith(b'PK'))
-            links=client.get('/.well-known/assetlinks.json').json()
-            self.assertEqual(links[0]['target']['package_name'],'app.orbita.mobile')
-            self.assertEqual(len(links[0]['target']['sha256_cert_fingerprints'][0]),95)
-            page=client.get('/instalar').text
-            self.assertIn('/baixar/Orbita.apk',page)
-            self.assertIn('Adicionar à Tela de Início',page)
