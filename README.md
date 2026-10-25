@@ -14,6 +14,13 @@ Os arquivos ficam em um bucket privado do Supabase e respeitam o acesso ao canal
 
 O Render publica a branch `main` usando `render.yaml`. Configure no Render as variáveis `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `LIVEKIT_URL`, `LIVEKIT_API_KEY` e `LIVEKIT_API_SECRET`. Não publique o arquivo `.env` nem use chaves secretas no navegador.
 
+Assistente Lula (opcional):
+- `FLATKEY_API_KEY`: chave da Flatkey (`https://router.flatkey.ai`). Sem ela, o Lula responde 503.
+- `FLATKEY_MODEL`: modelo usado; o padrão é `MiniMax-H3`.
+- `STT_API_KEY` e `STT_MODEL`: chave Groq e modelo (padrão `whisper-large-v3-turbo`) para transcrever a voz no app de PC/Electron, onde o reconhecimento de voz do navegador não funciona. A chave Flatkey não substitui a de transcrição. O áudio é só encaminhado ao provedor e não fica guardado.
+
+Depois de salvar as variáveis, faça um novo deploy e confira em `/api/ai/status` quais serviços aparecem como configurados. Chaves nunca entram no repositório: se alguma já foi commitada, gere uma nova no provedor e revogue a antiga.
+
 Em um projeto Supabase novo, execute uma vez o `supabase.sql` gerado. Em projetos existentes, aplique somente migrações ainda pendentes de `supabase/migrations/`, conferindo o histórico remoto. Não reaplique o baseline ou o arquivo completo em produção. As credenciais e chaves secretas devem ficar nas variáveis de ambiente do Render.
 
 ## Desenvolvimento local
