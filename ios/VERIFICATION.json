@@ -8,8 +8,8 @@
   "ui_test_methods_present": 2,
   "checks": [
     "OpenStep project parsed; all object IDs unique",
-    "85 Xcode objects have valid references",
-    "All 19 Swift source files referenced once",
+    "109 Xcode objects have valid references",
+    "All 22 Swift source files referenced once",
     "App, unit tests and UI tests have isolated build phases",
     "Shared schemes and workspace XML parsed",
     "Info and privacy plists parsed; no ATS bypass or unrelated background modes",

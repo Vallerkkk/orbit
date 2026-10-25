@@ -142,6 +142,20 @@ final class APIClient {
         return try JSONDecoder().decode(JoinTicket.self, from: data)
     }
 
+    /// Busca de GIFs e figurinhas pelo mesmo endpoint do site. Sem texto, mostra os em alta.
+    func mediaSearch(kind: String, query: String) async throws -> MediaSearchReply {
+        var items = [URLQueryItem(name: "type", value: kind)]
+        let path: String
+        if query.isEmpty {
+            path = "api/media/trending"
+        } else {
+            path = "api/media/search"
+            items.append(.init(name: "q", value: String(query.prefix(50))))
+        }
+        let data = try await request(path: path, query: items, origin: Self.origin)
+        return try JSONDecoder().decode(MediaSearchReply.self, from: data)
+    }
+
     func registerIOSPushToken(_ token: String) async throws {
         struct Body: Encodable { let deviceToken: String }
         try await mutateAPI("api/ios/push/subscribe", body: Body(deviceToken: token), method: "POST")

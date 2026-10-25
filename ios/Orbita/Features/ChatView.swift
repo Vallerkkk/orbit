@@ -23,6 +23,9 @@ struct ChatView: View {
     @State private var pendingAttachment: (name: String, type: String, data: Data)?
     @State private var uploading = false
     @State private var showingPoll = false
+    @State private var showingMedia = false
+    @State private var showingSearch = false
+    @State private var emojiFor: Message?
     @State private var poll: MessagePoll?
     @FocusState private var composing: Bool
 
@@ -62,7 +65,8 @@ struct ChatView: View {
                                        reactionTapped: { emoji in
                                            guard let user = app.userId, !app.isDemo else { return }
                                            Task { await store.react(message, emoji: emoji, user: user) }
-                                       })
+                                       },
+                                       moreReactionsTapped: { emojiFor = message })
                                 .padding(.horizontal, 16).id(message.id)
                                 .contextMenu {
                                     if !app.isDemo { Button("Responder", systemImage: "arrowshape.turn.up.left") {
@@ -131,6 +135,12 @@ struct ChatView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
+                Button { showingSearch = true } label: {
+                    Image(systemName: "magnifyingglass").frame(minWidth: 44, minHeight: 44)
+                }
+                .accessibilityLabel("Buscar nas mensagens")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
                 if destination.isDirect {
                     Button { lobby = true } label: {
                         Image(systemName: "phone").frame(minWidth: 44, minHeight: 44)
@@ -164,6 +174,21 @@ struct ChatView: View {
             PollComposer { value in
                 poll = value
                 showingPoll = false
+            }
+        }
+        .sheet(isPresented: $showingMedia) {
+            if let api = app.api {
+                MediaPicker(api: api) { token in sendMedia(token) }
+            }
+        }
+        .sheet(isPresented: $showingSearch) {
+            ChatSearchView(messages: store.messages) { app.directory.profiles[$0]?.displayName ?? "Participante" }
+        }
+        .sheet(item: $emojiFor) { message in
+            EmojiGrid { emoji in
+                emojiFor = nil
+                guard let user = app.userId, !app.isDemo else { return }
+                Task { await store.react(message, emoji: emoji, user: user) }
             }
         }
         .onChange(of: photoItem) { _, item in
@@ -243,6 +268,21 @@ struct ChatView: View {
                 .frame(minHeight: 48)
                 .background(Orbit.raised, in: RoundedRectangle(cornerRadius: 14))
             }
+            if !mentionSuggestions.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(mentionSuggestions) { profile in
+                            Button { completeMention(profile) } label: {
+                                Text("@\(profile.username ?? "")").font(.caption.weight(.semibold))
+                                    .padding(.horizontal, 12).frame(minHeight: 36)
+                                    .background(Orbit.raised, in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Mencionar \(profile.displayName)")
+                        }
+                    }
+                }
+            }
             HStack(alignment: .bottom, spacing: 10) {
                 PhotosPicker(selection: $photoItem, matching: .any(of: [.images, .videos])) {
                     Image(systemName: uploading ? "arrow.triangle.2.circlepath" : "plus")
@@ -251,6 +291,12 @@ struct ChatView: View {
                 }
                 .disabled(app.isDemo || store.sending || uploading)
                 .accessibilityLabel("Adicionar foto ou vídeo")
+                Button { showingMedia = true } label: {
+                    Text("GIF").font(.caption.bold()).frame(width: 44, height: 44)
+                        .background(Orbit.raised, in: Circle())
+                }
+                .disabled(app.isDemo || store.sending || uploading || app.api == nil)
+                .accessibilityLabel("Enviar GIF ou figurinha")
                 Button { showingPoll = true } label: {
                     Image(systemName: "chart.bar.doc.horizontal")
                         .font(.subheadline).frame(width: 44, height: 44)
@@ -329,6 +375,35 @@ struct ChatView: View {
                 app.drafts[destination.draftKey] = draft
                 scrollRequest = UUID()
             }
+        }
+    }
+
+    /// Quem você menciona: o trecho depois do último "@" (a palavra que está sendo digitada).
+    private var mentionQuery: String? {
+        guard !app.isDemo,
+              let last = draft.components(separatedBy: .whitespacesAndNewlines).last,
+              last.hasPrefix("@"), last.count <= 25 else { return nil }
+        return String(last.dropFirst())
+    }
+
+    /// Só perfis já carregados na sessão (amigos, DMs e membros que apareceram na lista).
+    private var mentionSuggestions: [Profile] {
+        guard let partial = mentionQuery?.lowercased() else { return [] }
+        return Array(app.directory.profiles.values
+            .filter { $0.username != nil && $0.id != app.userId && ($0.username ?? "").lowercased().hasPrefix(partial) }
+            .sorted { ($0.username ?? "") < ($1.username ?? "") }
+            .prefix(6))
+    }
+
+    private func completeMention(_ profile: Profile) {
+        guard let username = profile.username, let range = draft.range(of: "@", options: .backwards) else { return }
+        draft.replaceSubrange(range.lowerBound..., with: "@\(username) ")
+    }
+
+    private func sendMedia(_ token: String) {
+        guard let user = app.userId, !app.isDemo else { return }
+        Task {
+            if await store.send(token, author: user) { scrollRequest = UUID() }
         }
     }
 
@@ -435,6 +510,7 @@ private struct MessageRow: View {
     let repliedMessage: Message?
     let attachmentTapped: (Attachment) -> Void
     let reactionTapped: (String) -> Void
+    let moreReactionsTapped: () -> Void
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             if own { Spacer(minLength: 32) }
@@ -453,7 +529,11 @@ private struct MessageRow: View {
                             .font(.caption).foregroundStyle(.secondary).lineLimit(2)
                     }.fixedSize(horizontal: false, vertical: true)
                 }
-                Text(message.content).font(.body).textSelection(.enabled)
+                if let media = ChatMedia.parse(message.content) {
+                    MediaBubble(media: media)
+                } else {
+                    Text(message.content).font(.body).textSelection(.enabled)
+                }
                 if message.pinned || message.editedAt != nil {
                     HStack(spacing: 8) {
                         if message.pinned { Label("Fixada", systemImage: "pin.fill") }
@@ -493,6 +573,13 @@ private struct MessageRow: View {
                     }
                 }
                 HStack(spacing: 6) {
+                    Button { moreReactionsTapped() } label: {
+                        Image(systemName: "face.smiling").font(.caption)
+                            .padding(.horizontal, 8).padding(.vertical, 5)
+                            .background(Orbit.raised, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Mais reações")
                     ForEach(["👍", "❤️", "😂", "🎉", "🔥", "👀"], id: \.self) { emoji in
                         let count = message.reactions?.filter { $0.emoji == emoji }.count ?? 0
                         Button { reactionTapped(emoji) } label: {

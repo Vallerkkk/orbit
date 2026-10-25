@@ -86,7 +86,8 @@ def main():
     assert len(swift_refs) == len(set(swift_refs))
     passed.append(f"All {len(actual)} Swift source files referenced once")
     targets = [value for value in objects.values() if value["isa"] == "PBXNativeTarget"]
-    assert {value["name"] for value in targets} == {"Orbita", "OrbitaTests", "OrbitaUITests"}
+    # Extensão de broadcast (tela) é um target próprio desde a v2.1.
+    assert {value["name"] for value in targets} == {"Orbita", "OrbitaTests", "OrbitaUITests", "BroadcastExtension"}
     for target in targets:
         sources = [objects[phase] for phase in target["buildPhases"]
                    if objects[phase]["isa"] == "PBXSourcesBuildPhase"]
@@ -107,7 +108,8 @@ def main():
     info = plistlib.loads((ROOT / "Orbita/Resources/Info.plist").read_bytes())
     privacy = plistlib.loads((ROOT / "Orbita/Resources/PrivacyInfo.xcprivacy").read_bytes())
     assert info["NSCameraUsageDescription"] and info["NSMicrophoneUsageDescription"]
-    assert info["UIBackgroundModes"] == ["audio"]
+    # remote-notification: push (APNs) chega com o app em segundo plano.
+    assert set(info["UIBackgroundModes"]) == {"audio", "remote-notification"}
     assert not info.get("NSAppTransportSecurity", {}).get("NSAllowsArbitraryLoads", False)
     assert privacy["NSPrivacyTracking"] is False
     assert privacy["NSPrivacyAccessedAPITypes"][0]["NSPrivacyAccessedAPITypeReasons"] == ["CA92.1"]
