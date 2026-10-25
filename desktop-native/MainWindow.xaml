@@ -1,0 +1,152 @@
+<Window x:Class="Orbita.Desktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="Órbita"
+        Width="1280"
+        Height="820"
+        MinWidth="860"
+        MinHeight="560"
+        Background="{StaticResource BgBrush}"
+        Foreground="{StaticResource TextBrush}"
+        FontFamily="Segoe UI Variable Text, Segoe UI"
+        Icon="Assets/icon.ico"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display">
+
+    <Grid x:Name="MainGrid">
+        <wv2:WebView2 x:Name="Browser" Visibility="Collapsed" AllowExternalDrop="True" />
+
+        <Grid x:Name="LoadingLayer">
+            <Grid.Background>
+                <RadialGradientBrush Center="0.5,0.36" GradientOrigin="0.5,0.36" RadiusX="0.78" RadiusY="0.78">
+                    <GradientStop Color="#141A2B" Offset="0" />
+                    <GradientStop Color="#0B0C0F" Offset="1" />
+                </RadialGradientBrush>
+            </Grid.Background>
+
+            <StackPanel Width="430"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                <Image Source="Assets/icon.png"
+                       Width="88"
+                       Height="88"
+                       Margin="0,0,0,22"
+                       HorizontalAlignment="Center"
+                       RenderOptions.BitmapScalingMode="HighQuality" />
+
+                <TextBlock Text="ÓRBITA"
+                           FontSize="26"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center" />
+
+                <TextBlock x:Name="LoadingText"
+                           Text="Conectando à sua comunidade…"
+                           Margin="0,12,0,0"
+                           FontSize="13.5"
+                           Foreground="{StaticResource MutedBrush}"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap" />
+
+                <Grid Width="240" Height="3" Margin="0,26,0,0" ClipToBounds="True" HorizontalAlignment="Center">
+                    <Border Background="#1B1E25" CornerRadius="2" />
+                    <Border x:Name="LoadingPulse"
+                            Width="82"
+                            HorizontalAlignment="Left"
+                            Background="{StaticResource AccentBrush}"
+                            CornerRadius="2"
+                            Opacity="0.85">
+                        <Border.RenderTransform>
+                            <TranslateTransform x:Name="LoadingPulseTransform" X="-90" />
+                        </Border.RenderTransform>
+                    </Border>
+                </Grid>
+
+                <TextBlock x:Name="LoadingHint"
+                           Text="A primeira abertura pode levar alguns segundos."
+                           Margin="0,20,0,0"
+                           FontSize="11.5"
+                           Foreground="#6E7480"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+
+            <TextBlock Text="2.0.0"
+                       FontSize="11"
+                       Foreground="#565C68"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Bottom"
+                       Margin="0,0,18,14" />
+        </Grid>
+
+        <Grid x:Name="StatusLayer" Background="{StaticResource BgBrush}" Visibility="Collapsed">
+            <StackPanel Width="520"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                <Border Width="58"
+                        Height="58"
+                        CornerRadius="29"
+                        Background="#171A22"
+                        BorderBrush="#2B303B"
+                        BorderThickness="1"
+                        HorizontalAlignment="Center">
+                    <TextBlock x:Name="StatusGlyph"
+                               Text="!"
+                               FontSize="25"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource AccentBrush}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                </Border>
+
+                <TextBlock x:Name="StatusTitle"
+                           Text="Não foi possível abrir o Órbita"
+                           Margin="0,20,0,0"
+                           FontSize="22"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap" />
+
+                <TextBlock x:Name="StatusMessage"
+                           Text="Verifique sua conexão com a internet e tente novamente."
+                           Margin="0,10,0,0"
+                           FontSize="13.5"
+                           LineHeight="20"
+                           Foreground="{StaticResource MutedBrush}"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap" />
+
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            Margin="0,26,0,0">
+                    <Button x:Name="StatusPrimaryButton"
+                            Style="{StaticResource PrimaryButton}"
+                            Margin="0,0,8,0"
+                            Click="OnStatusPrimaryClick" />
+                    <Button x:Name="StatusSecondaryButton"
+                            Style="{StaticResource BaseButton}"
+                            Click="OnStatusSecondaryClick" />
+                </StackPanel>
+
+                <Button x:Name="StatusSiteButton"
+                        Content="Abrir no navegador"
+                        Style="{StaticResource GhostButton}"
+                        Margin="0,14,0,0"
+                        HorizontalAlignment="Center"
+                        Click="OnStatusSiteClick" />
+            </StackPanel>
+
+            <TextBlock Text="2.0.0"
+                       FontSize="11"
+                       Foreground="#565C68"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Bottom"
+                       Margin="0,0,18,14" />
+        </Grid>
+    </Grid>
+</Window>

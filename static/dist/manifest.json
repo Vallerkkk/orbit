@@ -1,13 +1,13 @@
 {
-  "version": "bae430fa4e946127",
-  "entry": "/static/dist/app-QGDUP5KA.js",
+  "version": "fe36b972beaac603",
+  "entry": "/static/dist/app-53IVBJHO.js",
   "files": [
-    "/static/dist/app-QGDUP5KA.js",
-    "/static/dist/call-layout-41217c9121da3858.css",
+    "/static/dist/app-53IVBJHO.js",
+    "/static/dist/call-layout-382a49a2edc95126.css",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js",
     "/static/dist/chunk-app-diagnostics-2QD3IM5Z.js",
-    "/static/dist/chunk-call-v3-LCTGXI3J.js",
+    "/static/dist/chunk-call-v3-6A7CXYBX.js",
     "/static/dist/chunk-chunk-2STABZ2Z.js",
     "/static/dist/chunk-chunk-3KAWAVGL.js",
     "/static/dist/chunk-chunk-5UINBKID.js",
@@ -35,7 +35,7 @@
     "/static/dist/chunk-telemetry-L3E3VUOP.js",
     "/static/dist/chunk-voice-chat-BHSY2K7F.js",
     "/static/dist/chunk-watch-party-4TP54AYB.js",
-    "/static/dist/chunk-youtube-OAVCNIPK.js",
+    "/static/dist/chunk-youtube-CGQHMSIE.js",
     "/static/dist/community-ux-f1d2cee68ca44291.css",
     "/static/dist/enhancements-bae842f815459588.css",
     "/static/dist/fluency-e8bd643cf9fd04e1.css",
@@ -46,17 +46,17 @@
     "/static/dist/orbita-v2-1e3d698461c75575.css",
     "/static/dist/polish-361ad16353b8aeb6.css",
     "/static/dist/profile-studio-8d7243dfc3c469e6.css",
-    "/static/dist/social-feed-4b3f4d2a773418e0.css",
+    "/static/dist/social-feed-d86ac02d4664ac41.css",
     "/static/dist/store-v2-497d86db13d87b1a.css",
-    "/static/dist/style-66be5b65cd0613f2.css"
+    "/static/dist/style-0c9594aa8ad553c0.css"
   ],
   "css": {
-    "/static/style.css": "/static/dist/style-66be5b65cd0613f2.css",
+    "/static/style.css": "/static/dist/style-0c9594aa8ad553c0.css",
     "/static/enhancements.css": "/static/dist/enhancements-bae842f815459588.css",
     "/static/interface.css": "/static/dist/interface-873e50655c276577.css",
     "/static/fluency.css": "/static/dist/fluency-e8bd643cf9fd04e1.css",
-    "/static/social-feed.css": "/static/dist/social-feed-4b3f4d2a773418e0.css",
-    "/static/call-layout.css": "/static/dist/call-layout-41217c9121da3858.css",
+    "/static/social-feed.css": "/static/dist/social-feed-d86ac02d4664ac41.css",
+    "/static/call-layout.css": "/static/dist/call-layout-382a49a2edc95126.css",
     "/static/community-ux.css": "/static/dist/community-ux-f1d2cee68ca44291.css",
     "/static/identity.css": "/static/dist/identity-fd4b34a93e86c63c.css",
     "/static/polish.css": "/static/dist/polish-361ad16353b8aeb6.css",
@@ -67,12 +67,12 @@
     "/static/grafite.css": "/static/dist/grafite-5bb1f2793321fb8e.css"
   },
   "integrity": {
-    "/static/dist/app-QGDUP5KA.js": "e3e273cf448d7c2400a56d9f479aee7b3150d4b599b9e3ce00387374ce3b074b",
-    "/static/dist/call-layout-41217c9121da3858.css": "41217c9121da385886b24e21b88d59a06c04e575277db89d6c1901b1a99d41da",
+    "/static/dist/app-53IVBJHO.js": "c760a0b0953c4a524372132b1159d00846b16b2e2ea3c2d5b365a0e666e66d2f",
+    "/static/dist/call-layout-382a49a2edc95126.css": "382a49a2edc95126332e30dc572a23f9815a382e166c3e1e4c8628bc24bfc5fe",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js": "20cfee0fc731efe53611da92202bd240b2f9d28e6b3115691ed50fc718851ee0",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js": "db2508c2c9152fbe631806e53dd148bd67a8b3695a0094caa6145d906b978027",
     "/static/dist/chunk-app-diagnostics-2QD3IM5Z.js": "0163a63d4a8d77ec1df314bf7902c62baf6148cef02c8f7770e9f9b7d45cef20",
-    "/static/dist/chunk-call-v3-LCTGXI3J.js": "4c5695c8e011bd9bc079e3faa918a9d3137a1d88ac42dfa1d2543cad26027c03",
+    "/static/dist/chunk-call-v3-6A7CXYBX.js": "149948fdce4dc2cfdeb479bed790d9735934270ef8afe946e4da1aed4f30e97e",
     "/static/dist/chunk-chunk-2STABZ2Z.js": "0f8113c11023e2726cb626b16a04851abf9c1481a0397b89bb5243639b544fb1",
     "/static/dist/chunk-chunk-3KAWAVGL.js": "fb441793310d5ca7c064f259186cd6eb7b9175b62273cfaf30c5b16b63ce27f2",
     "/static/dist/chunk-chunk-5UINBKID.js": "c6c8783733f07aba772f1abd5783b08850cd0c566360a9ed8895b96ee67be6c6",
@@ -100,7 +100,7 @@
     "/static/dist/chunk-telemetry-L3E3VUOP.js": "3132e8830e5589029e82064b1fc2e9c325e2bcaaaf0f50eb9a7cc31f52ddba8c",
     "/static/dist/chunk-voice-chat-BHSY2K7F.js": "ec22cc5db5a13e64232ba19973145824603959f2778ecc8864a429ffca62d1cf",
     "/static/dist/chunk-watch-party-4TP54AYB.js": "f9cc76dabf0c1898d9635fb54dae254fa6e0433d2abf9b8c2eebbb5cdce8e70d",
-    "/static/dist/chunk-youtube-OAVCNIPK.js": "e78eb46bc212101cf110143bce89e0660449b73b18b203f2ea5269a8d757f91f",
+    "/static/dist/chunk-youtube-CGQHMSIE.js": "b8d07b842532c80ca43a212071942e741f1190fe2e8053cb7adcef3dd8b24a8e",
     "/static/dist/community-ux-f1d2cee68ca44291.css": "f1d2cee68ca44291d6840a4c9869d718e48b64f9de9e12b578689eb124b89b01",
     "/static/dist/enhancements-bae842f815459588.css": "bae842f81545958813f23a617dd8b9843815de1fc3e0f0f8ad13d6a0a0ae41f3",
     "/static/dist/fluency-e8bd643cf9fd04e1.css": "e8bd643cf9fd04e1f6d96f9f981948f6be5c4f390becdb2db5c2ee41960774ce",
@@ -111,8 +111,8 @@
     "/static/dist/orbita-v2-1e3d698461c75575.css": "1e3d698461c75575a20b2f23b06676d25f7053da8a24d7eaef36c22973ec501f",
     "/static/dist/polish-361ad16353b8aeb6.css": "361ad16353b8aeb64efb5b0d8a557b676a925406bd381f844e7900777d775c72",
     "/static/dist/profile-studio-8d7243dfc3c469e6.css": "8d7243dfc3c469e6d428e02173919c9dc779fd4301cfd00d00c670c41816a9c5",
-    "/static/dist/social-feed-4b3f4d2a773418e0.css": "4b3f4d2a773418e091aa1d85c724a235dd23e18fbf00f9f5c20a5b5f329ae1d3",
+    "/static/dist/social-feed-d86ac02d4664ac41.css": "d86ac02d4664ac41beb5dbf8fe0564d4b61f08c369c683533aad6588dfa0527d",
     "/static/dist/store-v2-497d86db13d87b1a.css": "497d86db13d87b1a774fbfaa891ed7e6dc97c02b84d11d27ec1bb5adb1bcfe98",
-    "/static/dist/style-66be5b65cd0613f2.css": "66be5b65cd0613f2fab19a08027714234f0160213e49c2844153be0101107064"
+    "/static/dist/style-0c9594aa8ad553c0.css": "0c9594aa8ad553c0bb350e7cb17365035c4cb434967b9d562f5d0d1be9ee4061"
   }
 }

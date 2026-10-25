@@ -258,10 +258,11 @@ function capturePosition() {
   if(restoring?.version===generation)return restoring.position;
   const list = $('message-list'), rect = list.getBoundingClientRect();
   if (!rect.height) return lastViewport || {top: list.scrollTop, atBottom: true};
+  const top = list.scrollTop, atBottom = list.scrollHeight - top - list.clientHeight < 100;
+  if (atBottom) return {top, atBottom: true};
   const hit = document.elementFromPoint(rect.left + Math.min(75, rect.width / 2), rect.top + Math.min(24, rect.height / 2));
   const row = hit?.closest('#message-list .message');
-  return {top: list.scrollTop, atBottom: list.scrollHeight - list.scrollTop - list.clientHeight < 100,
-    anchor: row?.dataset.messageId, offset: row ? row.getBoundingClientRect().top - rect.top : 0};
+  return {top, atBottom, anchor: row?.dataset.messageId, offset: row ? row.getBoundingClientRect().top - rect.top : 0};
 }
 function restorePosition(position) {
   const list=$('message-list'),desired=position||{atBottom:true},job={position:desired,version:generation};

@@ -1,0 +1,26 @@
+ÓRBITA — APLICATIVO PARA WINDOWS (x64)
+
+Requisitos
+- Windows 10 (1809 ou superior) ou Windows 11, 64 bits.
+- Microsoft Edge WebView2 Runtime. Ele já acompanha o Edge atualizado; se estiver ausente, o próprio aplicativo mostra um botão para instalar.
+
+Como usar
+- Extraia a pasta completa e abra Orbita.exe. Não mova apenas o executável.
+- Entre com a mesma conta do site. A sessão fica salva neste computador.
+- Fechar a janela pergunta se você quer continuar na bandeja. Na bandeja, clique com o botão direito para abrir, recarregar, redefinir permissões ou encerrar.
+- Microfone, câmera e notificações são confirmados em um diálogo nativo do aplicativo. O compartilhamento de tela usa o seletor do WebView2.
+- A janela do aplicativo só abre o Órbita. Links externos abrem no navegador após confirmação.
+
+Dados locais
+%LOCALAPPDATA%\OrbitaNative
+- WebView2\ (sessão e cache)
+- settings.json
+- logs\app.log
+
+Para remover o aplicativo, saia pela bandeja, apague a pasta do programa e a pasta acima.
+
+Limites conhecidos
+- Login com provedores externos (Google, Spotify e semelhantes) que exige navegar para fora do Órbita não conclui dentro do aplicativo. Entre com e-mail e senha ou use o site no navegador.
+- Notificações dependem das permissões do Windows e aparecem no nome do aplicativo.
+- Somente Windows x64.
+- Este pacote não possui assinatura digital comercial. O SmartScreen pode avisar sobre aplicativo desconhecido; execute somente arquivos obtidos no repositório oficial.

@@ -30,3 +30,8 @@ secrets.json
 # App nativo (.NET)
 native/**/bin/
 native/**/obj/
+
+# Build do cliente nativo WPF
+desktop-native/bin/
+desktop-native/obj/
+desktop-native/out/
