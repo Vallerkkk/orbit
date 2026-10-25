@@ -247,9 +247,7 @@ install_spotify(app, current_user)
 # ===== IA de Chamadas =====
 from ai_call import (
     is_enabled as ai_enabled,
-    process_audio_chunk,
     get_recent_transcript,
-    generate_opinion,
     generate_answer,
     clear_call,
     add_transcript,

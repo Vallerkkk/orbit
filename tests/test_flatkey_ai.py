@@ -14,6 +14,14 @@ class NvidiaNimAnswerTests(unittest.IsolatedAsyncioTestCase):
                 await generate_answer([], "O que aconteceu?")
         self.assertEqual(error.exception.status_code, 503)
 
+    async def test_unset_key_fails_closed(self):
+        # Sem a variável, não pode haver chave embutida no código como fallback.
+        env = {k: v for k, v in os.environ.items() if k != "FLATKEY_API_KEY"}
+        with patch.dict(os.environ, env, clear=True):
+            with self.assertRaises(HTTPException) as error:
+                await generate_answer([], "O que aconteceu?")
+        self.assertEqual(error.exception.status_code, 503)
+
     async def test_response_uses_nvidia_endpoint_and_context(self):
         class FakeResponse:
             status_code = 200
