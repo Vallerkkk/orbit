@@ -963,7 +963,7 @@ function showQuickOnboarding(){
 }
 
 async function boot(){
-  setTimeout(showQuickOnboarding, 800); {
+  setTimeout(showQuickOnboarding, 800);
   if(booting)return;booting=true;setEntryBusy(true);startupRetry.hidden=true;$('auth-status').textContent='';
   try {
     config=await requestWithDeadline(async signal=>{const response=await fetch('/api/config',{signal});if(!response.ok)throw Error('O servidor está indisponível. Aguarde e tente novamente.');return response.json();},{timeout:30000});
@@ -2510,4 +2510,3 @@ let spotifyApi;function spotify(){return spotifyApi??=createSpotify({session:()=
 if(/^#spotify=/.test(location.hash)){const ok=location.hash==='#spotify=conectado';history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>toast(ok?'Spotify conectado! Ele aparece no seu perfil enquanto você ouve.':'Não foi possível conectar o Spotify.'),1200);}
 
 window.orbitaJoinVoice=id=>joinVoiceChannel(id);import('./call-v3.js').then(m=>m.installCallV3()).catch(()=>{});
-}
