@@ -8,7 +8,12 @@ export function createBugReports({db,session,isAdmin,showDialog,el,button,toast}
     const now=el('p','bug-when','📅 '+fmt(Date.now())+' · enviado com versão, plataforma e tela atual');
     const ta=el('textarea');ta.maxLength=4000;ta.rows=5;ta.placeholder='O que aconteceu? O que você esperava? Como reproduzir?';ta.setAttribute('aria-label','Descrição do bug');
     const list=el('div','bug-files'),pick=el('input');pick.type='file';pick.accept=Object.keys(EXT).join(',');pick.multiple=true;pick.hidden=true;
-    const paint=()=>{list.replaceChildren(...files.map((f,i)=>{const t=el('div','bug-thumb'),u=URL.createObjectURL(f),m=f.type.startsWith('video')?el('video'):el('img');m.src=u;if(m.tagName==='VIDEO'){m.muted=true;m.controls=true;}t.append(m,button('×',()=>{files.splice(i,1);paint();},'bug-x'));t.lastChild.setAttribute('aria-label','Remover anexo');return t;}));};
+    const urls=new Map();
+    // Uma URL de objecto por arquivo: repaints (remover/colar/anexar) recriavam todas elas
+    // e cada uma prendia o buffer original do arquivo até fechar a aba.
+    const freeUrls=()=>{for(const u of urls.values())URL.revokeObjectURL(u);urls.clear();};
+    document.getElementById('app-dialog')?.addEventListener('close',freeUrls,{once:true});
+    const paint=()=>{for(const [f,u]of urls)if(!files.includes(f)){URL.revokeObjectURL(u);urls.delete(f);}list.replaceChildren(...files.map((f,i)=>{const t=el('div','bug-thumb');let u=urls.get(f);if(!u){u=URL.createObjectURL(f);urls.set(f,u);}const m=f.type.startsWith('video')?el('video'):el('img');m.src=u;if(m.tagName==='VIDEO'){m.muted=true;m.controls=true;}t.append(m,button('×',()=>{files.splice(i,1);paint();},'bug-x'));t.lastChild.setAttribute('aria-label','Remover anexo');return t;}));};
     pick.onchange=()=>{for(const f of pick.files){if(!EXT[f.type]){toast('Só imagens ou vídeos.');continue;}if(f.size>MAX){toast(f.name+' passa de 25 MB.');continue;}if(files.length<6)files.push(f);}pick.value='';paint();};
     const add=button('📎 Anexar imagem ou vídeo',()=>pick.click(),'bug-add');
     const send=button('Enviar relatório',async()=>{const text=ta.value.trim();if(text.length<3)return toast('Descreva o bug em poucas palavras.');send.disabled=true;send.textContent='Enviando…';

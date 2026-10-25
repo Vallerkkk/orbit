@@ -780,7 +780,8 @@ body[data-color-mode=light] .st-seg>button[aria-checked=true]{background:#fff;co
 #message-list .message{border-radius:12px;padding-block:6px;transition:background .15s}
 #message-list .message:hover,#message-list .message:focus-within{background:color-mix(in srgb,currentColor 4%,transparent)}
 #message-list .message-content>p,#message-list .message-content .rich-text{font-size:15px;line-height:1.5;max-width:76ch}
-#message-list .message-meta time{font-size:12px;opacity:.7}
+/* Sem opacity: sobre o fundo escuro a hora ficava em 3,6:1, abaixo do mínimo de 4,5:1. */
+#message-list .message-meta time{font-size:12px}
 #message-list{scroll-padding-top:56px;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 22px);mask-image:linear-gradient(to bottom,transparent 0,#000 22px)}
 #message-list .message-menu>summary{opacity:0;transition:opacity .15s}
 #message-list .message:hover .message-menu>summary,#message-list .message:focus-within .message-menu>summary,#message-list .message-menu[open]>summary{opacity:1}

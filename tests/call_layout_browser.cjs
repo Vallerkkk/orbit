@@ -20,11 +20,13 @@ const viaMore=async id=>{await page.locator('#call-more').click();await page.loc
   await page.waitForFunction(()=>[...document.querySelectorAll('.media-tile video')].every(v=>v.readyState>=2));
   assert.equal(await page.locator('.call-grid .participant:visible,.call-grid .media-tile:visible').count(),4);
   const boxes=await page.locator('.call-grid .participant:visible,.call-grid .media-tile:visible').evaluateAll(nodes=>nodes.map(n=>({x:n.offsetLeft,y:n.offsetTop,width:n.offsetWidth,height:n.offsetHeight})));
-  if(!mobile){assert.equal(new Set(boxes.map(n=>n.y)).size,2);assert.equal(new Set(boxes.map(n=>n.x)).size,2);assert.ok(boxes.every(n=>n.width/n.height>1.7&&n.width/n.height<1.85));assert.equal(await page.locator('.voice-stage').evaluate(n=>n.scrollHeight>n.clientHeight+1),false);}
+  // Sem palco (a tela não foi assistida), os quatro tiles dividem a grade em 2×2, todos em 16:9.
+  if(!mobile){assert.equal(await page.locator('.call-grid').getAttribute('data-layout'),'grid');
+   assert.equal(new Set(boxes.map(n=>n.y)).size,2);assert.equal(new Set(boxes.map(n=>n.x)).size,2);assert.ok(boxes.every(n=>n.width/n.height>1.7&&n.width/n.height<1.85));assert.equal(await page.locator('.voice-stage').evaluate(n=>n.scrollHeight>n.clientHeight+1),false);}
   assert.equal(await page.evaluate(()=>document.body.scrollWidth>innerWidth+1),false);
   await page.screenshot({path:path.join(tmp,mobile?'call-layout-mobile.png':'call-layout-desktop.png')});
   for(const id of ['mic','camera','screen','call-navigation','call-invite','call-fullscreen','call-popout','call-soundboard','call-more','vc-react-call','leave-call','back-to-call','mic-options','camera-options','screen-options'])assert.ok(await page.locator('#'+id).getAttribute('aria-label'),id+' needs a name');
-  const close=()=>page.locator('#dialog-close').click();
+  const close=()=>page.locator('#dialog-close').click(),closeMenu=()=>page.keyboard.press('Escape');
   await page.locator('#mic').click();await page.waitForFunction(()=>!window.__qaRoom.localParticipant.isMicrophoneEnabled);await page.locator('#mic').click();await page.waitForFunction(()=>window.__qaRoom.localParticipant.isMicrophoneEnabled);
   await page.locator('#camera').click();assert.equal(await page.evaluate(()=>window.__qaRoom.localParticipant.isCameraEnabled),true);await page.locator('#camera').click();
   if(await page.locator('#screen').isEnabled()){await page.locator('#screen').click();assert.equal(await page.evaluate(()=>window.__qaRoom.localParticipant.isScreenShareEnabled),true);await page.locator('#screen').click();}
@@ -37,11 +39,11 @@ const viaMore=async id=>{await page.locator('#call-more').click();await page.loc
   await viaMore('call-soundboard');await page.getByRole('button',{name:/Fanfarra/}).click();await page.waitForFunction(()=>window.__qaPublished?.some(p=>p.topic==='orbita-sound'));
   await viaMore('connection-info');await page.getByRole('heading',{name:'Conexão da chamada',exact:true}).waitFor();await close();
   await viaMore('call-invite');await page.getByRole('heading',{name:'Convidar pessoas',exact:true}).waitFor();await close();
-  await page.locator(`.media-tile:not(.media-screen) .call-tile-menu`).click();assert.equal(await page.locator('#app-dialog input[type=range]').count(),2);await close();
+  await page.locator(`.media-tile:not(.media-screen) .call-tile-menu`).click();assert.equal(await page.locator('.orb-menu input[type=range]').count(),2);await page.getByRole('slider',{name:'Volume do microfone de Outra pessoa',exact:true}).waitFor();await page.getByRole('slider',{name:'Volume da transmissão de Outra pessoa',exact:true}).waitFor();await closeMenu();
   await page.route('**/voice-action',route=>{const data=route.request().postDataJSON();assert.equal(data.member,OTHER);assert.equal(data.action,'mute');return route.fulfill({json:{ok:true}});});
   await page.evaluate(()=>{window.__qaRoom.orbitaModerator=true;window.__qaRoom.orbitaStage=true;window.__qaRoom.emit('ConnectionQualityChanged');});await page.locator('.media-tile:not(.media-screen) .call-tile-menu').click();
-  for(const name of ['Silenciar','Desconectar','Orador','Plateia'])assert.equal(await page.locator('#app-dialog').getByRole('button',{name,exact:true}).isVisible(),true);
-  await page.locator('#app-dialog').getByRole('button',{name:'Silenciar',exact:true}).click();await page.getByRole('heading',{name:'Confirmar controle de voz',exact:true}).waitFor();const moderationRequest=page.waitForRequest('**/voice-action');await page.locator('#app-dialog').getByRole('button',{name:'Confirmar',exact:true}).click();await moderationRequest;await page.waitForFunction(()=>!document.querySelector('#app-dialog').open);
+  for(const name of ['Silenciar','Desconectar','Orador','Plateia'])assert.equal(await page.locator('.orb-menu').getByRole('menuitem',{name,exact:true}).isVisible(),true);
+  await page.locator('.orb-menu').getByRole('menuitem',{name:'Silenciar',exact:true}).click();await page.getByRole('heading',{name:'Confirmar controle de voz',exact:true}).waitFor();const moderationRequest=page.waitForRequest('**/voice-action');await page.locator('#app-dialog').getByRole('button',{name:'Confirmar',exact:true}).click();await moderationRequest;await page.waitForFunction(()=>!document.querySelector('#app-dialog').open);
   if(!mobile){await viaMore('call-fullscreen');await page.waitForFunction(()=>!!document.fullscreenElement);await viaMore('call-fullscreen');await page.waitForFunction(()=>!document.fullscreenElement);
    await page.locator('.media-tile:not(.media-screen)').hover();await page.locator('.media-tile:not(.media-screen) .expand-video').first().click();await page.waitForFunction(()=>document.fullscreenElement?.classList.contains('media-tile'));await page.evaluate(()=>document.exitFullscreen());}
   // Instrument only the browser window API; verify the actual button dispatches the selected live video.

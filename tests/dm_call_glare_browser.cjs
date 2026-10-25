@@ -47,7 +47,8 @@ async function open(user){
   for(const s of window.__qaSubscriptions.filter(s=>!s.removed))for(const [kind,filter,cb]of s.handlers||[])if(kind==='postgres_changes'&&filter.table==='friendships')cb({eventType:'INSERT'});},{USER,OTHER,convo});
  server.pages[me]=page;return {page,context,joins,errors};
 }
-async function openDm(page){await page.locator('#friends-nav').click();await page.locator('.friend-card').getByRole('button',{name:'Mensagem',exact:true}).click();await page.locator('#dm-voice-call').waitFor({timeout:8000}).catch(async e=>{await page.screenshot({path:'/tmp/opendm-fail.png'});console.error('OPENDM',page===server.pages.A?'A':'B',await page.evaluate(()=>[document.title,document.getElementById('voice-view').hidden,document.getElementById('text-view')?.hidden,location.hash]));throw e;});}
+// a aba padrão é "Online" e as ações do cartão só aparecem ao passar o mouse
+async function openDm(page){await page.locator('#friends-nav').click();await page.locator('[data-ftab=all]').click();await page.locator('.friend-card').hover();await page.locator('.friend-card').getByRole('button',{name:'Mensagem',exact:true}).click();await page.locator('#dm-voice-call').waitFor({timeout:8000}).catch(async e=>{await page.screenshot({path:'/tmp/opendm-fail.png'});console.error('OPENDM',page===server.pages.A?'A':'B',await page.evaluate(()=>[document.title,document.getElementById('voice-view').hidden,document.getElementById('text-view')?.hidden,location.hash]));throw e;});}
 const joinedDm=j=>j.some(u=>u.includes('/api/conversations/'+convo+'/join'));
 (async()=>{
  browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||undefined});

@@ -19,7 +19,7 @@ let browser;
   await page.locator('#dialog-close').click();await menu();await page.locator('#settings').click();
   assert.equal(await page.locator('.profile-edit-card .rp-avatar').first().evaluate(n=>n.getBoundingClientRect().width>=72),true); // estúdio da Configurações v2 usa avatar maior
   assert.equal(await page.locator('#dialog-content input[type=checkbox]').evaluateAll(list=>list.filter(n=>n.offsetParent).every(n=>n.getBoundingClientRect().width<30)),true); // checkboxes saíram do card de perfil na v2
-  await page.locator('#dialog-content').getByText('Aparência',{exact:true}).first().click();const theme=page.getByRole('radiogroup',{name:'Tema'});assert.equal(await theme.getByRole('radio').count(),12); // seletor de tema virou grade de cards
+  await page.getByRole('tab',{name:'Aparência',exact:true}).click();const theme=page.getByRole('radiogroup',{name:'Tema'});await theme.waitFor();assert.equal(await theme.getByRole('radio').count(),12); // seletor de tema virou grade de cards
   const names={cyber:'Cyber Neon',forest:'Floresta',ocean:'Oceano',sunset:'Pôr do Sol',midnight:'Meia-Noite',blood:'Sangue',gold:'Ouro',sakura:'Sakura'};
   for(const [value,name] of Object.entries(names)){await theme.getByRole('radio',{name}).click();assert.equal(await page.locator('body').getAttribute('data-theme'),value);}
   await theme.getByRole('radio',{name:'Ouro'}).click();await page.locator('#dialog-close').click();await page.reload({waitUntil:'networkidle'});await page.locator('#message-list .message').first().waitFor();assert.equal(await page.locator('body').getAttribute('data-theme'),'gold');

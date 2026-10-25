@@ -13,7 +13,7 @@
   --bg-deep:var(--bg);--bg-rail:var(--bg);--bg-sidebar:var(--s1);--bg-main:var(--bg);--bg-elevated:var(--s2);--bg-floating:var(--s2);--bg-input:var(--s2);
   --bg-hover:rgba(255,255,255,.04);--bg-active:var(--s3);
   --accent:var(--ac);--accent-hover:var(--ac-h);--accent-2:var(--ac2);--accent-soft:var(--acs);--accent-glow:var(--ac-glow);--accent-foreground:var(--onac);--aurora:var(--info);
-  --text:var(--t1);--text-dim:var(--t2);--text-mut:var(--t3);
+  --text:var(--t1);--text-dim:var(--t2);--text-mut:var(--t3);--text-muted:var(--t3);
   --online:var(--ok);--idle:var(--warn);--dnd:var(--err);--danger:var(--err);--offline:#7b7f8b;--boost:var(--ac);
   --border:var(--bd);--border-strong:var(--bdh);
   --v2-bg:var(--bg);--v2-panel:var(--s1);--v2-panel-2:var(--s2);--v2-raised:var(--s3);--v2-text:var(--t1);--v2-dim:var(--t2);--v2-mut:var(--t3);
@@ -696,7 +696,6 @@ body.server-themed .main{background-image:radial-gradient(120% 60% at 100% 0%,co
 .user-panel .up-btn.up-pop{animation:upPop .34s cubic-bezier(.3,1.6,.5,1)}
 @keyframes upPop{0%{transform:scale(1)}35%{transform:scale(.86) rotate(-6deg)}65%{transform:scale(1.08) rotate(4deg)}100%{transform:none}}
 @keyframes upSlash{from{width:0}to{width:22px}}
-#call-audio{display:none!important}
 #leave-call svg,#dock-leave svg{transform:rotate(135deg)}
 #leave-call,#dock-leave{border-radius:999px!important;background:linear-gradient(180deg,#f04449,#d42f35)!important;color:#fff!important;box-shadow:0 4px 14px rgba(240,68,73,.35);transition:transform .15s,box-shadow .15s,filter .15s}
 #leave-call:hover,#dock-leave:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 6px 18px rgba(240,68,73,.5)}

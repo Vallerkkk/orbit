@@ -17,7 +17,7 @@ let browser;
  await page.goto(process.env.ORBITA_TEST_URL||'http://127.0.0.1:8766/',{waitUntil:'networkidle'});
  await page.evaluate(id=>document.querySelector(`[data-channel-id="${id}"]`)?.click(),VOICE);
  await page.locator('#voice-view:not([hidden])').waitFor({state:'visible',timeout:10000});
- const toggle=page.locator('#voice-view .chat-actions button:has-text("Astro")');
+ const toggle=page.locator('#voice-view .chat-actions button[aria-controls="astro-panel"]');
  await toggle.waitFor({timeout:10000});
  assert.equal(await toggle.getAttribute('aria-expanded'),'false','botão do Astro começou expandido');
  await toggle.click();

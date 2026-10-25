@@ -6,4 +6,8 @@ const groups={
  quality:['diagnostics_browser.cjs','accessibility_browser.cjs','performance_browser.cjs','social_tools_browser.cjs','oauth_browser.cjs','admin_delete_browser.cjs']
 };
 const selection=process.argv[2],files=selection?groups[selection]:Object.values(groups).flat();if(!files)throw Error('Unknown test group');
-for(const file of files){const location=path.join(__dirname,'../tests',file);if(!require('fs').existsSync(location))throw Error('Missing test: '+file);console.log('Browser test:',file);const result=spawnSync(process.execPath,[location],{stdio:'inherit',env:process.env,timeout:180000});if(result.status!==0)process.exit(result.status||1);}
+// Roda todos os testes e resume as falhas no fim: parar na primeira escondia as regressões seguintes.
+const failed=[];
+for(const file of files){const location=path.join(__dirname,'../tests',file);if(!require('fs').existsSync(location))throw Error('Missing test: '+file);console.log('Browser test:',file);const result=spawnSync(process.execPath,[location],{stdio:'inherit',env:process.env,timeout:180000});if(result.status!==0)failed.push(file+(result.status===null?' (timeout)':''));}
+if(failed.length){console.error('Browser tests failed ('+failed.length+'/'+files.length+'): '+failed.join(', '));process.exit(1);}
+console.log('Browser tests passed: '+files.length);

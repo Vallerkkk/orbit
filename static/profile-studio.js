@@ -7,6 +7,8 @@ installBadgeTooltips();
 import {packVars,fxLayer,styleName,frameAvatar,dressCard} from './appearance-runtime.js';
 import {createStoreV2} from './store-v2.js';
 
+const safeList=raw=>{try{const value=JSON.parse(raw||'[]');return Array.isArray(value)?value:[];}catch{return [];}};
+
 export function initProfileStudio(ctx){
   const {el,button,toast,errorText}=ctx;
   const html=(tag,cls,markup)=>{const n=el(tag,cls);n.innerHTML=markup;return n;};
@@ -87,7 +89,7 @@ export function initProfileStudio(ctx){
   async function openBadges(userId,focus){const own=userId===me().session?.user.id;const s=sheet(own?'Suas insígnias':'Insígnias de '+(ctx.person(userId)?.display_name||'participante'));s.body.style.padding='0';
     const wrap=el('div','ps-badges'),left=el('div','ps-badges-left'),right=el('aside','ps-badges-right');wrap.append(left,right);s.body.append(wrap);left.append(el('p','muted','Carregando insígnias…'));
     const state=await badgeState(userId,true);let pinMode=false,pins=[...(state.showcase||[])];let selected;
-    const seenKey='orbita-badges-seen:'+userId,seen=new Set(JSON.parse(localStorage.getItem(seenKey)||'[]'));
+    const seenKey='orbita-badges-seen:'+userId,seen=new Set(safeList(localStorage.getItem(seenKey)));
     const draw=()=>{left.replaceChildren();if(state.error)left.append(el('p','muted',state.error+' As insígnias aparecem assim que a migration for aplicada.'));
       const unlocked=BADGES.filter(b=>levelOf(state,b)>0),locked=BADGES.filter(b=>!levelOf(state,b)&&!(b.exclusive&&b.exclusive!=='admin'&&!own));
       const head=el('div','ps-chip-row');head.append(el('span','ps-pill',`${unlocked.length} de ${BADGES.length} desbloqueadas`));if(state.admin)head.append(el('span','ps-pill','ADM global: tudo no nível máximo'));

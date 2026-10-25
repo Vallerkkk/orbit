@@ -77,7 +77,7 @@ const emit=(page,table,eventType,row)=>page.evaluate(({table,eventType,row})=>{f
   await page.waitForFunction(id=>window.__qaRpcCalls.some(([n,a])=>n==='call_event_transition'&&a.event===id&&a.next==='declined'),incoming.id);
   assert(await page.locator('#dm-call-card').isHidden());
   // Chamada de saída cancelada pelo autor.
-  if(mobile)await page.locator('.main>div:not([hidden]) .mobile-nav-btn').first().click();await page.locator('#friends-nav').click();await page.locator('.friend-card').getByRole('button',{name:'Mensagem',exact:true}).click();
+  if(mobile)await page.locator('.main>div:not([hidden]) .mobile-nav-btn').first().click();await page.locator('#friends-nav').click();await page.locator('[data-ftab=all]').click();await page.locator('.friend-card').hover();await page.locator('.friend-card').getByRole('button',{name:'Mensagem',exact:true}).click();
   await page.locator('#dm-video-call').click();await page.locator('#dm-call-card[data-mode=outgoing]').waitFor();
   const outgoing=await page.evaluate(()=>window.__qaData.call_events.at(-1));assert.equal(outgoing.kind,'video');
   await page.getByRole('button',{name:'Cancelar chamada'}).click();

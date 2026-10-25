@@ -8,6 +8,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const MONTHS=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const safeJson=text=>{try{return JSON.parse(text);}catch{return null;}};
 export const SKIP=/^(chore|test|tests|refactor|ci|build|docs|style)(\(|:|\b)|^merge\b|^rebuild\b|\bbuild final\b|\bdist\b|service ?worker|\bSW v\d|\bcache\b|deployment instructions|api key|secrets?\b|^testes?\b|^set requested|^document\b|^configure\b|\(n[ãa]o aplicada\)/i;
 export const AREAS=[
   ['chamadas',/\b(chamada|call|v[íi]deo|livekit|tile|ouvir juntos|tela)\b/i],
@@ -49,6 +50,24 @@ export function buildNotes(commits,overrides={},{perCard=4}={}){
   }).filter(r=>r.highlights.length||Object.keys(r.items).length);
   return {generated:true,releases};
 }
+// O git local nem sempre vê tudo que já foi publicado (clone raso, histórico agrupado em
+// drops). Como o JSON é um changelog cumulativo, o que o novo build não conhece chega do
+// arquivo anterior: nothing é apagado, apenas somado.
+export function mergeHistory(notes,previous){
+  const dayOf=r=>String(r.version||'').split('+')[0].replaceAll('.','-');
+  const oldByDay=new Map((previous?.releases||[]).map(r=>[dayOf(r),r]));
+  const combine=(fresh,prev)=>{
+    const items={};
+    for(const src of [fresh.items,prev.items])for(const [k,v] of Object.entries(src||{})){
+      const list=items[k]||=[];for(const t of v)if(!list.includes(t))list.push(t);
+    }
+    const merged=[...new Map([...fresh.highlights,...prev.highlights].map(h=>[h[1],h])).values()];
+    return {version:fresh.version.includes('+')?fresh.version:prev.version,date:fresh.date||prev.date,
+      highlights:merged.slice(0,fresh.highlights.length||4),items};
+  };
+  const releases=notes.releases.map(fresh=>{const prev=oldByDay.get(dayOf(fresh));oldByDay.delete(dayOf(fresh));return prev?combine(fresh,prev):fresh;});
+  return {generated:true,releases:[...releases,...oldByDay.values()].sort((a,b)=>dayOf(b).localeCompare(dayOf(a)))};
+}
 export function readGit(cwd,limit=400){
   const out=execFileSync('git',['log','--no-merges',`-${limit}`,'--date=format-local:%Y-%m-%dT%H:%M','--format=%H%x1f%ad%x1f%s%x1f%b%x1e'],{cwd,encoding:'utf8',env:{...process.env,TZ:'America/Sao_Paulo'},stdio:['ignore','pipe','ignore']});
   return out.split('\x1e').map(r=>r.trim()).filter(Boolean).map(r=>{const [sha,date,subject,body]=r.split('\x1f');return {sha,date,subject,body};});
@@ -57,8 +76,9 @@ export function generate(root){
   const out=path.join(root,'static','release-notes.json'),ovf=path.join(root,'static','changelog-overrides.json');
   const overrides=existsSync(ovf)?JSON.parse(readFileSync(ovf,'utf8')):{};
   let commits=[];try{commits=readGit(root);}catch{}
-  if(commits.length<5&&existsSync(out))return {skipped:true,file:out}; // clone raso: usa o JSON commitado
-  const notes=buildNotes(commits,overrides);const json=JSON.stringify(notes,null,1)+'\n';
+  const previous=existsSync(out)?safeJson(readFileSync(out,'utf8')):null;
+  if(commits.length<5&&previous)return {skipped:true,file:out}; // clone raso: usa o JSON commitado
+  const notes=mergeHistory(buildNotes(commits,overrides),previous);const json=JSON.stringify(notes,null,1)+'\n';
   if(!existsSync(out)||readFileSync(out,'utf8')!==json)writeFileSync(out,json);
   return {skipped:false,file:out,releases:notes.releases.length};
 }

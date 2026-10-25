@@ -88,6 +88,10 @@ export function initEnhancements(context) {
 
   const appSounds=createAppSounds(()=>state().deafened||state().profile?.presence_status==='dnd'||isQuiet(state().session?.user.id));
   const audio=effect=>appSounds.play(effect);
+  // Preferências da caixa "Notificações" (app.js): escritas em orbita-notif-* e lidas aqui,
+  // senão as duas caixas não mudam nada e a pessoa acha que o aviso foi desligado.
+  const notifSound=()=>localStorage.getItem('orbita-notif-sound')!=='off';
+  const deskNotif=()=>localStorage.getItem('orbita-notif-desktop')!=='off';
 
   async function installPWA() {
     if(!('serviceWorker' in navigator))return;
@@ -129,8 +133,8 @@ export function initEnhancements(context) {
   }
   // Boas-vindas recebidas: aviso no app; notificação do sistema só se a aba estiver oculta e não houver push.
   function welcomed(data){const s=state();if(!s.session||!data||data.actor_id===s.session.user.id)return;const text=String(data.text||((data.actor_name||'Alguém')+' te deu boas-vindas na Órbita')).slice(0,140);
-    toast('👋 '+text);if(s.profile?.presence_status==='dnd'||isQuiet(s.session.user.id))return;audio();
-    if(document.hidden&&'Notification' in window&&Notification.permission==='granted'&&!s.config?.pushConfigured){try{const n=new Notification('Boas-vindas · Órbita',{body:text,tag:'orbita-welcome-'+data.actor_id,icon:'/static/icons/icon-192.png'});n.onclick=()=>{window.focus();window.orbitaOpenMembers?.();n.close();};}catch{}}}
+    toast('👋 '+text);if(s.profile?.presence_status==='dnd'||isQuiet(s.session.user.id))return;if(notifSound())audio();
+    if(document.hidden&&deskNotif()&&'Notification' in window&&Notification.permission==='granted'&&!s.config?.pushConfigured){try{const n=new Notification('Boas-vindas · Órbita',{body:text,tag:'orbita-welcome-'+data.actor_id,icon:'/static/icons/icon-192.png'});n.onclick=()=>{window.focus();window.orbitaOpenMembers?.();n.close();};}catch{}}}
   let dispatchTask,retryPush;
   async function dispatchPush() {
     const uid=state().session?.user.id;if(!state().config?.pushConfigured||!uid||dispatchTask)return;
@@ -145,7 +149,7 @@ export function initEnhancements(context) {
     if (!document.hidden && s.selected?.id === data.scope && !s.home) { markRead(); return; }
     const prior = unread[data.scope] || {count:0, seen:new Date().toISOString(), at:Date.now()};
     unread[data.scope] = {...prior, count:Math.min(999, prior.count + 1), at:Date.now()}; saveUnread(); decorateNavigation();
-    if ((data.mentioned || data.private) && s.profile?.presence_status !== 'dnd'&&!isQuiet(s.session.user.id)&&channelNotifies(s.session.user.id,data)) { audio(); if (document.hidden && 'Notification' in window && Notification.permission === 'granted' && !s.config.pushConfigured) {
+    if ((data.mentioned || data.private) && s.profile?.presence_status !== 'dnd'&&!isQuiet(s.session.user.id)&&channelNotifies(s.session.user.id,data)) { if(notifSound())audio(); if (document.hidden && deskNotif() && 'Notification' in window && Notification.permission === 'granted' && !s.config.pushConfigured) {
       const title = data.private ? 'Nova mensagem privada · Órbita' : 'Você foi mencionado · Órbita';
       if (registration) await registration.showNotification(title, {body:'Abra a Órbita para ler.', icon:'/static/icons/icon-192.png', tag:'orbita-' + data.id});
       else if ('Notification' in window) new Notification(title, {tag:'orbita-' + data.id});
@@ -376,9 +380,11 @@ export function initEnhancements(context) {
     document.body.classList.toggle('call-connected',!!state().room);
     syncWakeLock();const s=state();
     if(s.room?.state!=='connected')return;
-    const cards=$('participants').querySelectorAll('.participant');
     const peers=[s.room.localParticipant,...s.room.remoteParticipants.values()];
-    if(!s.callChannel.private&&s.room.orbitaModerator)for(let i=0;i<peers.length;i++){const p=peers[i];if(p.isLocal||cards[i]?.querySelector('.voice-moderation'))continue;const controls=el('div','voice-moderation');controls.append(button('Silenciar',()=>voiceAction(p,'mute'),'tiny-button'),button('Desconectar',()=>voiceAction(p,'kick'),'tiny-button'));if(s.room.orbitaStage)controls.append(button('Orador',()=>voiceAction(p,'speaker'),'tiny-button'),button('Plateia',()=>voiceAction(p,'audience'),'tiny-button'));cards[i]?.append(controls);}
+    if(!s.callChannel.private&&s.room.orbitaModerator)for(const p of peers){if(p.isLocal)continue;
+      // Pelo identity: os cartões nem sempre seguem a ordem de peers, e pelo índice
+      // o botao "Silenciar" de uma pessoa acabava no cartão de outra.
+      const card=$('participants').querySelector('.participant[data-participant-id="'+CSS.escape(p.identity)+'"]');if(!card||card.querySelector('.voice-moderation'))continue;const controls=el('div','voice-moderation');controls.append(button('Silenciar',()=>voiceAction(p,'mute'),'tiny-button'),button('Desconectar',()=>voiceAction(p,'kick'),'tiny-button'));if(s.room.orbitaStage)controls.append(button('Orador',()=>voiceAction(p,'speaker'),'tiny-button'),button('Plateia',()=>voiceAction(p,'audience'),'tiny-button'));card.append(controls);}
   }
   function connected(connected,events,rights){
     connected.orbitaModerator=!!rights.moderator;connected.orbitaStage=!!rights.stage;watchJoined=connected;loadWatch().then(instance=>{if(watchJoined===connected&&state().room===connected)instance.connected(connected,events);}).catch(report);
@@ -447,7 +453,7 @@ export function initEnhancements(context) {
   document.querySelector('#voice-view .chat-actions').append(button('Ouvir juntos',showWatch,'feature-options'));
   const oldSettings=$('settings').onclick;$('settings').onclick=()=>{oldSettings();preferenceFields($('dialog-content'));};
   $('btn-notif-toggle').onclick=()=>enableNotifications().catch(report);
-  const latest=button('↓ Mensagens recentes',()=>{$('message-list').scrollTo({top:$('message-list').scrollHeight,behavior:prefersReducedMotion()?'auto':'smooth'});},'jump-latest');latest.hidden=true;document.querySelector('.message-form-wrap').append(latest);
+  const latest=button('↓ Mensagens recentes',()=>context.scrollToLatest(),'jump-latest');latest.hidden=true;document.querySelector('.message-form-wrap').append(latest);
   function updateLatest(){const list=$('message-list');latest.hidden=list.scrollHeight-list.scrollTop-list.clientHeight<180;}
   $('message-list').addEventListener('scroll',updateLatest,{passive:true});new ResizeObserver(updateLatest).observe($('message-list'));
   document.addEventListener('click',event=>{for(const menu of document.querySelectorAll('.message-menu[open]'))if(!menu.contains(event.target)||event.target.closest('button'))menu.open=false;});

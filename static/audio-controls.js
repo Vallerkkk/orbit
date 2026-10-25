@@ -22,7 +22,7 @@ export function initAudioControls(ctx){
     const prior=tracks.get(track);if(prior?.pending){prior.again=true;return prior.pending;}
     const record=prior||{};tracks.set(track,record);
     record.pending=(async()=>{do{record.again=false;
-      if(!enhanced()){if(record.processor){await track.stopProcessor();record.processor=null;}continue;}
+      if(!enhanced()){if(record.processor){await track.stopProcessor();await record.processor.destroy().catch(()=>{});record.processor=null;}continue;}
       // Processador já ativo: aplica sensibilidade e modo na hora, sem reiniciar a faixa.
       if(record.processor){record.processor.update({sensitivity:sensitivity(),mode:noiseMode(),volume:micVolume()});continue;}
       // O LiveKit chama processor.init() dentro de setProcessor; iniciar antes criava um segundo AudioContext.

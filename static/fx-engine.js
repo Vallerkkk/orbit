@@ -9,10 +9,13 @@ const reduced=()=>prefersReducedMotion();
 const live=new Set();let raf=0,last=0,tick=0;
 const io=typeof IntersectionObserver!=='undefined'?new IntersectionObserver(es=>{for(const e of es){const fx=e.target.__fx;if(fx){fx.visible=e.isIntersecting;if(fx.visible){fx.resize();if(reduced())fx.step(0,2);}}}kick();},{rootMargin:'80px'}):null;
 document.addEventListener('visibilitychange',kick);
-function kick(){if(!raf&&!document.hidden&&[...live].some(f=>f.visible)&&!reduced()){last=performance.now();raf=requestAnimationFrame(loop);}}
+function sweep(){for(const fx of live)if(!fx.canvas.isConnected)fx.destroy();}
+function kick(){sweep();if(!raf&&!document.hidden&&[...live].some(f=>f.visible)&&!reduced()){last=performance.now();raf=requestAnimationFrame(loop);}}
 function loop(now){raf=0;if(reduced()){for(const fx of live)if(fx.visible)fx.step(0,now/1000);return;}const dt=Math.min(.05,(now-last)/1000);last=now;tick++;let any=false;
   for(const fx of live){if(tick%60===0&&!fx.canvas.isConnected){fx.destroy();continue;}if(!fx.visible)continue;any=true;fx.step(dt,now/1000);}
-  if(any&&!document.hidden)raf=requestAnimationFrame(loop);}
+  // Sem varredura no fim do ciclo, um canvas removido do DOM depois que todas as
+  // instâncias saem da tela ficaria preso em `live` para sempre.
+  if(any&&!document.hidden)raf=requestAnimationFrame(loop);else sweep();}
 onMotionPreferenceChange(()=>{
   if(!reduced())return kick();
   if(raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(raf);

@@ -36,7 +36,7 @@ async function enlarge(video){
   large.removeAttribute('id');large.controls=true;large.muted=video.muted;large.currentTime=video.currentTime;
   const sink=localStorage.getItem('orbita-audio-output');if(sink&&large.setSinkId)large.setSinkId(sink).catch(()=>{});
   const playing=!video.paused;video.pause();dialog.append(close,large);document.body.append(dialog);
-  close.onclick=()=>dialog.close();dialog.addEventListener('close',()=>{video.currentTime=large.currentTime;large.pause();dialog.remove();if(playing&&video.isConnected)video.play().catch(()=>{});},{once:true});dialog.showModal();if(playing)large.play().catch(()=>{});close.focus();
+  close.onclick=()=>dialog.close();dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close();});dialog.addEventListener('close',()=>{video.currentTime=large.currentTime;large.pause();dialog.remove();if(playing&&video.isConnected)video.play().catch(()=>{});},{once:true});dialog.showModal();if(playing)large.play().catch(()=>{});close.focus();
 }
 function expandButton(video,record){if(record.expand||!video.isConnected)return;const button=document.createElement('button');button.type='button';button.className='soft-button video-enlarge';button.textContent='Ampliar vídeo';button.setAttribute('aria-label','Ampliar vídeo em tela cheia');button.onclick=()=>enlarge(video);video.after(button);record.expand=button;}
 function release(video,record){
@@ -66,7 +66,9 @@ function init(){
 export function watchUploadedVideo(video){
   if(clips.has(video))return video;
   init();video.classList.add('uploaded-video');video.controls=true;video.playsInline=true;
-  video.defaultMuted=false;video.muted=true;video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');video.preload='metadata';
+  // defaultMuted (e não só video.muted) grava o atributo muted: é ele que autoriza o
+  // autoplay silencioso no Safari/WebView e mantém o clipe mudo se a troca de URL recarregar o elemento.
+  video.defaultMuted=true;video.muted=true;video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');video.preload='metadata';
   const output=localStorage.getItem('orbita-audio-output');if(output&&video.setSinkId)video.setSinkId(output).catch(()=>{});
   // Calling play only for visible clips avoids background downloads and playback.
   const record={quiet:true,userMuted:false,visible:!visibilityObserver,manualPause:false,autoPause:false,pending:false,disposed:false,events:[]};

@@ -18,8 +18,9 @@ export function createSpotify({session,el,button,toast}){
       const open=el('a','sp-open','Abrir no Spotify');open.href=data.url||'https://open.spotify.com';open.target='_blank';open.rel='noopener';box.append(head,row,open);
       const step=()=>{const p=Math.min(data.durationMs,data.progressMs+(Date.now()-data.seenAt));fill.style.width=(data.durationMs?p/data.durationMs*100:0)+'%';a.textContent=mmss(p);};clearInterval(tick);tick=setInterval(()=>{if(!box.isConnected)return stop();step();},1000);step();};
     const poll=async()=>{if(!box.isConnected)return stop();if(!visible||document.hidden)return;try{data=await api('now-playing/'+userId);data.seenAt=Date.now();}catch{data=null;}render();};
-    const stop=()=>{clearInterval(timer);clearInterval(tick);io.disconnect();};
+    const abort=new AbortController();
+    const stop=()=>{clearInterval(timer);clearInterval(tick);io.disconnect();abort.abort();};
     const io=new IntersectionObserver(es=>{const v=es.some(e=>e.isIntersecting);if(v&&!visible){visible=true;poll();}visible=v;});
-    requestAnimationFrame(()=>{io.observe(box.parentElement||box);});timer=setInterval(poll,30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&visible)poll();});return box;}
+    requestAnimationFrame(()=>{io.observe(box.parentElement||box);});timer=setInterval(poll,30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&visible)poll();},{signal:abort.signal});return box;}
   return {settingsCard,block};
 }

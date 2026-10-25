@@ -235,10 +235,13 @@ export function createDmCalls(ctx) {
       for (const row of data) if (row?.event && !(current?.id === row.event.id)) onEvent(row.event, 'INSERT');
     } catch {}
   }
+  // watch() roda a cada sessão estabelecida: um wake por chamada acumularia um
+  // disparador de RPC extra por login, para sempre, no mesmo documento.
+  const wake = () => { if (!document.hidden) poll(); };
+  let watching = false;
   function watch() {
     clearInterval(pollTimer); pollTimer = setInterval(poll, 15000);
-    const wake = () => { if (!document.hidden) poll(); };
-    document.addEventListener('visibilitychange', wake); addEventListener('focus', wake); addEventListener('online', wake);
+    if (!watching) { watching = true; document.addEventListener('visibilitychange', wake); addEventListener('focus', wake); addEventListener('online', wake); }
     poll();
   }
   // Incoming ringing call for this DM (button turns into "Atender").

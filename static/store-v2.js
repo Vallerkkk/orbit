@@ -97,7 +97,8 @@ export function createStoreV2(o){
     s.back.addEventListener('ps-close',()=>{clearInterval(timer);destroyFxIn(s.box);});
 
     // ----- Detalhe -----
-    function detail(item){s.box.querySelector('.sv-detail')?.remove();const p=packOf(item.pack),d=el('div','sv-detail');d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-label',item.name);packVars(d,p);d.style.setProperty('--c3',p.c[2]);d.style.setProperty('--rc',RARITY[item.rarity].color);
+    let closeDetail=null;
+    function detail(item){closeDetail?.();closeDetail=null;const p=packOf(item.pack),d=el('div','sv-detail');d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-label',item.name);packVars(d,p);d.style.setProperty('--c3',p.c[2]);d.style.setProperty('--rc',RARITY[item.rarity].color);
       const panel=el('div','sv-dpanel'),close=button('×',()=>shut(),'ps-close sv-dclose');close.setAttribute('aria-label','Fechar detalhes');
       const left=el('div','sv-dprev'),right=el('div','sv-dinfo');const a={...cleanAppearance(o.mine())};if(item.kind!=='server')a[item.kind]=item.id;
       const av=miniProfile({...emptyA(),frame:a.frame,name_style:a.name_style},{big:true,focus:'frame'});av.classList.add('sv-only-av');
@@ -113,7 +114,7 @@ export function createStoreV2(o){
       right.append(el('h5','','Itens deste pacote'));const list=el('div','sv-plist');for(const i of V2.filter(i=>i.pack===p.id)){const b=button('',()=>detail(i),'sv-pitem'+(i.id===item.id?' current':''));const r=el('span','sv-dotr');r.style.background=RARITY[i.rarity].color;b.append(r,el('strong','',i.name),el('small','',ITEM_KINDS[i.kind]));list.append(b);}right.append(list,el('p','sv-sub','Ao equipar, todo mundo vê a mudança. A validação acontece no servidor.'));
       panel.append(close,left,right);d.append(panel);s.box.append(d);
       const key=e=>{if(e.key==='Escape'){e.stopImmediatePropagation();shut();}};window.addEventListener('keydown',key,true);d.addEventListener('click',e=>{if(e.target===d)shut();});
-      function shut(){destroyFxIn(d);d.remove();window.removeEventListener('keydown',key,true);}setTimeout(()=>eq.focus({preventScroll:true}),0);}
+      function shut(){destroyFxIn(d);d.remove();window.removeEventListener('keydown',key,true);if(closeDetail===shut)closeDetail=null;}closeDetail=shut;setTimeout(()=>eq.focus({preventScroll:true}),0);}
     open.detail=detail;
     const startItem=V2.find(i=>i.id===start);const startCol=COLLECTIONS.find(c=>c.id===start);
     if(start==='fontes')show2('name_style');else if(start==='adm'||start==='decoracoes')show2(start==='adm'?'colecoes':'frame');else if(startCol)show2('colecoes',startCol.id);else if(TABS.some(t=>t[0]===start))show2(start);else show2('destaques');

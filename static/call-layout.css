@@ -56,6 +56,8 @@ body.call-focus.mobile-menu-open .sidebar{display:flex!important;position:fixed;
 #voice-view #mic[aria-pressed=false],#voice-view #deafen[aria-pressed=true]{color:#f68084;background:#452227}
 #voice-view #leave-call{width:64px;background:#da2b40;color:#fff;margin-left:4px;border-radius:12px}
 #voice-view #leave-call:hover{background:#a91e30}
+/* Celular sem compartilhamento de tela: o botão sai da barra em vez de ficar parado. */
+#voice-view #screen.unsupported{display:none!important}
 #voice-view .call-control-group{display:flex;align-items:center;border-radius:9px;background:#1b1b1f;padding:0 2px}
 #voice-view .call-control-group>.call-icon{width:24px;min-width:24px;padding:4px}
 #voice-view .call-control-group>.call-icon svg{width:16px;height:16px}
@@ -113,20 +115,9 @@ body.camera-active #voice-view #camera-switch{min-width:88px;width:auto;padding-
 .media-tile:hover .resize-share { opacity: 1; }
 .media-screen { min-height: 180px; }
 
-/* Grade prioriza compartilhamento de tela */
-#voice-view:has(.media-screen) .media-grid {
-  display: grid !important;
-  grid-template-columns: 2fr 1fr;
-  gap: 8px;
-}
-#voice-view:has(.media-screen) .media-screen {
-  grid-column: 1;
-  grid-row: 1 / span 3;
-  min-height: 280px;
-}
-#voice-view:has(.media-screen) .media-tile:not(.media-screen) {
-  max-height: 140px;
-}
+/* O palco da chamada é montado por call-stage.js em .call-grid; a .media-grid
+   intermediária precisa sumir, senão a tela compartilhada ganha uma grade própria
+   e os tiles ficam de tamanhos e alturas diferentes. */
 
 /* Feedback de quem está falando mais evidente */
 .media-tile.speaking, .participant.speaking {
@@ -145,21 +136,6 @@ body.camera-active #voice-view #camera-switch{min-width:88px;width:auto;padding-
   z-index: 2;
 }
 
-/* Grade prioriza tela compartilhada */
-#voice-view:has(.media-screen) .media-grid {
-  display: grid !important;
-  grid-template-columns: 2fr 1fr;
-  gap: 8px;
-}
-#voice-view:has(.media-screen) .media-screen {
-  grid-column: 1;
-  grid-row: 1 / span 3;
-  min-height: 280px;
-}
-.media-tile.speaking {
-  border-color: #3ba55c !important;
-  box-shadow: 0 0 0 3px rgba(59,165,92,.5), 0 0 24px rgba(59,165,92,.25) !important;
-}
 .sharing-badge {
   position: absolute;
   top: 10px;

@@ -49,7 +49,9 @@ data.messages.push({...last,id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',thread_roo
   if(mobile)await page.locator('#mobile-menu-btn').click();await page.locator('#feed-nav').click();
   await page.locator('#feed-view video').waitFor();await page.locator('#feed-view video').evaluate(v=>v.loop=true);
   await page.waitForFunction(()=>{const v=document.querySelector('#feed-view video');return v.readyState>=2&&!v.paused&&v.currentTime>0;});
-  assert.equal(await page.locator('#feed-view video').evaluate(v=>v.muted),true);
+  // No feed o clipe já toca com som: navegar até aqui é o gesto que o armUnmute espera
+  // (o chat continua mudo; ver a asserção do #message-list acima).
+  assert.equal(await page.locator('#feed-view video').evaluate(v=>v.muted),false);
   assert.equal(await page.locator('#message-list video').evaluate(v=>v.paused),true);
   await page.locator('#feed-view video').evaluate(v=>{window.__qaClip=v;v.muted=false;});
   if(mobile)await page.locator('#feed-view .mobile-nav-btn').click();await page.locator(`[data-channel-id="${TEXT}"]`).first().click();

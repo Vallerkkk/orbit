@@ -320,14 +320,16 @@ body #app-view .user-panel{
 body #app-view .user-panel .up-profile-trigger{border-radius:10px!important;transition:background-color var(--orb-fast) linear!important}
 body #app-view .user-panel .up-profile-trigger:hover{background:rgba(198,178,255,.06)!important}
 body #app-view .user-panel .up-avatar{
-  border-radius:12px!important;
+  border-radius:50%!important;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),0 4px 12px -6px #000!important;
 }
 body #app-view .user-panel .up-avatar .status-dot{border-color:var(--s2)!important}
 body #app-view .user-panel .up-name{font-family:var(--orb-display);font-size:13px!important;font-weight:600!important;letter-spacing:-.01em!important;color:var(--t1)!important}
 body #app-view .user-panel .up-status{font-size:10.5px!important;color:var(--t3)!important}
-body #app-view .user-panel .up-controls{width:100%!important;display:flex!important;align-items:center!important;gap:2px!important}
-body #app-view .user-panel .up-btn{border-radius:9px!important;color:var(--t3)!important;transition:background-color var(--orb-fast) linear,color var(--orb-fast) linear!important}
+/* Na pílula do v2 os controles fecham a mesma linha e o nome usa o espaço que sobra;
+   `width:100%` espremia o gatilho do perfil a zero e sumia com o nickname. */
+body #app-view .user-panel .up-controls{display:flex!important;align-items:center!important;gap:2px!important}
+body #app-view .user-panel .up-btn{border-radius:50%!important;color:var(--t3)!important;transition:background-color var(--orb-fast) linear,color var(--orb-fast) linear!important}
 body #app-view .user-panel .up-btn:hover{background:rgba(198,178,255,.08)!important;color:var(--t1)!important}
 body #app-view .user-panel #logout{color:var(--t3)!important}
 body #app-view .user-panel #logout:hover{color:#ff9aa2!important;background:rgba(255,93,108,.1)!important}
@@ -1585,10 +1587,11 @@ body[data-color-mode=light]{
   --hl:rgba(88,44,160,.03)!important;
   --text:#241c38!important;
   --text-dim:#5a5073!important;
-  --text-mut:#7c7294!important;
+  /* #7c7294 ficava em 3,9:1 sobre o fundo claro dos campos; este tom passa de 4,5:1. */
+  --text-mut:#6b6284!important;
   --t1:#241c38!important;
   --t2:#5a5073!important;
-  --t3:#7c7294!important;
+  --t3:#6b6284!important;
   --ok:#0e9f6e;
   --rf-toolbar:#ffffff;
   --rf-toolbar-border:#e2d9f2;
@@ -1769,6 +1772,9 @@ body[data-color-mode=light] #app-dialog.st-dialog .st-panel>label.field,
 body[data-color-mode=light] #app-dialog.st-dialog .st-panel>div:not(.profile-edit-card),
 body[data-color-mode=light] #app-dialog.st-dialog .st-panel>section,
 body[data-color-mode=light] #app-dialog.st-dialog .st-panel label.st-toggle{background:#fff!important;border-color:var(--sg-b1)!important}
+/* O editor de perfil dentro do diálogo não usa o cartão escuro de style.css, mas herdava o
+   color:#fff dele e sumia no fundo claro; aqui ele volta a seguir o tema. */
+body[data-color-mode=light] #app-dialog.st-dialog .profile-edit-card{color:var(--sg-tx)!important}
 body[data-color-mode=light] #toast{
   background:linear-gradient(160deg,#fff,#faf7ff)!important;
   border-color:var(--bdh)!important;
