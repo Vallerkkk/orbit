@@ -1,0 +1,5 @@
+# Fontes sempre com LF, inclusive no Windows (core.autocrlf=true). Com CRLF na
+# cópia de trabalho, o hash dos arquivos de static/dist deixa de bater com o
+# manifest (scripts/check_build.py) e testes que leem o código-fonte quebram.
+* text=auto eol=lf
+*.bat text eol=crlf

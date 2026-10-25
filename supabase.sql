@@ -3256,3 +3256,144 @@ language sql stable security definer set search_path='' as $$
 $$;
 revoke all on function public.mark_conversation_read(uuid),public.dm_unread_counts() from public,anon;
 grant execute on function public.mark_conversation_read(uuid),public.dm_unread_counts() to authenticated;
+
+-- Migration: 20261024030000_dm_call_glare.sql
+-- One active private call per DM (fixes glare: A and B calling each other at once).
+-- start_dm_call serialises starts per conversation, expires stale rings (35 s) and
+-- returns the existing ringing/accepted call instead of creating a second one.
+update public.call_events set status='missed',ended_at=coalesce(ended_at,now())
+ where status='ringing' and created_at<now()-interval '35 seconds';
+update public.call_events set status='ended',ended_at=coalesce(ended_at,now())
+ where status='accepted' and coalesce(answered_at,created_at)<now()-interval '6 hours';
+-- Any duplicates left from before the guard: keep only the newest active row.
+update public.call_events e set status=case when e.status='ringing' then 'missed' else 'ended' end,ended_at=coalesce(e.ended_at,now())
+ where e.status in('ringing','accepted') and exists(select 1 from public.call_events n
+  where n.conversation_id=e.conversation_id and n.status in('ringing','accepted') and (n.created_at,n.id)>(e.created_at,e.id));
+create unique index if not exists call_events_one_active_per_dm on public.call_events(conversation_id) where status in('ringing','accepted');
+
+create or replace function public.start_dm_call(target uuid,call_kind text default 'voice')
+returns table(event public.call_events,existing boolean,server_now timestamptz)
+language plpgsql security definer set search_path='' as $$
+declare me uuid:=auth.uid();ev public.call_events;
+begin
+ if me is null then raise exception 'Entre para continuar.' using errcode='42501';end if;
+ if call_kind not in('voice','video') then raise exception 'Tipo de chamada inválido.' using errcode='22023';end if;
+ -- Row lock on the conversation makes simultaneous starts resolve to the first one.
+ perform 1 from public.conversations c where c.id=target and me in(c.user_a,c.user_b) for update;
+ if not found then raise exception 'Chamada sem acesso.' using errcode='42501';end if;
+ if not orbita_private.can_call_conversation(target) then raise exception 'Chamada sem acesso.' using errcode='42501';end if;
+ update public.call_events set status='missed',ended_at=now()
+  where conversation_id=target and status='ringing' and created_at<now()-interval '35 seconds';
+ update public.call_events set status='ended',ended_at=now()
+  where conversation_id=target and status='accepted' and coalesce(answered_at,created_at)<now()-interval '6 hours';
+ select e.* into ev from public.call_events e where e.conversation_id=target and e.status in('ringing','accepted') limit 1;
+ if found then return query select ev,true,now();return;end if;
+ insert into public.call_events(conversation_id,caller_id,kind) values(target,me,call_kind) returning * into ev;
+ return query select ev,false,now();
+end $$;
+revoke all on function public.start_dm_call(uuid,text) from public,anon;
+grant execute on function public.start_dm_call(uuid,text) to authenticated;
+
+-- Ringing calls addressed to me (fallback when realtime missed the INSERT, e.g. a
+-- background desktop tab), with the server clock so clients can ignore skew.
+create or replace function public.dm_ringing_calls()
+returns table(event public.call_events,server_now timestamptz)
+language sql stable security definer set search_path='' as $$
+ select e,now() from public.call_events e join public.conversations c on c.id=e.conversation_id
+ where (select auth.uid()) in(c.user_a,c.user_b) and e.caller_id<>(select auth.uid())
+  and e.status='ringing' and e.created_at>now()-interval '30 seconds'
+ order by e.created_at desc limit 3
+$$;
+revoke all on function public.dm_ringing_calls() from public,anon;
+grant execute on function public.dm_ringing_calls() to authenticated;
+
+-- Migration: 20261024100000_community_theme.sql
+-- Tema de servidor (item da Loja) salvo na comunidade, visível para todos os membros.
+-- Quem pode alterar: a policy communities_manage (orbita_private.can_edit_community).
+alter table public.communities add column if not exists theme text check (theme is null or theme ~ '^[a-z0-9-]{1,64}$');
+grant update(theme) on public.communities to authenticated;
+
+-- Migration: 20261024110000_bug_reports.sql
+-- Relatórios de bug: qualquer usuário autenticado envia e lê os seus; ADMs globais leem e mudam o status.
+create sequence if not exists public.bug_report_seq;
+create table if not exists public.bug_reports (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique default ('BUG-' || lpad(nextval('public.bug_report_seq')::text, 4, '0')),
+  reporter_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  description text not null check (char_length(btrim(description)) between 3 and 4000),
+  attachments text[] not null default '{}' check (cardinality(attachments) <= 6),
+  status text not null default 'aberto' check (status in ('aberto','em análise','resolvido','descartado')),
+  app_version text check (char_length(app_version) <= 64),
+  platform text check (char_length(platform) <= 64),
+  user_agent text check (char_length(user_agent) <= 512),
+  route text check (char_length(route) <= 256),
+  created_at timestamptz not null default now()
+);
+create index if not exists bug_reports_reporter_idx on public.bug_reports(reporter_id, created_at desc);
+alter table public.bug_reports enable row level security;
+revoke all on public.bug_reports from anon, authenticated;
+grant select on public.bug_reports to authenticated;
+grant insert (description, attachments, app_version, platform, user_agent, route) on public.bug_reports to authenticated;
+grant update (status) on public.bug_reports to authenticated;
+grant usage on sequence public.bug_report_seq to authenticated;
+create policy bug_reports_insert on public.bug_reports for insert to authenticated
+  with check (reporter_id = (select auth.uid()) and not exists (select 1 from unnest(attachments) a where a !~ ('^bug-reports/' || (select auth.uid())::text || '/[0-9a-f-]{36}\.(jpg|jpeg|png|webp|gif|mp4|webm|mov)$')));
+create policy bug_reports_read on public.bug_reports for select to authenticated
+  using (reporter_id = (select auth.uid()) or (select public.is_site_admin()));
+create policy bug_reports_admin_update on public.bug_reports for update to authenticated
+  using ((select public.is_site_admin())) with check ((select public.is_site_admin()));
+-- Anexos em orbita-files/bug-reports/<uid>/<uuid>.<ext>
+create policy orbita_files_bug_upload on storage.objects for insert to authenticated
+  with check (bucket_id = 'orbita-files' and (storage.foldername(name))[1] = 'bug-reports' and (storage.foldername(name))[2] = (select auth.uid())::text and name ~ '^bug-reports/[0-9a-f-]{36}/[0-9a-f-]{36}\.(jpg|jpeg|png|webp|gif|mp4|webm|mov)$');
+create policy orbita_files_bug_read on storage.objects for select to authenticated
+  using (bucket_id = 'orbita-files' and (storage.foldername(name))[1] = 'bug-reports' and ((storage.foldername(name))[2] = (select auth.uid())::text or (select public.is_site_admin())));
+
+-- Migration: 20261024120000_spotify_connections.sql
+-- Conexões com Spotify: tokens só no servidor. RLS ligada sem policies e sem grants para clientes;
+-- apenas o backend (service role) lê/escreve.
+create table if not exists public.spotify_connections (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  refresh_token text not null,
+  access_token text,
+  expires_at timestamptz,
+  display_name text check (char_length(display_name) <= 80),
+  show_on_profile boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.spotify_connections enable row level security;
+revoke all on public.spotify_connections from anon, authenticated;
+grant select, insert, update, delete on public.spotify_connections to service_role;
+
+-- Migration: 20261024130000_member_welcome_notify.sql
+-- Boas-vindas notificam o membro: aviso em tempo real (in-app) + push (se houver inscrição) e entrada em social_activity.
+create or replace function orbita_private.member_welcome_notify()
+returns trigger language plpgsql security definer set search_path='' as $$
+declare actor record; target record; msg text;
+begin
+ select id,display_name,username into actor from public.profiles where id=new.user_id;
+ select id,presence_status into target from public.profiles where id=new.member_id;
+ if actor.id is null or target.id is null then return new; end if;
+ msg:=coalesce(nullif(btrim(actor.display_name),''),'@'||actor.username,'Alguém')||' te deu boas-vindas na Órbita';
+ perform realtime.send(jsonb_build_object('actor_id',actor.id,'actor_name',coalesce(nullif(btrim(actor.display_name),''),actor.username),'text',msg,'created_at',new.created_at),'welcome','user:'||target.id,true);
+ if coalesce(target.presence_status,'')<>'dnd' and exists(select 1 from public.push_subscriptions where user_id=target.id)
+    and not exists(select 1 from orbita_private.push_jobs j where j.author_id=actor.id and j.recipient_id=target.id and j.payload->>'tag'='orbita-welcome-'||actor.id and j.created_at>now()-interval '1 day') then
+  insert into orbita_private.push_jobs(author_id,recipient_id,payload)
+  values(actor.id,target.id,jsonb_build_object('title','Boas-vindas · Órbita','body',msg,'url','/?members=1','tag','orbita-welcome-'||actor.id));
+ end if;
+ return new;
+end $$;
+revoke all on function orbita_private.member_welcome_notify() from public,anon,authenticated;
+drop trigger if exists member_welcome_notify on public.member_welcomes;
+create trigger member_welcome_notify after insert on public.member_welcomes for each row execute function orbita_private.member_welcome_notify();
+
+create or replace function public.social_activity() returns jsonb language sql stable security invoker set search_path='' as $$
+with events as (
+ select l.user_id actor_id,l.post_id,l.created_at,'like'::text kind from public.social_likes l join public.social_posts p on p.id=l.post_id where p.author_id=auth.uid() and l.user_id<>auth.uid()
+ union all select r.user_id,r.post_id,r.created_at,'repost' from public.social_reposts r join public.social_posts p on p.id=r.post_id where p.author_id=auth.uid() and r.user_id<>auth.uid()
+ union all select r.author_id,r.id,r.created_at,'reply' from public.social_posts r join public.social_posts p on p.id=r.reply_to where p.author_id=auth.uid() and r.author_id<>auth.uid()
+ union all select r.author_id,r.id,r.created_at,'quote' from public.social_posts r join public.social_posts p on p.id=r.quote_id where p.author_id=auth.uid() and r.author_id<>auth.uid()
+ union all select f.follower_id,null::uuid,f.created_at,'follow' from public.social_follows f where f.following_id=auth.uid()
+ union all select w.user_id,null::uuid,w.created_at,'welcome' from public.member_welcomes w where w.member_id=auth.uid() and w.user_id<>auth.uid()
+),page as (select * from events where orbita_private.social_visible(actor_id) order by created_at desc,actor_id limit 50)
+select coalesce(jsonb_agg(to_jsonb(e)||jsonb_build_object('actor',(select jsonb_build_object('id',u.id,'display_name',u.display_name,'username',u.username,'avatar_url',u.avatar_url,'avatar_color',u.avatar_color) from public.profiles u where u.id=e.actor_id)) order by e.created_at desc),'[]'::jsonb) from page e $$;

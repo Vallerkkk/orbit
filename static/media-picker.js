@@ -39,3 +39,6 @@ export function initMediaPicker({apiFetch,insert,send,anchor,toast}){
   document.addEventListener('pointerdown',e=>{if(!root.hidden&&!root.contains(e.target)&&!anchor.contains(e.target))close();});
   return {toggle:()=>root.hidden?open():close(),open,close,select};
 }
+// Windows (Segoe UI Emoji) não tem bandeiras nem emojis recentes e mostra caixas vazias: usa Noto Color Emoji
+// (Google Fonts com unicode-range, baixa só os glifos usados) apenas no seletor e nas reações.
+if(typeof navigator!=='undefined'&&/Windows/i.test(navigator.userAgent)&&!document.getElementById('emoji-font')){const l=document.createElement('link');l.id='emoji-font';l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap';document.head.append(l);document.documentElement.classList.add('emoji-fallback');}

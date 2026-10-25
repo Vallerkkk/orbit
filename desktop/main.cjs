@@ -41,7 +41,9 @@ async function start(){
   protocol.handle('orbita-desktop',localHandler);
   const ses=session.fromPartition('persist:orbita');
   ses.protocol.handle('orbita-desktop',localHandler);
-  mainWindow=new BrowserWindow({title:'Órbita',width:1360,height:900,minWidth:800,minHeight:600,show:false,backgroundColor:'#10101b',icon:path.join(__dirname,'assets/icon.png'),webPreferences:{session:ses,nodeIntegration:false,nodeIntegrationInSubFrames:false,contextIsolation:true,sandbox:true,webSecurity:true,allowRunningInsecureContent:false,webviewTag:false,devTools:!app.isPackaged}});
+  mainWindow=new BrowserWindow({title:'Órbita',frame:false,autoHideMenuBar:true,fullscreen:true,width:1360,height:900,minWidth:800,minHeight:600,show:false,backgroundColor:'#10101b',icon:path.join(__dirname,'assets/icon.png'),webPreferences:{preload:path.join(__dirname,'app-preload.cjs'),session:ses,nodeIntegration:false,nodeIntegrationInSubFrames:false,contextIsolation:true,sandbox:true,webSecurity:true,allowRunningInsecureContent:false,webviewTag:false,backgroundThrottling:false,devTools:!app.isPackaged}});
+  mainWindow.setMenuBarVisibility(false);mainWindow.on('leave-full-screen',()=>{if(!mainWindow.isDestroyed()&&!mainWindow.isMinimized())setTimeout(()=>mainWindow.setFullScreen(true),50);});mainWindow.on('restore',()=>mainWindow.setFullScreen(true));
+  mainWindow.webContents.on('before-input-event',(event,input)=>{if(input.type==='keyDown'&&input.key==='F11'){event.preventDefault();mainWindow.setFullScreen(true);}});
   protectNavigation(mainWindow);
   ses.setPermissionCheckHandler((contents,permission,origin,details)=>{
     if(!isAppURL(origin)||details?.isMainFrame===false)return false;
@@ -92,7 +94,7 @@ async function start(){
   });
   tray=new Tray(nativeImage.createFromPath(path.join(__dirname,'assets/icon.png')).resize({width:16,height:16}));tray.setToolTip('Órbita');tray.on('double-click',showMain);
   tray.setContextMenu(Menu.buildFromTemplate([{label:'Abrir Órbita',click:showMain},{label:'Encerrar aplicativo',click:()=>app.quit()}]));
-  Menu.setApplicationMenu(Menu.buildFromTemplate([{label:'Órbita',submenu:[{label:'Reconectar',accelerator:'CmdOrCtrl+R',click:()=>mainWindow.loadURL(APP_URL).catch(()=>{})},{type:'separator'},{label:'Encerrar aplicativo',accelerator:'Alt+F4',click:()=>app.quit()}]},{label:'Exibir',submenu:[{role:'resetZoom'},{role:'zoomIn'},{role:'zoomOut'},{role:'togglefullscreen'}]},{label:'Ajuda',submenu:[{id:'orbita-update-status',label:'Atualizações automáticas',click:()=>updates?.interact().catch(()=>{})},{type:'separator'},{label:'Site oficial',click:()=>openExternal(APP_URL)},{label:'Sobre a Órbita',click:()=>dialog.showMessageBox(mainWindow,{title:'Órbita Desktop',message:'Órbita '+app.getVersion(),detail:'Texto, voz e vídeo em uma janela própria. Requer conexão à internet. Não inicia automaticamente com o Windows.'})}]}]));
+  Menu.setApplicationMenu(null);
   updates=createUpdateService({
     enabled:app.isPackaged&&process.platform==='win32'&&!process.env.PORTABLE_EXECUTABLE_DIR&&fs.existsSync(path.join(path.dirname(app.getPath('exe')),'Uninstall Orbita.exe')),
     version:app.getVersion(),loadUpdater:()=>require('electron-updater').autoUpdater,
@@ -112,3 +114,5 @@ async function start(){
   await mainWindow.loadURL('orbita-desktop://ui/loading.html');if(!qa)mainWindow.show();
   mainWindow.loadURL(APP_URL).catch(()=>{});
 }
+
+ipcMain.on('orbita-window',(event,action)=>{if(!mainWindow||event.sender!==mainWindow.webContents||!currentFrame(event.senderFrame))return;if(action==='minimize')mainWindow.minimize();else if(action==='close')mainWindow.close();});

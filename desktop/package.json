@@ -36,6 +36,7 @@
       "main.cjs",
       "policy.cjs",
       "picker-preload.cjs",
+      "app-preload.cjs",
       "ui/**/*",
       "assets/icon.png",
       "assets/icon.ico",

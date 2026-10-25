@@ -8,11 +8,11 @@
 @keyframes pk-rain{to{transform:translateY(60px)}}
 @keyframes pk-flicker{0%,100%{opacity:.9}48%{opacity:.4}50%{opacity:1}}
 /* Anime: pétalas */
-.pk-anim-petals::before,.pk-anim-petals::after{background:radial-gradient(6px 4px at 10% 20%,var(--c1),transparent 70%),radial-gradient(5px 3px at 40% 5%,var(--c2),transparent 70%),radial-gradient(6px 4px at 70% 30%,var(--c1),transparent 70%),radial-gradient(4px 3px at 85% 10%,var(--c2),transparent 70%),radial-gradient(5px 4px at 25% 60%,var(--c1),transparent 70%),radial-gradient(6px 3px at 60% 75%,var(--c2),transparent 70%);animation:pk-petal 7s linear infinite}
+.pk-anim-petals::before,.pk-anim-petals::after{background:radial-gradient(circle 7.2px at 10% 20%,var(--c1),transparent 70%),radial-gradient(circle 6.2px at 40% 5%,var(--c2),transparent 70%),radial-gradient(circle 7.2px at 70% 30%,var(--c1),transparent 70%),radial-gradient(circle 5.2px at 85% 10%,var(--c2),transparent 70%),radial-gradient(circle 6.2px at 25% 60%,var(--c1),transparent 70%),radial-gradient(circle 7.2px at 60% 75%,var(--c2),transparent 70%);animation:pk-petal 7s linear infinite}
 .pk-anim-petals::after{animation-delay:-3.5s;transform:scaleX(-1)}
 @keyframes pk-petal{from{transform:translate(-10%,-30%) rotate(0)}to{transform:translate(15%,40%) rotate(25deg)}}
 /* Espaço: estrelas */
-.pk-anim-stars::before{background:radial-gradient(1.5px 1.5px at 12% 18%,#fff,transparent),radial-gradient(1px 1px at 33% 72%,#fff,transparent),radial-gradient(2px 2px at 58% 30%,var(--c2),transparent),radial-gradient(1px 1px at 77% 64%,#fff,transparent),radial-gradient(1.5px 1.5px at 88% 22%,#fff,transparent),radial-gradient(2px 2px at 20% 88%,var(--c1),transparent),radial-gradient(1px 1px at 48% 50%,#fff,transparent);animation:pk-orbit 40s linear infinite}
+.pk-anim-stars::before{background:radial-gradient(circle 2.7px at 12% 18%,#fff,transparent),radial-gradient(circle 2.2px at 33% 72%,#fff,transparent),radial-gradient(circle 3.2px at 58% 30%,var(--c2),transparent),radial-gradient(circle 2.2px at 77% 64%,#fff,transparent),radial-gradient(circle 2.7px at 88% 22%,#fff,transparent),radial-gradient(circle 3.2px at 20% 88%,var(--c1),transparent),radial-gradient(circle 2.2px at 48% 50%,#fff,transparent);animation:pk-orbit 40s linear infinite}
 .pk-anim-stars::after{background:radial-gradient(circle at 70% 30%,color-mix(in srgb,var(--c1) 40%,transparent),transparent 45%);animation:pk-twinkle 4s ease-in-out infinite}
 @keyframes pk-orbit{to{transform:rotate(360deg)}}
 @keyframes pk-twinkle{50%{opacity:.35}}
@@ -24,7 +24,7 @@
 .pk-anim-flames::after{inset:auto 0 0 0;height:40%;background:linear-gradient(transparent,color-mix(in srgb,var(--c2) 40%,transparent))}
 @keyframes pk-flame{from{transform:scaleY(.85) skewX(-3deg)}to{transform:scaleY(1.12) skewX(3deg)}}
 /* Lo-fi: partículas lentas */
-.pk-anim-particles::before,.pk-anim-particles::after{background:radial-gradient(3px 3px at 15% 80%,var(--c1),transparent),radial-gradient(2px 2px at 45% 90%,var(--c2),transparent),radial-gradient(3px 3px at 70% 85%,var(--c1),transparent),radial-gradient(2px 2px at 90% 95%,var(--c2),transparent);animation:pk-rise 9s linear infinite;opacity:.8}
+.pk-anim-particles::before,.pk-anim-particles::after{background:radial-gradient(circle 4.2px at 15% 80%,var(--c1),transparent),radial-gradient(circle 3.2px at 45% 90%,var(--c2),transparent),radial-gradient(circle 4.2px at 70% 85%,var(--c1),transparent),radial-gradient(circle 3.2px at 90% 95%,var(--c2),transparent);animation:pk-rise 9s linear infinite;opacity:.8}
 .pk-anim-particles::after{animation-delay:-4.5s}
 @keyframes pk-rise{from{transform:translateY(20%)}to{transform:translateY(-60%)}}
 /* Pixel/Retrô */
@@ -233,3 +233,87 @@
 .rich-profile .ps-badge-pill button{width:26px!important;height:26px!important;min-width:0!important;min-height:0!important;padding:1px!important;margin:0!important;background:none!important;border:0!important;box-shadow:none!important;place-items:center}
 .rich-profile .ps-badge-pill .badge-art{width:24px;height:24px}
 .ps-badge-pill button.is-owner .badge-art{filter:drop-shadow(0 0 4px #ff4f9a88)}
+
+/* ===== Editor de perfil v2: grupos, prévia maior, rodapé fixo, destaque ligado ===== */
+.ps-ed-group{margin:14px 2px 4px}.ps-ed-group:first-child{margin-top:2px}
+.ps-ed-group h4{margin:0;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted,#9aa0a6)}
+.ps-ed-group p,.ps-help{margin:2px 0 6px;font-size:12px;line-height:1.4;color:var(--text-muted,#9aa0a6)}
+.ps-ed-stage .ps-card{width:min(100%,380px);margin-inline:auto}
+.ps-ed-stage .rp-banner{min-height:132px}
+.ps-ed-stage-label{display:flex;align-items:center;gap:6px}.ps-ed-stage-label::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ac);box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 25%,transparent)}
+[data-preview-part]{transition:outline-color .18s ease,box-shadow .18s ease;outline:2px solid transparent;outline-offset:3px}
+[data-preview-part].ps-hl{outline-color:var(--ac);box-shadow:0 0 0 6px color-mix(in srgb,var(--ac) 22%,transparent),0 0 22px color-mix(in srgb,var(--ac) 35%,transparent)}
+.rp-avatar.ps-hl,.rp-avatar-wrap.ps-hl{border-radius:50%}
+.ps-ed-card[data-preview-target]:hover>button:first-child,.ps-ed-card:focus-within>button:first-child{background:color-mix(in srgb,var(--ac) 7%,transparent)}
+.ps-ed-foot{position:sticky;bottom:0;z-index:3;display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid var(--border,#2b2d31);background:color-mix(in srgb,var(--bg-secondary,#1e1f22) 92%,transparent);backdrop-filter:blur(8px)}
+.ps-ed-foot>span{margin-right:auto;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-muted,#9aa0a6)}
+.ps-ed-foot>span::before{content:"";width:8px;height:8px;border-radius:50%;background:#3ba55d}
+.ps-ed-foot.dirty>span{color:var(--text,#f2f3f5)}.ps-ed-foot.dirty>span::before{background:#f0b232;box-shadow:0 0 0 3px #f0b23233}
+.ps-colors input[type=color]{-webkit-appearance:none;appearance:none;width:38px;height:38px;padding:0;border:2px solid var(--border,#3a3c42);border-radius:50%;background:none;cursor:pointer;transition:transform .15s}
+.ps-colors input[type=color]::-webkit-color-swatch-wrapper{padding:2px}.ps-colors input[type=color]::-webkit-color-swatch{border:0;border-radius:50%}.ps-colors input[type=color]::-moz-color-swatch{border:0;border-radius:50%}
+.ps-colors input[type=color]:hover{transform:scale(1.07)}
+.ps-swatches{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.ps-swatch{width:26px;height:26px;border-radius:8px;border:1px solid #ffffff22;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.ps-swatch:hover,.ps-swatch:focus-visible{transform:translateY(-1px);box-shadow:0 0 0 2px var(--ac)}
+.ps-ed-pane,.sv-grid,.ps-ed-panel{animation:psFade .22s ease}
+@keyframes psFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.ps-ed-pane,.sv-grid,.ps-ed-panel{animation:none}[data-preview-part]{transition:none}}
+/* Loja: rodapé do item com estado e ação */
+.sv-cfoot{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:6px}
+.sv-price{font-size:11.5px;font-weight:700;color:var(--text-muted,#9aa0a6)}
+.sv-cta{padding:5px 11px;border-radius:8px;border:0;font-size:12px;font-weight:700;background:var(--ac);color:#fff;cursor:pointer;transition:filter .15s}
+.sv-cta:hover{filter:brightness(1.1)}.sv-cta.on{background:transparent;color:var(--ac);box-shadow:inset 0 0 0 1px var(--ac)}.sv-cta:disabled{opacity:.5;cursor:not-allowed}
+@media (max-width:720px){.ps-ed-left{padding:10px 12px}.ps-ed-card>button:first-child{padding:12px}.ps-ed-foot{padding:10px 12px calc(10px + env(safe-area-inset-bottom))}.ps-ed-foot .ps-btn{flex:1}.ps-ed-foot>span{flex-basis:100%;margin:0}.ps-ed-foot{flex-wrap:wrap}.ps-ed-stage .ps-card{width:100%}}
+/* Destaque ligado v2: fino, arredondado, segue a forma de cada parte */
+[data-preview-part]{outline:1.5px solid transparent;outline-offset:8px;transition:outline-color .15s ease,outline-offset .15s ease,box-shadow .15s ease}
+[data-preview-part].ps-hl{outline-color:var(--ac);outline-offset:4px;box-shadow:0 0 0 4px color-mix(in srgb,var(--ac) 10%,transparent),0 0 18px color-mix(in srgb,var(--ac) 28%,transparent)}
+.rp-avatar[data-preview-part],.rp-avatar-wrap[data-preview-part]{border-radius:50%}
+.rp-avatar-wrap.ps-hl,.rp-avatar.ps-hl{outline-offset:3px}
+.ps-card[data-preview-part=card].ps-hl{outline-offset:3px}
+.rp-name[data-preview-part],.rp-bio[data-preview-part],.rp-username[data-preview-part],.ps-badge-row[data-preview-part],.ps-plate[data-preview-part]{border-radius:8px}
+.rp-name.ps-hl,.rp-bio.ps-hl,.rp-username.ps-hl,.ps-badge-row.ps-hl{outline-offset:3px;background:color-mix(in srgb,var(--ac) 8%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 8%,transparent),0 0 14px color-mix(in srgb,var(--ac) 22%,transparent)}
+@media (prefers-reduced-motion:reduce){[data-preview-part]{transition:none}}
+.rp-name.ps-hl,.rp-bio.ps-hl,.rp-username.ps-hl{outline-offset:5px;border-radius:9px}
+/* Prévia retangular (estilo cartão de perfil largo, ~16:10) */
+@media (min-width:861px){.ps-editor:not(.ps-editor-hub){grid-template-columns:280px minmax(0,1fr) 250px}}
+.ps-ed-center{display:flex;align-items:center;justify-content:center;min-width:0}
+.ps-ed-stage{width:100%;display:flex;flex-direction:column;align-items:center;padding:18px clamp(8px,2vw,24px)}
+.ps-ed-stage .ps-card{width:min(100%,600px);aspect-ratio:16/10;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.ps-ed-stage .rp-banner{min-height:0;height:38%;flex:none}
+.ps-ed-stage .rp-body{flex:1}
+@media (max-width:860px){.ps-ed-stage{padding:12px 0}.ps-ed-stage .ps-card{width:100%;aspect-ratio:auto}.ps-ed-stage .rp-banner{height:120px}}
+.ps-ed-stage .ps-card{min-height:auto;overflow:visible}.ps-ed-stage .rp-banner{height:120px!important;min-height:0!important}.ps-ed-stage .rp-body{padding-bottom:14px}
+
+.ps-ed-center .ps-ed-stage .ps-card.rich-profile{width:min(600px,100%)!important}
+@media (max-width:860px){.ps-ed-center .ps-ed-stage .ps-card.rich-profile{width:100%!important}}
+@media (min-width:861px){.ps-editor:not(.ps-editor-hub){grid-template-columns:260px minmax(0,1fr) 210px}}.ps-ed-stage .rp-banner{height:96px!important}.ps-ed-center .ps-ed-stage .ps-card.rich-profile{width:min(640px,100%)!important}
+.ps-ed-center .ps-ed-stage .ps-card.rich-profile .rp-banner{height:96px!important;min-height:0!important;max-height:96px!important}@media (min-width:861px){.ps-editor:not(.ps-editor-hub){grid-template-columns:260px minmax(0,1fr) 230px}}
+.ps-ed-center .ps-ed-stage .rp-body h5{margin:10px 0 2px!important}.ps-ed-center .ps-ed-stage .rp-body p{margin:0!important}
+/* Prévia vertical (retrato, estilo popout do Discord) */
+@media (min-width:861px){.ps-editor:not(.ps-editor-hub){grid-template-columns:300px minmax(0,1fr) 260px}.ps-ed-center{position:sticky;top:0;align-self:start;height:100%;max-height:100%;min-height:0}}
+.ps-ed-center{display:flex;align-items:center;justify-content:center}
+.ps-ed-center .ps-ed-stage{margin:auto;justify-content:center;min-height:100%}
+.ps-ed-center .ps-ed-stage .ps-card.rich-profile{width:340px!important;max-width:100%;aspect-ratio:auto!important;min-height:540px!important;max-height:600px;overflow:auto!important;border-radius:16px;box-shadow:0 18px 50px #0008,0 0 0 1px #ffffff14}
+.ps-ed-center .ps-ed-stage .ps-card.rich-profile .rp-banner{height:120px!important;max-height:120px!important}
+@media (max-width:860px){.ps-ed-center .ps-ed-stage .ps-card.rich-profile{width:min(360px,100%)!important;min-height:480px!important;margin:0 auto}}
+
+/* Fundo de fótons da prévia do editor */
+.ps-ed-center .ps-ed-stage{position:relative;isolation:isolate;overflow:hidden;border-radius:16px;background:radial-gradient(42% 38% at 50% 48%,color-mix(in srgb,var(--ac) 24%,transparent),transparent 72%),linear-gradient(160deg,#1b1c20,#121316 55%,#17181c)!important}
+.ps-ed-center .ps-ed-stage::before,.ps-ed-center .ps-ed-stage::after{content:'';position:absolute;inset:-30%;z-index:-1;pointer-events:none;will-change:transform,opacity;filter:drop-shadow(0 0 2px rgba(255,255,255,.35))}
+.ps-ed-center .ps-ed-stage::before{background:radial-gradient(circle 3.7px at 43% 21%,color-mix(in srgb,var(--ac) 65%,transparent),transparent),radial-gradient(circle 3.2px at 70% 14%,color-mix(in srgb,var(--ac) 65%,transparent),transparent),radial-gradient(circle 2.2px at 66% 29%,color-mix(in srgb,var(--ac) 35%,transparent),transparent),radial-gradient(circle 2.2px at 10% 32%,color-mix(in srgb,var(--ac) 65%,transparent),transparent),radial-gradient(circle 2.7px at 74% 17%,rgba(255,255,255,0.65),transparent),radial-gradient(circle 3.7px at 9% 75%,rgba(255,255,255,0.35),transparent),radial-gradient(circle 2.7px at 7% 73%,color-mix(in srgb,var(--ac) 50%,transparent),transparent),radial-gradient(circle 3.2px at 71% 17%,rgba(255,255,255,0.65),transparent),radial-gradient(circle 2.7px at 25% 15%,color-mix(in srgb,var(--ac) 50%,transparent),transparent),radial-gradient(circle 2.2px at 93% 10%,color-mix(in srgb,var(--ac) 65%,transparent),transparent),radial-gradient(circle 3.7px at 89% 70%,color-mix(in srgb,var(--ac) 50%,transparent),transparent),radial-gradient(circle 3.2px at 60% 48%,rgba(255,255,255,0.35),transparent),radial-gradient(circle 2.2px at 91% 33%,color-mix(in srgb,var(--ac) 65%,transparent),transparent),radial-gradient(circle 3.7px at 65% 45%,rgba(255,255,255,0.5),transparent);animation:psPhotonA 34s ease-in-out infinite alternate,psTwinkle 6s ease-in-out infinite;opacity:.8}
+.ps-ed-center .ps-ed-stage::after{background:radial-gradient(circle 3.7px at 11% 17%,rgba(255,255,255,0.35),transparent),radial-gradient(circle 2.7px at 98% 45%,rgba(255,255,255,0.5),transparent),radial-gradient(circle 2.2px at 55% 7%,rgba(255,255,255,0.65),transparent),radial-gradient(circle 3.2px at 75% 42%,rgba(255,255,255,0.65),transparent),radial-gradient(circle 3.7px at 46% 78%,rgba(255,255,255,0.65),transparent),radial-gradient(circle 2.2px at 60% 10%,rgba(255,255,255,0.5),transparent),radial-gradient(circle 2.2px at 62% 91%,rgba(255,255,255,0.35),transparent),radial-gradient(circle 3.2px at 95% 91%,rgba(255,255,255,0.65),transparent),radial-gradient(circle 3.7px at 75% 89%,rgba(255,255,255,0.5),transparent),radial-gradient(circle 3.2px at 93% 51%,rgba(255,255,255,0.35),transparent),radial-gradient(circle 2.7px at 61% 47%,rgba(255,255,255,0.65),transparent),radial-gradient(circle 2.2px at 16% 65%,rgba(255,255,255,0.35),transparent);animation:psPhotonB 26s ease-in-out infinite alternate,psTwinkle 8.5s ease-in-out -3s infinite;opacity:.55}
+.ps-ed-center .ps-ed-stage>*{position:relative;z-index:1}
+@keyframes psPhotonA{from{transform:translate3d(-4%,3%,0)}to{transform:translate3d(5%,-4%,0)}}
+@keyframes psPhotonB{from{transform:translate3d(4%,-2%,0) rotate(0deg)}to{transform:translate3d(-5%,4%,0) rotate(4deg)}}
+@keyframes psTwinkle{0%,100%{opacity:.45}50%{opacity:.85}}
+@media (prefers-reduced-motion:reduce){.ps-ed-center .ps-ed-stage::before,.ps-ed-center .ps-ed-stage::after{animation:none}}
+/* Configurações › Perfil (hub): mesma prévia vertical, fixa no topo da coluna */
+.profile-edit-card.st-profile{grid-template-columns:minmax(0,1fr) 380px!important;align-items:start}
+.ps-editor-hub .ps-ed-center{align-self:start!important;position:sticky!important;top:0!important;height:auto!important;min-height:0!important;max-height:none!important;padding:10px!important}
+.ps-editor-hub .ps-ed-center .ps-ed-stage{min-height:620px!important;height:auto;padding:18px 10px!important;justify-content:center}
+@media (max-width:860px){.profile-edit-card.st-profile{grid-template-columns:1fr!important}.ps-editor-hub .ps-ed-center{position:static!important}}
+/* Configurações › Perfil = estúdio redesenhado: visual primeiro, identidade depois, prévia fixa à direita */
+#app-dialog.st-dialog .st-panel .profile-edit-card.st-profile{overflow:visible!important;grid-template-areas:"cos preview" "form preview"!important}
+#app-dialog.st-dialog .ps-editor-hub>.ps-ed-center{grid-area:preview;position:sticky!important;top:8px!important}
+#app-dialog.st-dialog .st-profile>form{border:1px solid var(--sg-b1,#ffffff14);border-radius:16px;background:var(--sg-s1,#ffffff06);padding:16px}
+@media(max-width:980px){#app-dialog.st-dialog .st-panel .profile-edit-card.st-profile{grid-template-areas:"preview" "cos" "form"!important}#app-dialog.st-dialog .ps-editor-hub>.ps-ed-center{position:static!important}}

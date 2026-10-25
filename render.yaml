@@ -26,22 +26,3 @@ services:
         sync: false
       - key: STT_MODEL
         value: whisper-large-v3-turbo
-
-  # Ponte de voz Discord <-> Órbita (discord_bridge/). O plano free do Render
-  # não mantém workers ligados 24h; é preciso um plano pago (ex.: starter)
-  # para o bot ficar sempre conectado no Discord. Veja discord_bridge/README.md.
-  - type: worker
-    name: orbita-discord-bridge
-    runtime: python
-    plan: starter
-    buildCommand: pip install -r discord_bridge/requirements.txt
-    startCommand: python -m discord_bridge.bot
-    envVars:
-      - key: DISCORD_BOT_TOKEN
-        sync: false
-      - key: LIVEKIT_API_KEY
-        sync: false
-      - key: LIVEKIT_API_SECRET
-        sync: false
-      - key: LIVEKIT_URL
-        sync: false

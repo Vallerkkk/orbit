@@ -1,63 +1,24 @@
 """
 Sistema de IA para chamadas da Órbita — "Lula"
-Ativação por comando de voz: "Ei Lula" + desejo ou pesquisa.
-Integração preparada para LLM Grok + memória adaptável.
+Ativação por comando de voz: "Ei Lula" + pergunta. Respostas via Flatkey.
 """
 from __future__ import annotations
 import os
 import time
-import json
 import re
-import tempfile
 import threading
-import unicodedata
 import httpx
-from typing import Any
 from datetime import datetime, timezone
-from pathlib import Path
 
 # Configuração
-STT_PROVIDER = os.getenv("AI_STT_PROVIDER", "simulation")
-LLM_PROVIDER = os.getenv("AI_LLM_PROVIDER", "grok")  # preparado para Grok
 AI_ENABLED = os.getenv("AI_CALL_ENABLED", "true").lower() == "true"
-WAKE_WORD = "ei lula"
-MEMORY_FILE = Path(os.getenv("LULA_MEMORY_FILE") or (Path(tempfile.gettempdir()) / "orbita_lula_droid_memory.json"))
 MAX_TEXT = 2000
 MAX_ENTRIES_PER_CALL = 200
 MAX_CALLS = 100
 TRANSCRIPT_TTL = 1800
 _lock = threading.Lock()
 
-# Memória adaptável (em produção pode ir para Supabase)
-_memory: dict = {"facts": [], "preferences": {}, "conversation_style": "equilibrado", "learned": []}
-
-def _load_memory():
-    global _memory
-    try:
-        if MEMORY_FILE.exists():
-            loaded = json.loads(MEMORY_FILE.read_text(encoding="utf-8"))
-            if isinstance(loaded, dict):
-                _memory = {**_memory, **loaded}
-                for key in ("facts", "learned"):
-                    if not isinstance(_memory.get(key), list):
-                        _memory[key] = []
-                if not isinstance(_memory.get("preferences"), dict):
-                    _memory["preferences"] = {}
-    except Exception:
-        pass
-
-def _save_memory():
-    try:
-        MEMORY_FILE.parent.mkdir(parents=True, exist_ok=True)
-        temp = MEMORY_FILE.with_suffix(".tmp")
-        temp.write_text(json.dumps(_memory, ensure_ascii=False, indent=2), encoding="utf-8")
-        temp.replace(MEMORY_FILE)
-    except Exception:
-        pass
-
-_load_memory()
-
-# Transcrições por chamada
+# Transcrições por chamada (só em memória, descartadas após TRANSCRIPT_TTL)
 _transcripts: dict[str, list[dict]] = {}
 
 def is_enabled() -> bool:
@@ -86,22 +47,7 @@ def add_transcript(call_id: str, user_id: str, display_name: str, text: str, sta
         rows.append(entry)
         if len(rows) > MAX_ENTRIES_PER_CALL:
             del rows[:len(rows) - MAX_ENTRIES_PER_CALL]
-    # Aprendizado leve: extrai preferências simples
-    _learn_from_text(text, entry["display_name"])
     return entry
-
-def _learn_from_text(text: str, speaker: str):
-    """Memória adaptável simples: aprende fatos e preferências das conversas."""
-    lower = text.lower()
-    if any(w in lower for w in ["gosto de", "prefiro", "odeio", "não gosto", "nao gosto"]):
-        with _lock:
-            _memory["learned"].append({
-                "speaker": str(speaker)[:60],
-                "text": text[:200],
-                "ts": datetime.now(timezone.utc).isoformat()
-            })
-            _memory["learned"] = _memory["learned"][-50:]  # mantém últimas 50
-        _save_memory()
 
 def get_recent_transcript(call_id: str, last_seconds: float = 180) -> list[dict]:
     now = time.time()
@@ -113,9 +59,6 @@ def get_recent_transcript(call_id: str, last_seconds: float = 180) -> list[dict]
 def clear_call(call_id: str) -> None:
     with _lock:
         _transcripts.pop(call_id, None)
-
-def _normalize(text: str) -> str:
-    return unicodedata.normalize("NFD", text or "").encode("ascii", "ignore").decode().lower()
 
 def detect_wake_word(text: str) -> tuple[bool, str]:
     """Detecta Ei/Eai/Oi/Olá Lula e extrai a pergunta; não aceita Lula."""
@@ -129,80 +72,11 @@ def detect_wake_word(text: str) -> tuple[bool, str]:
     match = pattern.search(raw)
     return (True, match.group("command").strip()) if match else (False, "")
 
-def simulate_stt(audio_chunk_info: dict) -> str:
-    return audio_chunk_info.get("sample_text") or "Fala simulada."
-
-def generate_opinion(context: list[dict], question: str = "", use_memory: bool = True) -> dict:
-    """Gera resposta usando contexto + memória adaptável. Preparado para Grok."""
-    if not context and not question:
-        return {
-            "answer": "Ainda não há contexto suficiente nesta chamada.",
-            "source": "local",
-            "searched": False,
-            "wake_detected": False,
-        }
-
-    lines = []
-    for item in context[-12:]:
-        name = item.get("display_name") or item.get("user_id", "?")
-        lines.append(f"{name}: {item.get('text', '')}")
-    context_text = "\n".join(lines)
-
-    # Incorpora memória
-    memory_hint = ""
-    if use_memory and _memory.get("learned"):
-        recent = _memory["learned"][-3:]
-        memory_hint = " (considerando preferências aprendidas anteriormente)"
-
-    searched = any(w in (question + context_text).lower() for w in ["pesquisa", "busca", "internet", "atual", "notícia", "procure"])
-    if searched:
-        answer = (
-            f"Lula aqui. Com base no que foi falado{memory_hint} e numa consulta simulada: "
-            "o assunto merece confirmação em fontes confiáveis. "
-            f"Analisei {len(context)} falas recentes."
-        )
-    else:
-        answer = (
-            f"Lula: analisei o contexto da chamada{memory_hint}. "
-            "Minha opinião é que o ponto discutido está coerente e pode ser aprofundado. "
-            "Se quiser que eu pesquise algo específico, é só pedir."
-        )
-
-    return {
-        "answer": answer,
-        "context_used": len(context),
-        "source": LLM_PROVIDER,
-        "searched": searched,
-        "question": question or "(opinião geral)",
-        "memory_used": bool(memory_hint),
-        "wake_detected": True,
-    }
-
-def process_audio_chunk(call_id: str, user_id: str, display_name: str, chunk: dict) -> dict:
-    start = time.time()
-    text = simulate_stt(chunk)
-    end = time.time()
-    entry = add_transcript(call_id, user_id, display_name, text, start, end)
-    woke, command = detect_wake_word(text)
-    result = {"transcribed": True, "entry": entry, "latency_ms": round((end - start) * 1000, 1), "wake": woke}
-    if woke:
-        context = get_recent_transcript(call_id)
-        opinion = generate_opinion(context, command)
-        result["ai_response"] = opinion
-    return result
-
-def get_memory_summary() -> dict:
-    return {
-        "learned_count": len(_memory.get("learned", [])),
-        "style": _memory.get("conversation_style"),
-        "recent": _memory.get("learned", [])[-5:],
-    }
-
 async def generate_answer(context: list[dict], question: str = "") -> dict:
     """Answer questions using Flatkey. Never expose provider credentials or fake responses."""
     from fastapi import HTTPException
 
-    key = os.getenv("FLATKEY_API_KEY", "sk-klg0rqhwo1mgi9P5VH1Q6RFPImguPonhHEQKuMHg3xMUKOqN").strip()
+    key = os.getenv("FLATKEY_API_KEY", "").strip()
     if not key:
         raise HTTPException(503, "Configure FLATKEY_API_KEY no servidor para usar o Lula.")
 

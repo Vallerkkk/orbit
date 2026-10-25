@@ -1,5 +1,5 @@
 importScripts('/static/share-worker.js');
-const CACHE = 'orbita-shell-20261024-v72';
+const CACHE = 'orbita-shell-20261024-v115';
 const SHELL = ['/static/offline.html', '/static/icons/icon-192.png', '/static/icons/icon-512.png'];
 const MAX_ASSETS = 80;
 let cacheWrites = Promise.resolve();
@@ -38,7 +38,7 @@ self.addEventListener('notificationclick', event => {
   event.waitUntil((async () => {
     const url = new URL(event.notification.data?.url || '/', self.location.origin).href;
     for (const client of await self.clients.matchAll({type:'window', includeUncontrolled:true})) {
-      if (new URL(client.url).origin === self.location.origin) { await client.navigate(url); return client.focus(); }
+      if (new URL(client.url).origin === self.location.origin) { const focused = await client.focus().catch(() => client); (focused || client).postMessage({type:'orbita-navigate', url}); return focused; }
     }
     return self.clients.openWindow(url);
   })());

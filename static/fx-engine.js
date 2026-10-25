@@ -150,11 +150,11 @@ for(const k of ['stars','particles','glitch','aurora2'])P[k]=P[k]||P.nebula;
 
 // ---------- instância ----------
 // mode: 'effect' (área toda), 'hero' (área toda, mais partículas), 'frame' (anel do avatar), 'border' (contorno do cartão).
-export function mountFx(host,{preset='nebula',colors=['#9b7bff','#ff7ad9','#7fe3ff'],bg='#0d0a22',mode='effect',radius=16}={}){
+export function mountFx(host,{preset='nebula',colors=['#9b7bff','#ff7ad9','#7fe3ff'],bg='#0d0a22',mode='effect',radius=16,density=1}={}){
   const def=P[preset]||P.nebula;const canvas=document.createElement('canvas');canvas.className='fx-canvas fx-'+mode;canvas.setAttribute('aria-hidden','true');host.append(canvas);
-  const c=canvas.getContext('2d');const fx={canvas,visible:false,w:0,h:0,cols:colors,bg,parts:[],mode,def,
+  const c=canvas.getContext('2d');const fx={density:Math.max(.2,Math.min(4,+density||1)),canvas,visible:false,w:0,h:0,cols:colors,bg,parts:[],mode,def,
     resize(){const r=canvas.getBoundingClientRect(),d=Math.min(1.5,devicePixelRatio||1);if(!r.width||!r.height)return;if(Math.abs(r.width-fx.w)<1&&Math.abs(r.height-fx.h)<1)return;fx.w=r.width;fx.h=r.height;canvas.width=r.width*d|0;canvas.height=r.height*d|0;c.setTransform(d,0,0,d,0,0);fx.seed();},
-    seed(){const n=def.n[mode==='frame'?1:mode==='border'?2:0]*(mode==='hero'?1.6:1)*(fx.w*fx.h<9000?.6:1)|0;fx.parts=[];for(let i=0;i<n;i++)fx.parts.push(fx.spawn(true));},
+    seed(){const n=def.n[mode==='frame'?1:mode==='border'?2:0]*(mode==='hero'?1.6:1)*fx.density*(fx.w*fx.h<9000?.6:1)|0;fx.parts=[];for(let i=0;i<n;i++)fx.parts.push(fx.spawn(true));},
     spawn(initial){const p=Object.assign({rot:0,vr:0,a:1,life:0},def.spawn(fx));const [l0,l1]=def.life||[3,7];p.max=rnd(l0,l1);if(initial)p.life=rnd(0,p.max);
       if(mode==='border'){p.t=Math.random();p.sp=rnd(.03,.08)*(Math.random()<.5?1:-1);p.off=rnd(-3,3);}
       else if(mode==='frame'){const a=rnd(0,TAU),R=Math.min(fx.w,fx.h)*.36;p.ang=a;p.R=R*rnd(.92,1.12);p.av=rnd(.3,.9)*(Math.random()<.5?1:-1);p.x=fx.w/2+Math.cos(a)*p.R;p.y=fx.h/2+Math.sin(a)*p.R;}

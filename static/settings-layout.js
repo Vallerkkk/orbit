@@ -6,9 +6,11 @@ const TABS=[
   ['voz','Voz e vídeo','M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Zm-7 9a7 7 0 0 0 14 0M12 19v2'],
   ['sons','Sons','M4 10v4h4l5 4V6L8 10H4Zm12-1a4 4 0 0 1 0 6'],
   ['avisos','Notificações','M6 16V11a6 6 0 1 1 12 0v5l2 2H4l2-2Zm4 4h4'],
+  ['conexoes','Conexões','M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1'],
   ['conta','Conta e ajuda','M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z'],
 ];
 const RULES=[
+  ['conexoes',n=>n.matches('.spotify-connect')],
   ['perfil',n=>n.matches('.profile-edit-card')],
   ['voz',n=>n.matches('.settings-audio-link')],
   ['voz',n=>/Entrada e saída de áudio|A redução de ruído|Manter a tela acesa|Big Picture/.test(n.textContent)],
@@ -17,7 +19,7 @@ const RULES=[
   ['aparencia',n=>/^(Tema|Densidade|Aparência|Tamanho das mensagens|Reduzir animações|Conforto e acessibilidade)/.test(n.textContent.trim())],
 ];
 const svgIcon=d=>{const s=document.createElementNS('http://www.w3.org/2000/svg','svg');s.setAttribute('viewBox','0 0 24 24');s.setAttribute('aria-hidden','true');s.classList.add('st-ico');const p=document.createElementNS('http://www.w3.org/2000/svg','path');p.setAttribute('d',d);s.append(p);return s;};
-const DESC={perfil:'Como as pessoas veem você: identidade, foto, capa, cosméticos e insígnias. Tudo num só lugar.',aparencia:'Tema, densidade e conforto visual do aplicativo neste dispositivo.',voz:'Microfone, alto-falante, câmera e processamento de áudio das chamadas.',sons:'Sons do aplicativo e dos avisos.',avisos:'Notificações no navegador e instalação do app.',conta:'Sua conta, privacidade, atalhos e ajuda.'};
+const DESC={conexoes:'Contas externas ligadas à Órbita, como o Spotify.',perfil:'Como as pessoas veem você: identidade, foto, capa, cosméticos e insígnias. Tudo num só lugar.',aparencia:'Tema, densidade e conforto visual do aplicativo neste dispositivo.',voz:'Microfone, alto-falante, câmera e processamento de áudio das chamadas.',sons:'Sons do aplicativo e dos avisos.',avisos:'Notificações no navegador e instalação do app.',conta:'Sua conta, privacidade, atalhos e ajuda.'};
 const tabFor=n=>{for(const [k,f] of RULES)try{if(f(n))return k;}catch{}return 'conta';};
 
 function segment(select){

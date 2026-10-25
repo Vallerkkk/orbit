@@ -3,8 +3,9 @@ import {createAppSounds,SOUND_EFFECTS} from './app-sounds.js';
 import { relativeTime, safeLink, stickerNames, youtubeId } from './media-utils.js';
 import { reserveImage, focusElement } from './dom-utils.js';
 import { requestWithDeadline } from './chat-state.js';
-import { requestAppInstall } from './app-install.js';
+import { requestAppInstall, runningAsApp } from './app-install.js';
 import { watchUploadedVideo } from './uploaded-video.js';
+import { attachmentMedia } from './media-viewer.js';
 
 export function initEnhancements(context) {
   const { el, button, toast, checked, showDialog, inputField } = context;
@@ -47,8 +48,8 @@ export function initEnhancements(context) {
     parent.append(button('Apagar rascunhos deste aparelho',()=>{if(confirm('Apagar os rascunhos salvos desta conta neste aparelho?')){context.clearDrafts();toast('Rascunhos apagados.');}}));
     parent.append(button('Central de ajuda e sugestões',()=>showDialog('Ajuda e sugestões',box=>{box.append(el('p','','Use Ctrl+K para encontrar canais e conversas. Durante uma chamada, abra a seta ao lado do microfone para trocar a entrada ou a saída de áudio.'),button('Reportar problema',()=>{const url=new URL('https://github.com/Vallerkkk/calldojoao/issues/new');url.searchParams.set('title','Problema no Órbita');window.open(url.href,'_blank','noopener,noreferrer');}));const suggestions=state().channels.find(c=>c.kind==='text'&&['sugestoes','sugestões'].includes(c.name.toLowerCase().replace(/^#/,'')));box.append(button('Abrir #sugestões',async()=>{const server=state().communities.find(c=>c.is_default),channel=suggestions||await checked(state().db.from('channels').select('*').eq('community_id',server?.id||state().activeCommunity).eq('name','sugestões').maybeSingle());if(!channel)throw Error('O canal de sugestões ainda não está disponível.');document.getElementById('app-dialog').close();await context.selectChannel(channel);}));})));
     appSounds.fields(parent,el,button);
-    checkbox(parent, 'Sons de avisos e chamadas', 'sounds'); checkbox(parent, 'Manter a tela acesa durante chamadas', 'wake-lock');
-    parent.append(button('Instalar Órbita', installApp), button('Ativar notificações e push', enableNotifications), button('Desativar push neste dispositivo', disablePush),button('Sair da conta',()=>{$('app-dialog').close();$('logout').click();},'danger'));
+    checkbox(parent, 'Sons de avisos e chamadas', 'sounds'); if(matchMedia('(pointer: coarse)').matches)checkbox(parent, 'Manter a tela acesa durante chamadas', 'wake-lock'); // opção só de celular/tablet
+    parent.append(...(runningAsApp()?[]:[button('Instalar Órbita', installApp)]), button('Ativar notificações e push', enableNotifications), button('Desativar push neste dispositivo', disablePush),button('Sair da conta',()=>{$('app-dialog').close();$('logout').click();},'danger'));
   }
 
   const appSounds=createAppSounds(()=>state().deafened||state().profile?.presence_status==='dnd'||isQuiet(state().session?.user.id));
@@ -92,6 +93,10 @@ export function initEnhancements(context) {
     if (subscription) { try { await context.apiFetch('/api/push/subscribe', {method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify(subscription.toJSON())}); } finally { await subscription.unsubscribe(); } }
     if(!quiet)toast('Push desativado neste dispositivo.');
   }
+  // Boas-vindas recebidas: aviso no app; notificação do sistema só se a aba estiver oculta e não houver push.
+  function welcomed(data){const s=state();if(!s.session||!data||data.actor_id===s.session.user.id)return;const text=String(data.text||((data.actor_name||'Alguém')+' te deu boas-vindas na Órbita')).slice(0,140);
+    toast('👋 '+text);if(s.profile?.presence_status==='dnd'||isQuiet(s.session.user.id))return;audio();
+    if(document.hidden&&'Notification' in window&&Notification.permission==='granted'&&!s.config?.pushConfigured){try{const n=new Notification('Boas-vindas · Órbita',{body:text,tag:'orbita-welcome-'+data.actor_id,icon:'/static/icons/icon-192.png'});n.onclick=()=>{window.focus();window.orbitaOpenMembers?.();n.close();};}catch{}}}
   let dispatchTask,retryPush;
   async function dispatchPush() {
     const uid=state().session?.user.id;if(!state().config?.pushConfigured||!uid||dispatchTask)return;
@@ -148,6 +153,7 @@ export function initEnhancements(context) {
     try { unread = JSON.parse(localStorage.getItem('orbita-unread-' + uid) || '{}'); } catch { unread = {}; }
     for (const target of [...s.channels, ...s.conversations]) unread[target.id] ||= {count:0, seen:new Date().toISOString()};
     inbox = s.db.channel('user:' + uid, {config:{private:true}}).on('broadcast', {event:'activity'}, ({payload}) => notifyActivity(payload).catch(() => {}))
+      .on('broadcast', {event:'welcome'}, ({payload}) => welcomed(payload))
       .on('postgres_changes',{event:'*',schema:'public',table:'community_moderation',filter:'user_id=eq.'+uid},payload=>context.moderationChanged(payload.new).catch(report));
     inbox.subscribe(status => { if (status === 'SUBSCRIBED') refreshUnread().catch(() => {}); });
     await channelChanged();
@@ -194,7 +200,7 @@ export function initEnhancements(context) {
     const article=el('article','thread-message'),p=state().people.find(p=>p.id===message.author_id)||message.profiles||{};
     article.dataset.messageId=message.id;article.append(el('strong','',p.display_name||'Participante'),el('time','muted',relativeTime(message.created_at)),context.richText(message.content));
     article.orbitaMessage=message;
-    if(message.attachments){const a=message.attachments;if(a.mime_type?.startsWith('image/')){const image=el('img','attachment-preview');image.alt=a.name;image.loading='lazy';reserveImage(image);context.resolveAttachmentUrl(a).then(url=>image.src=url).catch(()=>image.remove());article.append(image);}else if(a.mime_type?.startsWith('video/')){const video=watchUploadedVideo(el('video'));video.setAttribute('aria-label','Vídeo: '+a.name);article.append(video);context.resolveAttachmentUrl(a).then(url=>{if(video.isConnected)video.src=url;}).catch(()=>video.remove());}article.append(button('↓ '+a.name,()=>context.downloadAttachment(a),'file-card'));}
+    if(message.attachments){const a=message.attachments;if(/^(image|video)\//.test(a.mime_type||''))article.append(attachmentMedia(a,{resolve:context.resolveAttachmentUrl,download:context.downloadAttachment,makeVideo:watchUploadedVideo}));article.append(button('↓ '+a.name,()=>context.downloadAttachment(a),'file-card'));}
     const actions=el('div','message-actions');actions.append(button('Responder',()=>{closePanel();context.replyToMessage(message);},'tiny-button'));
     if(message.author_id===state().session.user.id)actions.append(button('Editar',()=>context.messageAction(message,'edit'),'tiny-button'));
     if(message.author_id===state().session.user.id||(!state().selected?.private&&context.hasPermission('manage_messages')))actions.append(button('Excluir',()=>context.messageAction(message,'delete'),'tiny-button'));
@@ -245,7 +251,19 @@ export function initEnhancements(context) {
       if(state().selected?.id===target.id)await context.refreshMessages();if(root&&threadRoot===root)await loadThread(true);dispatchPush();toast('Arquivo enviado.');
     }catch(error){report(error);}finally{uploading=false;$('attach-file').disabled=false;}
   }
-  document.addEventListener('paste',event=>{if(!state().session||!event.target.closest('#text-view,.thread-form'))return;const files=[...(event.clipboardData?.items||[])].filter(item=>item.kind==='file'&&item.type.startsWith('image/')).map(item=>item.getAsFile()).filter(Boolean);if(files.length){event.preventDefault();sendFiles(files);}});
+  // Imagens coladas não são mais enviadas na hora: ficam numa bandeja de pré-visualização e saem junto com o Enter.
+  let pasted=[],pastedFor=null;const tray=el('div','paste-tray');tray.hidden=true;tray.setAttribute('aria-label','Imagens coladas');
+  $('message-form').before(tray);
+  function renderTray(){tray.replaceChildren();tray.hidden=!pasted.length;pasted.forEach((item,index)=>{const card=el('div','paste-item'),img=document.createElement('img');img.src=item.url;img.alt=item.file.name;
+    const remove=el('button','paste-remove','×');remove.type='button';remove.onclick=()=>{URL.revokeObjectURL(item.url);pasted.splice(index,1);renderTray();$('message-input').focus();};remove.setAttribute('aria-label','Remover '+item.file.name);card.append(img,remove);tray.append(card);});
+    if(pasted.length){const hint=el('small','paste-hint','Enter para enviar · Esc para descartar');tray.append(hint);}}
+  function clearTray(){pasted.forEach(item=>URL.revokeObjectURL(item.url));pasted=[];pastedFor=null;renderTray();}
+  document.addEventListener('paste',event=>{if(!state().session||!event.target.closest('#text-view,.thread-form'))return;const files=[...(event.clipboardData?.items||[])].filter(item=>item.kind==='file'&&item.type.startsWith('image/')).map(item=>item.getAsFile()).filter(Boolean);if(!files.length)return;event.preventDefault();
+    if(event.target.closest('.thread-form'))return sendFiles(files);
+    if(pastedFor!==state().selected?.id)clearTray();pastedFor=state().selected?.id;
+    for(const file of files){if(pasted.length>=5){toast('Envie até cinco arquivos por vez.');break;}const named=file.name&&file.name!=='image.png'?file:new File([file],'imagem-'+Date.now()+'.'+(file.type.split('/')[1]||'png'),{type:file.type});pasted.push({file:named,url:URL.createObjectURL(named)});}renderTray();});
+  $('message-form').addEventListener('submit',()=>{if(!pasted.length)return;if(pastedFor!==state().selected?.id)return clearTray();const files=pasted.map(item=>item.file);clearTray();sendFiles(files);},true);
+  $('message-input').addEventListener('keydown',event=>{if(event.key==='Escape'&&pasted.length)clearTray();if(event.key==='Enter'&&!event.shiftKey&&pasted.length&&!$('message-input').value.trim()){event.preventDefault();const files=pasted.map(item=>item.file);clearTray();sendFiles(files);}});
   let dragCount=0;const drop=el('div','file-drop-zone','Solte seus arquivos para enviar');drop.hidden=true;document.body.append(drop);
   document.addEventListener('dragenter',event=>{if(state().session&&!document.querySelector('#feed-view:not([hidden])')&&[...(event.dataTransfer?.types||[])].includes('Files')){dragCount++;drop.hidden=false;}});
   document.addEventListener('dragover',event=>{if([...(event.dataTransfer?.types||[])].includes('Files'))event.preventDefault();});
@@ -348,7 +366,7 @@ export function initEnhancements(context) {
   let viewportFrame;function viewport(){if(viewportFrame)return;viewportFrame=requestAnimationFrame(()=>{viewportFrame=null;document.documentElement.style.setProperty('--app-viewport',(window.visualViewport?.height||window.innerHeight)+'px');});}
   let channelStatus='idle';const offline=el('div','network-notice');offline.setAttribute('role','status');document.querySelector('#text-view .chat-header').after(offline);
   function realtimeChanged(value){channelStatus=value;connectionState();}
-  function connectionState(){const offlineNow=!navigator.onLine,retrying=['connecting','reconnecting'].includes(channelStatus);offline.hidden=!offlineNow&&!retrying;offline.textContent=offlineNow?'Você está sem conexão. Seus rascunhos permanecem nesta aba.':channelStatus==='connecting'?'Conectando às mensagens em tempo real…':'Reconectando… Você pode continuar lendo as mensagens carregadas.';$('conn-label').textContent=offlineNow?'Sem conexão':channelStatus==='connected'?'Tempo real ativo':retrying?'Reconectando…':'Conexão disponível';document.body.classList.toggle('network-offline',offlineNow);}
+  function connectionState(){const offlineNow=!navigator.onLine,retrying=['connecting','reconnecting'].includes(channelStatus);offline.hidden=!offlineNow&&!retrying;offline.textContent=offlineNow?'Você está sem conexão. Seus rascunhos permanecem nesta aba.':channelStatus==='connecting'?'Conectando às mensagens em tempo real…':'Reconectando… Você pode continuar lendo as mensagens carregadas.';$('conn-label').textContent=offlineNow?'Sem conexão':channelStatus==='connected'?'Tempo real ativo':retrying?'Reconectando…':'Conexão disponível';document.body.classList.toggle('network-offline',offlineNow);document.body.classList.toggle('realtime-ok',!offlineNow&&channelStatus==='connected');}
   window.addEventListener('online',connectionState);window.addEventListener('offline',connectionState);connectionState();
   window.visualViewport?.addEventListener('resize',viewport);window.addEventListener('resize',viewport);viewport();
   document.addEventListener('visibilitychange',()=>{runTimers();syncWakeLock();if(!document.hidden){markRead();activeAgain();const s=state();if(s.session)syncNotificationPreferences(s.db,s.session.user.id).catch(()=>{});}});
