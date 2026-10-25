@@ -1,0 +1,46 @@
+# Ponte de voz Discord <-> Órbita.
+#
+#   docker compose up -d --build                      # só a ponte (LiveKit Cloud ou outro servidor)
+#   docker compose --profile selfhost up -d --build   # ponte + LiveKit Server na VPS (custo zero)
+#   docker compose --profile dev up -d livekit-dev    # LiveKit local de teste (usado por scripts/local-test)
+#
+# Variáveis: discord_bridge/.env (veja .env.example).
+
+services:
+  bridge:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      HEALTH_HOST: 0.0.0.0
+    ports:
+      - "127.0.0.1:8080:8080"     # /health e /metrics só na própria máquina
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # alcança o LiveKit do perfil selfhost (rede host)
+    restart: unless-stopped
+    stop_grace_period: 15s
+
+  # LiveKit Server self-hosted para produção numa VPS Linux. Usa a rede do host
+  # (recomendado para WebRTC: sem NAT do Docker no caminho do UDP).
+  # Portas a liberar no firewall: 7881/tcp e 7882/udp (+ 443 do proxy TLS, veja README).
+  livekit:
+    profiles: ["selfhost"]
+    image: livekit/livekit-server:v1.13.10
+    command: --config /etc/livekit.yaml
+    network_mode: host
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    restart: unless-stopped
+
+  # LiveKit em modo dev (chaves devkey/secret) só para testes locais.
+  livekit-dev:
+    profiles: ["dev"]
+    image: livekit/livekit-server:v1.13.10
+    command: --dev --bind 0.0.0.0 --node-ip 127.0.0.1
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"

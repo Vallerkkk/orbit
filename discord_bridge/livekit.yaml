@@ -1,0 +1,9 @@
+# LiveKit Server self-hosted (perfil "selfhost" do docker-compose.yml).
+# As chaves vêm da variável LIVEKIT_KEYS, montada a partir do .env pelo compose.
+port: 7880
+rtc:
+  tcp_port: 7881
+  udp_port: 7882          # uma porta UDP só, multiplexada: simplifica o firewall
+  use_external_ip: true   # descobre o IP público da VPS via STUN
+logging:
+  level: info

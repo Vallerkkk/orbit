@@ -24,3 +24,6 @@ work-*.err
 *.pem
 *.key
 secrets.json
+
+# Ambiente local da ponte Discord
+.venv-bridge/
