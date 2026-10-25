@@ -42,7 +42,7 @@ final class AppSession {
             api = client
             media.api = client
             watchAuth(client)
-            if let current = try? await client.supabase.auth.session {
+            if let current = try? await client.supabase.auth.session, !current.isExpired {
                 client.cache(session: current)
                 accept(user: current.user.id)
             } else {
@@ -154,7 +154,7 @@ final class AppSession {
         authTask = Task { [weak self] in
             for await (_, session) in client.supabase.auth.authStateChanges {
                 guard !Task.isCancelled, let self, !self.isDemo else { return }
-                if let session {
+                if let session, !session.isExpired {
                     client.cache(session: session)
                     self.accept(user: session.user.id)
                 }

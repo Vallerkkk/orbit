@@ -22,7 +22,9 @@ final class APIClient {
         self.config = config
         network = session
         supabase = SupabaseClient(supabaseURL: config.supabaseUrl, supabaseKey: config.supabaseKey,
-                                  options: .init(global: .init(session: session)))
+                                  options: .init(global: .init(session: session),
+                                                 // Sessão salva expirada não é entregue como válida (comportamento do próximo SDK).
+                                                 auth: .init(emitLocalSessionAsInitialSession: true)))
     }
 
     static func bootstrap(session: URLSession = URLSession(configuration: .ephemeral)) async throws -> APIClient {
