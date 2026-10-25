@@ -24,6 +24,7 @@ from site_admin import install_site_admin
 from media_search import install_media_search
 from badges import install_badges
 from youtube import install_youtube
+import apns
 from upstream import client_for, new_client, read_json
 from videochamada import configured as videochamada_configured
 from astro_call import install_astro
@@ -56,7 +57,8 @@ bearer = HTTPBearer(auto_error=False)
 def settings():
     return {key: os.getenv(key, '').strip() for key in (
         'SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'LIVEKIT_URL',
-        'LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET')}
+        'LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET', 'APNS_KEY_ID', 'APNS_TEAM_ID',
+        'APNS_PRIVATE_KEY', 'APNS_BUNDLE_ID', 'APNS_PRODUCTION')}
 
 
 @app.middleware('http')
@@ -95,6 +97,7 @@ def config():
             'storageConfigured': True, 'uploadLimit': 26214400,
             'pushPublicKey': os.getenv('VAPID_PUBLIC_KEY',''),
             'pushConfigured': all(os.getenv(k) for k in ('VAPID_PUBLIC_KEY','VAPID_PRIVATE_KEY','PUSH_TRANSPORT_KEY')),
+            'iosPushConfigured': bool(os.getenv('PUSH_TRANSPORT_KEY')) and apns.configured(s),
             'callsConfigured': all(s[k] for k in ('LIVEKIT_URL', 'LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET'))}
 
 

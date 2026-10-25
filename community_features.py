@@ -1,4 +1,4 @@
-"""Authenticated moderation and Web Push delivery; no background paid service."""
+"""Authenticated moderation and Web/iOS push delivery; no background paid service."""
 import asyncio
 import base64
 import json
@@ -13,6 +13,8 @@ import httpx
 from fastapi import Depends, HTTPException
 from livekit import api
 from pydantic import BaseModel, Field
+
+import apns
 from upstream import client_for, read_json
 
 
@@ -35,6 +37,10 @@ class PushRegistration(BaseModel):
     keys: dict[str, str] = Field(max_length=2)
 
 
+class IOSPushRegistration(BaseModel):
+    device_token: str = Field(pattern=r'^[A-Fa-f0-9]{64}$')
+
+
 class MemberAction(BaseModel):
     member: UUID
     action: Literal['timeout', 'untimeout', 'ban', 'unban']
@@ -50,6 +56,7 @@ class VoiceAction(BaseModel):
 def install_features(app, current_user, settings):
     dispatch_times = defaultdict(deque)
     dispatch_gate = asyncio.Lock()
+    apns_sender = apns.APNsSender()
 
     async def rest(path, headers, *, method='POST', body=None, params=None):
         try:
@@ -102,11 +109,27 @@ def install_features(app, current_user, settings):
         await rest('push_subscriptions', headers, method='DELETE', params={'user_id': f'eq.{user["id"]}', 'endpoint': f'eq.{body.endpoint}'})
         return {'ok': True}
 
+    @app.post('/api/ios/push/subscribe')
+    async def subscribe_ios(body: IOSPushRegistration, identity=Depends(current_user)):
+        _, headers = identity
+        # A função do banco transfere o aparelho para a conta logada: se outra pessoa
+        # usou este iPhone antes, ela deixa de receber as notificações dele.
+        await rest('rpc/register_ios_device', headers, body={'token': body.device_token.lower()})
+        return {'ok': True}
+
+    @app.delete('/api/ios/push/subscribe')
+    async def unsubscribe_ios(body: IOSPushRegistration, identity=Depends(current_user)):
+        user, headers = identity
+        await rest('ios_push_subscriptions', headers, method='DELETE',
+                   params={'user_id': f'eq.{user["id"]}', 'device_token': f'eq.{body.device_token.lower()}'})
+        return {'ok': True}
+
     @app.post('/api/notifications/dispatch')
     async def dispatch(identity=Depends(current_user)):
         user, headers = identity
         secret, private = os.getenv('PUSH_TRANSPORT_KEY', ''), os.getenv('VAPID_PRIVATE_KEY', '')
-        if not secret or not private:
+        ios_ready = apns.configured(settings())
+        if not secret or not (private or ios_ready):
             return {'enabled': False, 'sent': 0}
         queue = dispatch_times[user['id']]
         while queue and queue[0] < time.monotonic() - 20:
@@ -130,7 +153,20 @@ def install_features(app, current_user, settings):
                 nonlocal sent
                 success, expired = True, None
                 try:
-                    if not valid_push_endpoint(job['endpoint']):
+                    if job.get('platform') == 'ios':
+                        if not ios_ready:
+                            success = False
+                            return
+                        async with semaphore:
+                            outcome = await apns_sender.send(settings(), job.get('device_token'), job['payload'])
+                        if outcome == 'expired':
+                            expired = job['subscription_id']
+                        elif outcome == 'retry':
+                            success = False
+                        else:
+                            sent += 1
+                        return
+                    if not private or not valid_push_endpoint(job['endpoint']):
                         expired = job['subscription_id']
                         return
                     async with semaphore:
