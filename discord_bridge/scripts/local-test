@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+# Sobe um LiveKit Server local em modo dev (Docker) e roda o teste da ponte
+# contra ele: participante falso no LiveKit + usuário falso do "Discord".
+#
+#   discord_bridge/scripts/local-test [--seconds 15]
+#
+# Para testar contra o seu LiveKit Cloud em vez do local, rode direto:
+#   python -m discord_bridge.scripts.local_test
+set -e
+here="$(cd "$(dirname "$0")/.." && pwd)"
+
+docker compose -f "$here/docker-compose.yml" --profile dev up -d livekit-dev
+trap 'docker compose -f "$here/docker-compose.yml" --profile dev stop livekit-dev >/dev/null' EXIT
+
+export LIVEKIT_URL=ws://localhost:7880 LIVEKIT_API_KEY=devkey LIVEKIT_API_SECRET=secret
+sleep 2  # tempo do servidor abrir as portas
+
+cd "$here/.."
+python -m discord_bridge.scripts.local_test "$@"
