@@ -10,6 +10,7 @@ import {initSidebarToggle} from './sidebar-toggle.js';
 import './ui-polish.js';
 import {nicknameProblem} from './identity-rules.js';
 import {canEditServer,isSiteAdmin} from './server-permissions.js';
+import {nativeShell,authOptions as nativeAuthOptions,attach as attachNativeShell,post as postNative,requestedScreen} from './native-shell.js';
 import {initSocialLogin} from './social-login.js';
 import {initPasswordReset,parseRecovery,pendingReset} from './password-reset.js';
 // Captura o link de recuperação antes que o supabase-js limpe o hash.
@@ -193,9 +194,18 @@ async function showSession(next) {
     if(transition===sessionTransition){sessionReady=true;trackVisibleActivity().catch(()=>{});}
   }catch(error){if(transition===sessionTransition){toast('Não foi possível carregar a comunidade: '+errorText(error));sessionRecovery.hidden=false;}}
   finally{if(transition===sessionTransition){sessionInitializing=false;setEntryBusy(false);}}
-  if(transition===sessionTransition){await enhancements.sessionChanged();feed?.deepLink();showFirstWelcome(transition);const publicProfile=new URL(location.href).searchParams.get('profile');if(/^[0-9a-f-]{36}$/i.test(publicProfile||''))feed.open('profile',{author:publicProfile});if(new URL(location.href).searchParams.has('youtube'))youtube.open();shareReceiver?.resume();const story=new URL(location.href).searchParams.get('story');if(/^[0-9a-f-]{36}$/i.test(story||'')){const tools=await loadSocialTools();if(transition===sessionTransition)tools.stories(story);}}
+  if(transition===sessionTransition){await enhancements.sessionChanged();feed?.deepLink();showFirstWelcome(transition);const publicProfile=new URL(location.href).searchParams.get('profile');if(/^[0-9a-f-]{36}$/i.test(publicProfile||''))feed.open('profile',{author:publicProfile});if(new URL(location.href).searchParams.has('youtube'))youtube.open();shareReceiver?.resume();const story=new URL(location.href).searchParams.get('story');if(/^[0-9a-f-]{36}$/i.test(story||'')){const tools=await loadSocialTools();if(transition===sessionTransition)tools.stories(story);}const screen=requestedScreen();if(screen)openRequestedScreen(screen);}
+}
+// Telas abertas direto pelo app iOS (?open=...): cada uma usa o mesmo caminho dos botões do site.
+function openRequestedScreen(screen){
+ const run={store:()=>studio('openStore'),decorations:()=>openDecorationGallery(),youtube:()=>youtube.open(),settings:()=>openSettingsHub(),
+  admin:()=>isAdmin()?openManagement():toast('Somente administradores da Órbita.'),friends:()=>showFriends(),profile:()=>openProfileCustomizer(),
+  members:()=>feed.open('members'),feed:()=>feed.open('foryou')}[screen];
+ Promise.resolve().then(run).catch(error=>toast(errorText(error)));
 }
 $('logout').onclick = async () => {
+  // No app iOS quem encerra a sessão é o app: qualquer signOut aqui revogaria a sessão do iPhone.
+  if(nativeShell){postNative('sign-out');return;}
   try { await enhancements?.disablePush(true); } catch {}
   const {error} = await db.auth.signOut(); if (error) toast(errorText(error));
 };
@@ -887,11 +897,12 @@ async function boot() {
     if(config.sentryDsn||config.umamiScript)import('./telemetry.js').then(module=>module.configureTelemetry(config)).catch(()=>{});
     if (!config.configured) { $('setup').hidden = false; $('auth-submit').disabled = true; return; }
     const {createClient} = await requestWithDeadline(()=>import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm'),{timeout:30000});
-    if(!db){db=createClient(config.supabaseUrl,config.supabaseKey,{realtime:{worker:true}});
+    if(!db){db=createClient(config.supabaseUrl,config.supabaseKey,{realtime:{worker:true},...(nativeAuthOptions?{auth:nativeAuthOptions}:{})});
     // Supabase calls run outside the Auth callback to avoid locking the session.
     passwordReset=initPasswordReset({$,el,db,enter:next=>showSession(next).catch(error=>toast(errorText(error)))});
     db.auth.onAuthStateChange((event,next)=>{if(event==='PASSWORD_RECOVERY'){setTimeout(()=>{if(!passwordReset.active()||!document.getElementById('reset-form'))passwordReset.showNewPassword();},0);return;}if(passwordReset.active())return;setTimeout(()=>showSession(next).catch(error=>toast(errorText(error))),0);});}
     await socialLogin.ready(db,config);
+    if(nativeShell)await attachNativeShell(db);
     if(initialRecovery&&!passwordReset.active()&&await passwordReset.begin(initialRecovery)){$('auth-submit').disabled=false;return;}
     if(passwordReset.active()){$('auth-submit').disabled=false;return;}
     const {data, error} = await requestWithDeadline(()=>db.auth.getSession(),{timeout:30000}); if(error){if(isInvalidSessionError(error)){await showSession(null);$('auth-status').textContent='Sua sessão expirou. Entre novamente para continuar.';$('auth-submit').disabled=false;return;}throw error;}
@@ -1627,7 +1638,7 @@ $('settings').onclick=()=>{
   baseSettings();const container=$('dialog-content'),appearance=el('div');
   const THEMES=[['nitro','Pink','#e07ad6','#b78cff'],['orbita','Violeta Órbita','#9b87ff','#5aa9ff'],['blurple','Blurple','#7f89ff','#4fb3ff'],['emerald','Emerald','#34d399','#22d3ee'],['cyber','Cyber Neon','#22e6f5','#ff4fd8'],['forest','Floresta','#7bc96f','#d6c25e'],['ocean','Oceano','#4fb3ff','#2dd4bf'],['sunset','Pôr do Sol','#ff8a5c','#ff5d8f'],['midnight','Meia-Noite','#8fa8ff','#7c6bff'],['blood','Sangue','#ff5a6a','#ff9f43'],['gold','Ouro','#f2c14e','#ff9f43'],['sakura','Sakura','#ff9ec7','#c9a7ff']];
   const themeLabel=el('div','field theme-field','Tema'),themeGrid=el('div','theme-grid');themeGrid.setAttribute('role','radiogroup');themeGrid.setAttribute('aria-label','Tema');const currentTheme=()=>localStorage.getItem('orbita-theme')||'nitro';
-  for(const [key,label,c1,c2] of THEMES){const card=el('button','theme-card');card.type='button';card.dataset.themeKey=key;card.setAttribute('role','radio');card.setAttribute('aria-checked',String(currentTheme()===key));card.style.setProperty('--tc1',c1);card.style.setProperty('--tc2',c2);const mini=el('span','theme-mini');mini.append(el('i','tm-rail'),el('i','tm-line'),el('i','tm-line short'),el('i','tm-btn'),el('i','tm-pill'));card.append(mini,el('span','theme-name',label));card.onclick=()=>{localStorage.setItem('orbita-theme',key);document.body.dataset.theme=key;for(const other of themeGrid.children)other.setAttribute('aria-checked',String(other===card));};themeGrid.append(card);}
+  for(const [key,label,c1,c2] of THEMES){const card=el('button','theme-card');card.type='button';card.dataset.themeKey=key;card.setAttribute('role','radio');card.setAttribute('aria-checked',String(currentTheme()===key));card.style.setProperty('--tc1',c1);card.style.setProperty('--tc2',c2);const mini=el('span','theme-mini');mini.append(el('i','tm-rail'),el('i','tm-line'),el('i','tm-line short'),el('i','tm-btn'),el('i','tm-pill'));card.append(mini,el('span','theme-name',label));card.onclick=()=>{localStorage.setItem('orbita-theme',key);document.body.dataset.theme=key;postNative('theme',{key});for(const other of themeGrid.children)other.setAttribute('aria-checked',String(other===card));};themeGrid.append(card);}
   // Prévia ao vivo: mini Órbita com o tema em foco/selecionado; as variáveis valem só dentro da prévia.
   const prev=el('div','ap-preview');prev.setAttribute('aria-hidden','true');prev.innerHTML='<div class="ap-rail"><i class="on"></i><i></i><i></i><b>+</b></div><div class="ap-chan"><strong>Órbita</strong><span># geral</span><span class="on"># jogos</span><span># música</span><em>🔊 Sala de voz</em></div><div class="ap-chat"><header># jogos</header><div class="ap-msg"><i></i><p><b>Lua</b> <small>hoje 21:04</small><br>Bora uma partida hoje?</p></div><div class="ap-msg"><i class="b"></i><p><b>Kai</b> <small>hoje 21:05</small><br>Fechou! Entro na sala às 22h <span class="ap-mention">@Lua</span></p></div><div class="ap-msg"><i class="c"></i><p><b>Nina</b> <small>hoje 21:06</small><br>Eu também 🎮</p></div><footer><span>Conversar em #jogos</span><button type="button" tabindex="-1">Enviar</button></footer></div>';
   const paintPrev=key=>{const t=THEMES.find(x=>x[0]===key)||THEMES[0];prev.style.setProperty('--pv-ac',t[2]);prev.style.setProperty('--pv-ac2',t[3]);prev.dataset.mode=document.body.dataset.colorMode==='light'?'light':'dark';prev.dataset.label=t[1];};
@@ -2249,6 +2260,7 @@ async function syncVoiceChat(force=false){
 
 const authRecovery=createAuthRecovery({auth:()=>db.auth,currentUser:()=>session?.user.id,onExpired:async account=>{
  if(session?.user.id!==account)return;
+ if(nativeShell){postNative('session-expiring');return;}
  saveComposerDraft();const cleanup=showSession(null);$('auth-submit').disabled=false;$('auth-status').textContent='Sua sessão expirou. Entre novamente para continuar.';
  // Only the confirmed invalid local login is removed. No other device is signed out.
  db.auth.signOut({scope:'local'}).catch(()=>{});await cleanup;
