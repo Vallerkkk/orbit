@@ -1,0 +1,55 @@
+name: Publicar Orbita Nativo
+on:
+  push:
+    tags: ['native-v*']
+  pull_request:
+    paths: ['native/**', '.github/workflows/native-release.yml']
+permissions:
+  contents: read
+concurrency:
+  group: orbita-native-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  windows:
+    # Standard hosted runners are free in public repositories. Do not run if made private.
+    if: ${{ github.event.repository.private == false }}
+    runs-on: windows-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: native
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Testar regras de navegacao
+        run: dotnet test --project Orbita.Native.Tests
+      - name: Compilar
+        run: |
+          $ErrorActionPreference = 'Stop'
+          dotnet publish Orbita.Native -c Release -o ../work/native
+          dotnet publish Orbita.Native -c Release -p:SelfContained=true -o ../work/native-sc
+      - name: Conferir tag e versao
+        if: startsWith(github.ref, 'refs/tags/native-v')
+        run: |
+          $version = ([xml](Get-Content Orbita.Native/Orbita.Native.csproj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+          if ("native-v$version" -ne $env:GITHUB_REF_NAME) { throw "Tag $env:GITHUB_REF_NAME difere da versao $version" }
+          "VERSION=$version" >> $env:GITHUB_ENV
+      - name: Publicar release
+        if: startsWith(github.ref, 'refs/tags/native-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dist = New-Item -ItemType Directory -Force ../work/dist
+          Copy-Item ../work/native/Orbita.exe "$dist/Orbita-Nativo-$env:VERSION-x64.exe"
+          Compress-Archive ../work/native-sc/* "$dist/Orbita-Nativo-$env:VERSION-x64-autocontido.zip"
+          Get-ChildItem $dist -File | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_ -Algorithm SHA256).Hash.ToLower(), $_.Name } | Set-Content "$dist/SHA256SUMS.txt"
+          gh release create "$env:GITHUB_REF_NAME" (Get-ChildItem $dist -File).FullName --repo "$env:GITHUB_REPOSITORY" --verify-tag --generate-notes --title "Orbita Nativo $env:VERSION"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

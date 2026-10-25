@@ -19,7 +19,7 @@ export function initSocialLogin({toast}) {
     client=db;
     // The current native launcher intentionally blocks navigation to external origins.
     // Do not strand a desktop user in an unrelated browser session.
-    if(/Electron\//.test(navigator.userAgent)){hint.textContent='No aplicativo Windows, entre com e-mail. O login social está disponível no navegador.';return;}
+    if(/Electron\/|OrbitaNative\//.test(navigator.userAgent)){hint.textContent='No aplicativo Windows, entre com e-mail. O login social está disponível no navegador.';return;}
     const url=new URL('/auth/v1/settings',config.supabaseUrl);
     fetch(url,{headers:{apikey:config.supabaseKey},signal:AbortSignal.timeout(5000)}).then(response=>{
       if(!response.ok)throw Error();return response.json();
