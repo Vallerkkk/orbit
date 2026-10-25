@@ -338,7 +338,13 @@ def install_youtube(app, current_user, settings):
             raise HTTPException(503, 'Não foi possível salvar a conexão com o Google.')
         if r.is_error:
             raise HTTPException(503, 'Não foi possível acessar a conexão com o Google.')
-        return r.json() if r.content else None
+        if not r.content:
+            return None
+        try:
+            return r.json()
+        except (ValueError, UnicodeDecodeError):
+            # Um proxy na frente do Supabase devolve HTML com 200: sem isto o erro vira 500.
+            raise HTTPException(503, 'Não foi possível acessar a conexão com o Google.') from None
 
     async def google_token(data):
         try:
@@ -347,7 +353,14 @@ def install_youtube(app, current_user, settings):
                                                       'client_secret': os.getenv('GOOGLE_OAUTH_CLIENT_SECRET', '').strip()})
         except httpx.HTTPError:
             raise HTTPException(503, 'O Google não respondeu. Tente novamente.')
-        return r.status_code, (r.json() if r.content else {})
+        try:
+            payload = r.json() if r.content else {}
+        except (ValueError, UnicodeDecodeError):
+            payload = {}
+        if not isinstance(payload, dict):
+            payload = {}
+        # Os chamadores fazem data.get(...): uma página de erro do proxy viraria 500.
+        return r.status_code, payload
 
     async def account(identity, required=True):
         """Token de acesso do YouTube do usuário (memória → refresh token criptografado no Supabase)."""

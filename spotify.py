@@ -168,27 +168,31 @@ def install_spotify(app, current_user):
         if not enabled(c):
             return {'playing': False}
         uid = str(user_id)
+        # O direito de ver vem sempre do banco, antes de qualquer cache: um acerto aqui
+        # entregava a faixa a um estranho quando a própria pessoa acabara de consultar o
+        # próprio cartão (show_on_profile desligado não protegia nada por 15 segundos).
+        row = await load(c, uid)
+        if not row or not (row.get('show_on_profile', True) or uid == identity[0]['id']):
+            return {'playing': False}
         hit = cache.get(uid)
         if hit and hit[0] > time.time():
             return hit[1]
         out = {'playing': False}
-        row = await load(c, uid)
-        if row and (row.get('show_on_profile', True) or uid == identity[0]['id']):
-            token = await access_token(c, row)
-            if token:
-                try:
-                    async with client_for(app) as client:
-                        r = await client.get('https://api.spotify.com/v1/me/player/currently-playing', headers={'Authorization': 'Bearer ' + token})
-                    if r.status_code == 200:
-                        d = read_json(r, dict)
-                        item = d.get('item') or {}
-                        if item and d.get('is_playing') and item.get('type', 'track') == 'track':
-                            imgs = (item.get('album') or {}).get('images') or []
-                            out = {'playing': True, 'track': item.get('name'), 'artist': ', '.join(a.get('name', '') for a in item.get('artists') or []),
-                                   'album': (item.get('album') or {}).get('name'), 'art': imgs[-2]['url'] if len(imgs) > 1 else (imgs[0]['url'] if imgs else None),
-                                   'url': (item.get('external_urls') or {}).get('spotify'), 'progressMs': d.get('progress_ms') or 0,
-                                   'durationMs': item.get('duration_ms') or 0, 'fetchedAt': int(time.time() * 1000)}
-                except httpx.HTTPError:
-                    pass
+        token = await access_token(c, row)
+        if token:
+            try:
+                async with client_for(app) as client:
+                    r = await client.get('https://api.spotify.com/v1/me/player/currently-playing', headers={'Authorization': 'Bearer ' + token})
+                if r.status_code == 200:
+                    d = read_json(r, dict)
+                    item = d.get('item') or {}
+                    if item and d.get('is_playing') and item.get('type', 'track') == 'track':
+                        imgs = (item.get('album') or {}).get('images') or []
+                        out = {'playing': True, 'track': item.get('name'), 'artist': ', '.join(a.get('name', '') for a in item.get('artists') or []),
+                               'album': (item.get('album') or {}).get('name'), 'art': imgs[-2]['url'] if len(imgs) > 1 else (imgs[0]['url'] if imgs else None),
+                               'url': (item.get('external_urls') or {}).get('spotify'), 'progressMs': d.get('progress_ms') or 0,
+                               'durationMs': item.get('duration_ms') or 0, 'fetchedAt': int(time.time() * 1000)}
+            except httpx.HTTPError:
+                pass
         cache[uid] = (time.time() + CACHE_TTL, out)
         return out

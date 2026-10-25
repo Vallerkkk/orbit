@@ -57,6 +57,11 @@ def install_media_search(app, current_user):
         if len(bucket) >= RATE[0]:
             raise HTTPException(429, 'Muitas buscas seguidas. Espere alguns segundos.')
         bucket.append(now)
+        if len(hits) > 4096:
+            # O defaultdict criaria uma fila por conta e nunca a largaria: uma pessoa a
+            # mais no banco, para sempre, é um deque vazio a mais na memória.
+            for key in [k for k, v in hits.items() if k != user_id and (not v or now - v[-1] > RATE[1])]:
+                del hits[key]
 
     async def fetch(kind, endpoint, params, identity):
         key = os.getenv('GIPHY_API_KEY', '').strip()

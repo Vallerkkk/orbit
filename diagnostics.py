@@ -108,17 +108,27 @@ def install_diagnostics(app, current_user, settings):
     status = 'awaiting_usage'
 
     async def rpc(name, payload, headers):
-        async with client_for(app) as client:
-            response = await client.post(settings()['SUPABASE_URL'] + '/rest/v1/rpc/' + name, headers=headers, json=payload)
+        try:
+            async with client_for(app) as client:
+                response = await client.post(settings()['SUPABASE_URL'] + '/rest/v1/rpc/' + name, headers=headers, json=payload)
+        except httpx.HTTPError:
+            raise HTTPException(503, 'O diagnóstico técnico está temporariamente indisponível.') from None
         if response.is_error:
             raise HTTPException(503, 'O diagnóstico técnico está temporariamente indisponível.')
-        return response
+        # Devolve o valor já decodificado: as duas chamadas comparam com True e uma
+        # resposta de proxy sem JSON teria que virar 503, não o 500 de um ValueError.
+        if not response.content:
+            return None
+        try:
+            return response.json()
+        except (ValueError, UnicodeDecodeError):
+            raise HTTPException(503, 'O diagnóstico técnico está temporariamente indisponível.') from None
 
     async def analyze(headers, snapshot):
         nonlocal status
         try:
             reserved = await rpc('reserve_diagnostic_analysis', {}, headers)
-            if reserved.json() is not True:
+            if reserved is not True:
                 status = 'daily_or_hourly_limit'
                 return
             # Only allowlisted category counts. No IDs, message/error text, URLs or traces.
@@ -155,8 +165,8 @@ def install_diagnostics(app, current_user, settings):
         nonlocal task, next_attempt
         _, headers = identity
         # Persistence and throttling are transactional, shared across processes/restarts.
-        response = await rpc('record_app_diagnostics', {'events': [x.model_dump() for x in batch.events]}, headers)
-        if response.json() is not True:
+        recorded = await rpc('record_app_diagnostics', {'events': [x.model_dump() for x in batch.events]}, headers)
+        if recorded is not True:
             return {'accepted': False}
         for event in batch.events:
             key = (event.screen, event.signal)
@@ -169,6 +179,12 @@ def install_diagnostics(app, current_user, settings):
         return {'accepted': True}
 
     async def admin_data(identity):
+        try:
+            return await read_report(identity)
+        except httpx.HTTPError:
+            raise HTTPException(503, 'O diagnóstico técnico está temporariamente indisponível.') from None
+
+    async def read_report(identity):
         user, headers = identity
         async with client_for(app) as client:
             response = await client.get(settings()['SUPABASE_URL'] + '/rest/v1/site_roles', headers=headers,

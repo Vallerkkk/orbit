@@ -152,7 +152,13 @@ def install_features(app, current_user, settings):
                     if expired:
                         await rest('rpc/push_finish', headers, body={'transport_key': secret, 'job': job['job_id'], 'expired': expired, 'success': False})
 
-            await asyncio.gather(*(deliver(job) for job in jobs))
+            outcomes = await asyncio.gather(*(deliver(job) for job in jobs), return_exceptions=True)
+            # Um job que levanta fora do try/finally (o push_finish do "finally" é uma
+            # chamada HTTP e vira 503) interrompia o gather antes do laço abaixo, deixando
+            # todos os jobs locados: a próxima varredura entregava o mesmo push de novo.
+            for job, outcome in zip(jobs, outcomes):
+                if isinstance(outcome, BaseException):
+                    results.setdefault(job['job_id'], False)
             for job, success in results.items():
                 await rest('rpc/push_finish', headers, body={'transport_key': secret, 'job': job, 'success': success})
             return {'enabled': True, 'sent': sent, 'retry': len(results) >= 5 or any(not done for done in results.values())}
