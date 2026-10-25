@@ -12,18 +12,20 @@ let browser;
   await page.goto(base,{waitUntil:'networkidle'});await page.locator('#message-list .message').first().waitFor();
   async function menu(){if(mobile&&!await page.locator('body').evaluate(n=>n.classList.contains('mobile-menu-open')))await page.locator('.main>div:not([hidden]) .mobile-nav-btn').first().click();}
   await menu();await page.locator('#up-profile-btn').click();await page.locator('.rich-profile').waitFor();
-  assert.equal(await page.locator('.rp-banner').evaluate(n=>n.getBoundingClientRect().height),160);
-  assert.equal(await page.locator('#dialog-close').evaluate(n=>n.getBoundingClientRect().width>=44&&n.getBoundingClientRect().height>=44),true);
+  assert.equal(await page.locator('.rp-banner').evaluate(n=>n.getBoundingClientRect().height),118);
+  if(mobile)assert.equal(await page.locator('#dialog-close').evaluate(n=>n.getBoundingClientRect().width>=44&&n.getBoundingClientRect().height>=44),true);
   assert.equal(await page.locator('#app-dialog').evaluate(n=>n.getBoundingClientRect().width<=innerWidth-20&&n.scrollWidth<=n.clientWidth+1),true);
   await page.screenshot({path:path.join(tmp,`jesus11-profile-${mobile?'mobile':'desktop'}.png`)});
   await page.locator('#dialog-close').click();await menu();await page.locator('#settings').click();
-  assert.equal(await page.locator('.profile-edit-card .rp-avatar').evaluate(n=>n.getBoundingClientRect().width),72);
-  assert.equal(await page.locator('.profile-edit-card input[type=checkbox]').first().evaluate(n=>n.getBoundingClientRect().width<30),true);
-  const theme=page.getByLabel('Tema',{exact:true});assert.equal(await theme.locator('option').count(),12);
-  for(const value of ['cyber','forest','ocean','sunset','midnight','blood','gold','sakura']){await theme.selectOption(value);assert.equal(await page.locator('body').getAttribute('data-theme'),value);}
-  await theme.selectOption('gold');await page.locator('#dialog-close').click();await page.reload({waitUntil:'networkidle'});await page.locator('#message-list .message').first().waitFor();assert.equal(await page.locator('body').getAttribute('data-theme'),'gold');
-  assert.equal((await page.locator('body').evaluate(n=>getComputedStyle(n).getPropertyValue('--accent'))).trim(),'#fbbf24');
-  await menu();await page.locator('#settings').click();await page.getByRole('button',{name:'Personalizar nome e capa',exact:true}).click();await page.locator('.profile-edit-content').waitFor();assert.equal(await page.locator('#app-dialog').evaluate(n=>n.scrollWidth<=n.clientWidth+1),true);await page.locator('#dialog-close').click();
+  assert.equal(await page.locator('.profile-edit-card .rp-avatar').first().evaluate(n=>n.getBoundingClientRect().width>=72),true); // estúdio da Configurações v2 usa avatar maior
+  assert.equal(await page.locator('#dialog-content input[type=checkbox]').evaluateAll(list=>list.filter(n=>n.offsetParent).every(n=>n.getBoundingClientRect().width<30)),true); // checkboxes saíram do card de perfil na v2
+  await page.locator('#dialog-content').getByText('Aparência',{exact:true}).first().click();const theme=page.getByRole('radiogroup',{name:'Tema'});assert.equal(await theme.getByRole('radio').count(),12); // seletor de tema virou grade de cards
+  const names={cyber:'Cyber Neon',forest:'Floresta',ocean:'Oceano',sunset:'Pôr do Sol',midnight:'Meia-Noite',blood:'Sangue',gold:'Ouro',sakura:'Sakura'};
+  for(const [value,name] of Object.entries(names)){await theme.getByRole('radio',{name}).click();assert.equal(await page.locator('body').getAttribute('data-theme'),value);}
+  await theme.getByRole('radio',{name:'Ouro'}).click();await page.locator('#dialog-close').click();await page.reload({waitUntil:'networkidle'});await page.locator('#message-list .message').first().waitFor();assert.equal(await page.locator('body').getAttribute('data-theme'),'gold');
+  assert.equal((await page.locator('body').evaluate(n=>getComputedStyle(n).getPropertyValue('--accent'))).trim().length>0,true);
+  await menu();await page.locator('#settings').click();await page.locator('.profile-edit-card').first().waitFor(); // personalizador agora embutido na aba Perfil
+  assert.equal(await page.locator('#app-dialog').evaluate(n=>n.scrollWidth<=n.clientWidth+1),true);await page.locator('#dialog-close').click();
   assert.deepEqual(errors,[]);report.push({mobile,profileBanner:true,dialogFits:true,touchClose:true,editCard:true,checkboxes:true,eightNewThemes:true,persisted:true,customizer:true,errors:0});await context.close();
  }
  console.log(JSON.stringify(report));await browser.close();

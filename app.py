@@ -18,7 +18,12 @@ from livekit import api
 from integrations import install
 from public_pages import install_public_pages
 from diagnostics import install_diagnostics
+from spotify import install_spotify
 from community_features import install_features
+from site_admin import install_site_admin
+from media_search import install_media_search
+from badges import install_badges
+from youtube import install_youtube
 from upstream import client_for, new_client, read_json
 from videochamada import configured as videochamada_configured
 
@@ -209,60 +214,51 @@ def download_desktop_installer():
         status_code=302, headers={'Cache-Control':'no-store'})
 
 
+ANDROID_PACKAGE = 'app.orbita.mobile'
+ANDROID_CERT_SHA256 = '3C:24:A3:21:66:3F:2B:CF:F9:E7:ED:08:A1:56:0A:FB:2E:25:CD:6D:A4:E6:4C:D7:EC:E0:A9:32:6A:7D:44:18'
+
+
+@app.api_route('/baixar/Orbita.apk', methods=['GET','HEAD'])
+def download_android_apk():
+    return FileResponse(ROOT / 'static' / 'downloads' / 'Orbita.apk', media_type='application/vnd.android.package-archive',
+        filename='Orbita.apk', headers={'Cache-Control':'no-cache'})
+
+
+@app.get('/.well-known/assetlinks.json')
+def android_asset_links():
+    return JSONResponse([{'relation':['delegate_permission/common.handle_all_urls'],
+        'target':{'namespace':'android_app','package_name':ANDROID_PACKAGE,'sha256_cert_fingerprints':[ANDROID_CERT_SHA256]}}],
+        headers={'Cache-Control':'public, max-age=3600'})
+
+
 install(app, current_user, settings, make_token)
 install_features(app, current_user, settings)
+install_media_search(app, current_user)
+install_youtube(app, current_user, settings)
+install_badges(app, current_user, settings)
 install_public_pages(app, settings)
 install_diagnostics(app, current_user, settings)
+install_spotify(app, current_user)
 
 
-# ===== IA de Chamadas =====
-from ai_call import (
-    is_enabled as ai_enabled,
-    process_audio_chunk,
-    get_recent_transcript,
-    generate_opinion,
-    clear_call,
-    add_transcript,
-)
+async def is_site_admin(identity):
+    """Confirma o cargo no banco com o JWT do usuário, nunca com dado do cliente."""
+    user, headers = identity
+    s = settings()
+    if not s['SUPABASE_URL'] or not s['SUPABASE_PUBLISHABLE_KEY']:
+        raise HTTPException(503, 'Configure o Supabase no arquivo .env.')
+    try:
+        async with client_for(app) as client:
+            response = await client.get(s['SUPABASE_URL'] + '/rest/v1/site_roles', headers=headers,
+                params={'user_id': 'eq.' + user['id'], 'select': 'role'})
+    except httpx.HTTPError:
+        raise HTTPException(503, 'Não foi possível verificar a administração.')
+    if response.is_error:
+        raise HTTPException(503, 'Não foi possível verificar a administração.')
+    roles = read_json(response, list)
+    return any(isinstance(r, dict) and r.get('role') in ('admin', 'creator') for r in roles)
 
-@app.get("/api/ai/status")
-async def ai_status():
-    return {"enabled": ai_enabled(), "stt": "simulation", "llm": "simulation"}
-
-@app.post("/api/ai/transcript")
-async def ai_transcript(payload: dict, identity=Depends(current_user)):
-    """Recebe um chunk de áudio transcrito (ou simulado) de um participante."""
-    if not ai_enabled():
-        raise HTTPException(503, "IA de chamadas desativada.")
-    call_id = str(payload.get("call_id") or "")
-    user_id = str(payload.get("user_id") or "")
-    display_name = str(payload.get("display_name") or "Participante")
-    text = str(payload.get("text") or "").strip()
-    if not call_id or not user_id or not text:
-        raise HTTPException(400, "call_id, user_id e text são obrigatórios.")
-    entry = add_transcript(call_id, user_id, display_name, text, time.time(), time.time())
-    return {"ok": True, "entry": entry}
-
-@app.get("/api/ai/transcript/{call_id}")
-async def ai_get_transcript(call_id: str, identity=Depends(current_user)):
-    items = get_recent_transcript(call_id)
-    return {"call_id": call_id, "items": items, "count": len(items)}
-
-@app.post("/api/ai/opinion")
-async def ai_opinion(payload: dict, identity=Depends(current_user)):
-    """Pede opinião da IA sobre o assunto da chamada (com opção de pesquisa)."""
-    if not ai_enabled():
-        raise HTTPException(503, "IA de chamadas desativada.")
-    call_id = str(payload.get("call_id") or "")
-    question = str(payload.get("question") or "")
-    context = get_recent_transcript(call_id)
-    result = generate_opinion(context, question)
-    return result
-
-@app.delete("/api/ai/transcript/{call_id}")
-async def ai_clear(call_id: str, identity=Depends(current_user)):
-    clear_call(call_id)
-    return {"ok": True}
+install_site_admin(app, current_user, settings, is_site_admin)
 
 
 app.mount('/static', StaticFiles(directory=ROOT / 'static'), name='static')

@@ -40,12 +40,11 @@ let browser;
   await page.locator('#join-call').click();await page.locator('#toast').getByText('Indisponibilidade simulada',{exact:true}).waitFor();
   assert.equal(await page.locator('#join-call').isEnabled(),true);joinStatus=200;
   await page.locator('#join-call').click();await page.waitForFunction(()=>window.__qaRoom?.localParticipant.isMicrophoneEnabled===true);
-  // Restoring a page from the browser's history does not resurrect capture or stale call UI.
+  // Leaving the app on mobile (page hidden / kept in bfcache) keeps the call alive.
   await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true})));
-  await page.waitForFunction(()=>window.__qaRoom.state==='disconnected');
+  await page.waitForTimeout(200);assert.equal(await page.evaluate(()=>window.__qaRoom.state),'connected');
   await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));
-  assert.equal(await page.locator('#call-dock').isVisible(),false);assert.equal(await page.locator('#join-call').isEnabled(),true);
-  await page.locator('#join-call').click();await page.waitForFunction(()=>window.__qaRoom?.localParticipant.isMicrophoneEnabled===true);
+  assert.equal(await page.evaluate(()=>window.__qaRoom?.localParticipant.isMicrophoneEnabled),true);
   // Overlapping account initializations cannot overwrite the final account's subscriptions.
   await page.locator('#leave-call').click();
   await page.evaluate(async({USER,OTHER})=>{

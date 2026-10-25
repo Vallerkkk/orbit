@@ -1,5 +1,5 @@
 /* Visual system adapted from the supplied orbita.html. No continuous ambient animation. */
-:root{--bg-deep:#05050a;--bg-rail:#080811;--bg-sidebar:#0f0f19;--bg-main:#10101b;--bg-elevated:#1e1e30;--bg-floating:#141420;--bg-input:#222236;--bg-hover:#ffffff0d;--bg-active:#7c5cff29;--accent:#7c5cff;--accent-hover:#ad99ff;--accent-2:#5b8def;--accent-soft:#7c5cff26;--accent-glow:#7c5cff38;--text:#f3f3fa;--text-dim:#b4b4ca;--text-mut:#9696ae;--border:#ffffff12;--border-strong:#ffffff24;--ease-ui:cubic-bezier(.22,1,.36,1)}
+:root{--bg-deep:#05050a;--bg-rail:#080811;--bg-sidebar:#0f0f19;--bg-main:#10101b;--bg-elevated:#1e1e30;--bg-floating:#141420;--bg-input:#222236;--bg-hover:#ffffff0d;--bg-active:#7c5cff29;--accent:var(--ac);--accent-hover:#ad99ff;--accent-2:#5b8def;--accent-soft:#7c5cff26;--accent-glow:#7c5cff38;--text:#f3f3fa;--text-dim:#b4b4ca;--text-mut:#9696ae;--border:#ffffff12;--border-strong:#ffffff24;--ease-ui:cubic-bezier(.22,1,.36,1)}
 body{font-family:var(--font);letter-spacing:0;color-scheme:dark}body[data-color-mode=light]{color-scheme:light}
 .app{background:var(--bg-main);height:100dvh;width:100%;min-width:0}
 .main{position:relative;isolation:isolate;background:var(--bg-main)}
@@ -85,3 +85,10 @@ body[data-color-mode=light] .main::before{opacity:.35}body[data-color-mode=light
 @media(max-width:780px){.message-form #message-input{font-size:16px}.message-form .send-live{margin-bottom:0}.network-notice{padding:8px 14px}}
 
 .member[role=button]:focus-visible{outline:3px solid var(--accent-hover);outline-offset:1px}
+/* Recuperação de senha */
+.forgot-link{align-self:flex-end;justify-self:end;margin:-4px 0 2px;padding:2px 0;font-size:13px;width:auto}
+.reset-box{display:grid;gap:10px}.reset-form{display:grid;gap:14px}
+.pw-field{position:relative;display:block}.pw-field input{width:100%;padding-right:84px}
+.pw-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);min-height:32px;padding:4px 10px;border:0;border-radius:8px;background:transparent;color:var(--muted,#9aa);font:inherit;font-size:13px;cursor:pointer}
+.pw-eye:hover,.pw-eye:focus-visible{color:var(--text,#fff);background:var(--accent-soft,rgba(255,255,255,.08))}
+.reset-status[data-tone=error]{color:var(--danger,#ff6b6b)}.reset-status[data-tone=ok]{color:var(--success,#3ddc97)}

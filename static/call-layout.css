@@ -144,3 +144,49 @@ body.camera-active #voice-view #camera-switch{min-width:88px;width:auto;padding-
   outline: 2px solid #ff4d9e;
   z-index: 2;
 }
+
+/* Grade prioriza tela compartilhada */
+#voice-view:has(.media-screen) .media-grid {
+  display: grid !important;
+  grid-template-columns: 2fr 1fr;
+  gap: 8px;
+}
+#voice-view:has(.media-screen) .media-screen {
+  grid-column: 1;
+  grid-row: 1 / span 3;
+  min-height: 280px;
+}
+.media-tile.speaking {
+  border-color: #3ba55c !important;
+  box-shadow: 0 0 0 3px rgba(59,165,92,.5), 0 0 24px rgba(59,165,92,.25) !important;
+}
+.sharing-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: #ed4245;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  z-index: 3;
+}
+.participant-volume, .media-tile .volume-slider {
+  position: absolute;
+  bottom: 36px;
+  left: 10px;
+  right: 50px;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.media-tile:hover .volume-slider,
+.participant:hover .participant-volume {
+  opacity: 1;
+}
+.sharing-badge {
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .7; }
+}

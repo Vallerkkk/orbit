@@ -13,6 +13,7 @@ let browser;
   await page.goto(new URL('/instalar',base).href,{waitUntil:'networkidle'});
   const button=page.getByRole('button',{name:'Instalar versão do navegador',exact:true});await button.waitFor();
   assert.equal(await page.getByRole('link',{name:/Baixar para Windows/}).getAttribute('href'),'/baixar/Orbita-Setup.exe');
+  assert.equal(await page.getByRole('link',{name:'Baixar APK ↓'}).getAttribute('href'),'/baixar/Orbita.apk');
   await button.click();await page.getByRole('status').filter({hasText:'Use a opção de instalar'}).waitFor();
   assert.equal(await page.locator('#install-help').evaluate(node=>node===document.activeElement),true);
   await page.evaluate(()=>{const event=new Event('beforeinstallprompt',{cancelable:true});event.prompt=async()=>{window.__promptCalls=(window.__promptCalls||0)+1;};event.userChoice=Promise.resolve({outcome:'dismissed'});window.dispatchEvent(event);});

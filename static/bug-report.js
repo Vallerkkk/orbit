@@ -17,7 +17,25 @@ export function createBugReports({db,session,isAdmin,showDialog,el,button,toast}
         const {data,error}=await db.from('bug_reports').insert({description:text,attachments:paths,app_version:String(version).slice(0,64),platform:platform(),user_agent:navigator.userAgent.slice(0,512),route:(location.pathname+location.hash).slice(0,256)}).select('code,created_at').single();if(error)throw error;
         box.replaceChildren(el('div','bug-done'));box.firstChild.append(el('strong','','Relatório '+data.code+' enviado'),el('p','muted','Recebido em '+fmt(data.created_at)+'. Obrigado! A equipe vai analisar.'));toast('Relatório '+data.code+' enviado');}
       catch(e){toast(e.message||'Não foi possível enviar.');send.disabled=false;send.textContent='Enviar relatório';}},'primary');
-    const row=el('div','bug-actions');row.append(add,send);box.append(now,ta,pick,list,row);setTimeout(()=>ta.focus());});}
+    const row=el('div','bug-actions');row.append(add,send);box.append(now,ta,pick,list,row);
+    // Ctrl+V para colar prints
+    ta.addEventListener('paste', (e) => {
+      const items = e.clipboardData?.items;
+      if(!items) return;
+      for(const item of items){
+        if(item.type.startsWith('image/')){
+          e.preventDefault();
+          const file = item.getAsFile();
+          if(file && files.length < 6){
+            files.push(file);
+            paint();
+            toast('Print colado');
+          }
+        }
+      }
+    });
+    ta.placeholder = 'O que aconteceu? O que você esperava? Como reproduzir?\n\nDica: use Ctrl+V para colar prints.';
+    setTimeout(()=>ta.focus());});}
   function admin(){showDialog('Relatórios de bug',async box=>{box.classList.add('bug-modal','bug-admin');box.append(el('p','muted','Carregando…'));
     const {data,error}=await db.from('bug_reports').select('*').order('created_at',{ascending:false}).limit(100);box.replaceChildren();if(error)return box.append(el('p','muted',error.message));if(!data.length)return box.append(el('p','muted','Nenhum relatório ainda.'));
     const ids=[...new Set(data.map(r=>r.reporter_id))],{data:ps}=await db.from('profiles').select('id,username,display_name').in('id',ids);const who=id=>ps?.find(p=>p.id===id);

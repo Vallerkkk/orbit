@@ -3,35 +3,97 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#12121d">
-  <meta name="description" content="Baixe o aplicativo Órbita Desktop para Windows, com janela própria, chamadas e compartilhamento de tela.">
+  <meta name="theme-color" content="#0a0b0f">
+  <meta name="description" content="Baixe a Órbita para Windows, Android e iPhone. Texto, voz, vídeo e sua comunidade em um só lugar.">
   <link rel="manifest" href="/static/manifest.webmanifest">
   <link rel="icon" href="/static/icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-  <title>Órbita Desktop — baixar para Windows</title>
-  <link rel="stylesheet" href="/static/install.css?v=desktop-20261020-1">
+  <title>Baixar a Órbita — Windows, Android e iPhone</title>
+  <link rel="stylesheet" href="/static/install.css?v=install-20261023-1">
 </head>
 <body data-install-page="true">
-  <header><a class="brand" href="/"><img src="/static/icons/icon-192.png" width="40" height="40" alt="">Órbita</a><a class="back" href="/">Abrir o site ↗</a></header>
+  <header class="top"><a class="brand" href="/"><img src="/static/icons/icon-192.png" width="34" height="34" alt="">Órbita</a>
+    <nav><a href="#plataformas">Plataformas</a><a href="#recursos">Recursos</a><a href="#perguntas">Perguntas</a><a class="pill" href="/">Abrir no navegador ↗</a></nav></header>
   <main>
     <section class="hero" aria-labelledby="install-title">
-      <div class="copy"><span class="eyebrow">ÓRBITA DESKTOP · VERSÃO 1.0.2</span><h1 id="install-title">Sua órbita.<br><span>Agora no Windows.</span></h1><p class="lead">O aplicativo da sua comunidade. Janela própria, bandeja do Windows e seu lugar para conversar, sem precisar abrir o navegador.</p>
-        <div class="actions"><a id="desktop-download" class="primary-download" href="/baixar/Orbita-Setup.exe">Baixar para Windows ↓<small>Instalador · Windows 10/11 · 64 bits</small></a><a class="secondary" href="/">Continuar no site ↗</a></div>
-        <p class="desktop-note">Versão 1.0.2 · Atualizações automáticas · Grátis · Aproximadamente 107 MB. Entre na sua conta na primeira abertura. Mensagens e chamadas precisam de internet.</p>
-        <ul class="benefits"><li>Atualizações automáticas</li><li>Câmera e tela com áudio</li><li>Bandeja do Windows</li></ul>
+      <div class="copy reveal">
+        <span class="eyebrow"><i></i>ÓRBITA · DESKTOP 1.0.2 · MOBILE 1.0.0</span>
+        <h1 id="install-title">Sua comunidade,<br><span>em qualquer tela.</span></h1>
+        <p class="lead">Texto, voz e vídeo no mesmo lugar. Instale a Órbita no computador ou no celular e continue a conversa de onde parou.</p>
+        <div class="actions">
+          <a id="desktop-download" class="cta" data-platform="windows" href="/baixar/Orbita-Setup.exe"><span>Baixar para Windows</span><small>Instalador · Windows 10/11 · 64 bits · ~107 MB</small></a>
+          <a id="android-download" class="cta" data-platform="android" href="/baixar/Orbita.apk" hidden><span>Baixar para Android</span><small>APK · Android 7 ou mais novo · leve</small></a>
+          <a id="ios-guide" class="cta" data-platform="ios" href="#iphone" hidden><span>Instalar no iPhone</span><small>Pelo Safari · 3 passos</small></a>
+          <a class="ghost" href="#plataformas">Outras plataformas</a>
+        </div>
+        <p class="detected" id="detected" aria-live="polite"></p>
       </div>
-      <div class="preview" aria-hidden="true"><div class="preview-bar"><i></i><i></i><i></i><span>Órbita</span></div><div class="preview-body"><aside><img src="/static/icons/icon-192.png" width="48" height="48" alt=""><b>ÓR</b><b>+</b></aside><div class="preview-channels"><strong>Sua comunidade</strong><span># geral</span><span># projetos</span><small>SALAS DE VOZ</small><span>◖ Sala de estar</span></div><div class="preview-chat"><img src="/static/icons/icon-512.png" width="96" height="96" alt=""><strong>Perto, de qualquer lugar.</strong><span>Texto, voz e vídeo.<br>Tudo na mesma órbita.</span><div>Conversar com sua galera… <b>↗</b></div></div></div></div>
+      <div class="stage reveal" aria-hidden="true">
+        <figure class="window"><div class="bar"><i></i><i></i><i></i><span>Órbita</span></div><img src="/static/install/shot-chat.webp" width="1200" height="750" alt="" fetchpriority="high"></figure>
+        <figure class="window back"><img src="/static/install/shot-store.webp" width="1200" height="750" alt="" loading="lazy"></figure>
+        <figure class="phone"><img src="/static/install/shot-feed-mobile.webp" width="390" height="844" alt=""></figure>
+      </div>
     </section>
-    <section class="help" id="install-help" tabindex="-1" aria-labelledby="help-title"><span class="eyebrow">DO SEU JEITO</span><h2 id="help-title">Um aplicativo, suas conversas</h2><div class="guides">
-      <article><span class="badge">PC</span><h3>Instale e abra</h3><p>Para atualizar, encerre a Órbita pela bandeja do Windows. Baixe o novo instalador, escolha a pasta e conclua a instalação. Abra <strong>Órbita</strong> pelo menu Iniciar ou pelo atalho da área de trabalho e entre na sua conta.</p><p>Quem usa a versão 1.0.0 ou 1.0.1 precisa instalar esta versão uma vez para ativar o atualizador. Seus dados são preservados.</p></article>
-      <article><span class="badge">◉</span><h3>Continue por perto</h3><p>Ao fechar a janela, escolha continuar na bandeja do Windows ou encerrar o aplicativo. Na bandeja, suas chamadas podem continuar. As próximas versões são baixadas em segundo plano e instaladas ao encerrar o aplicativo pela bandeja, sem reiniciar no meio de uma chamada.</p><p>Compartilhe uma tela ou janela e escolha se quer incluir o áudio do computador. Câmera e microfone só são ativados com permissão.</p></article>
-      <article><span class="badge">MOBILE</span><h3>Android e iPhone</h3><p>No Android, use <strong>Instalar aplicativo</strong> ou <strong>Adicionar à tela inicial</strong> no navegador. No iPhone, abra no Safari e escolha <strong>Compartilhar → Adicionar à Tela de Início</strong>.</p></article>
-    </div></section>
-    <section class="download" aria-labelledby="shortcut-title"><div><h2 id="shortcut-title">Prefere usar sem instalar?</h2><p>Baixe o ZIP completo, extraia tudo para uma pasta e abra <strong>Orbita.exe</strong>. Mantenha as DLLs e a pasta resources junto do executável.</p></div><a class="secondary" href="/baixar/Orbita-Windows.zip">Baixar versão ZIP ↓<small>Windows 64 bits · aproximadamente 147 MB</small></a></section>
-    <section class="browser-option"><h2>Também pelo navegador</h2><p>Se preferir, instale a versão web pelo Edge ou Chrome. No iPhone, use Safari → Compartilhar → Adicionar à Tela de Início.</p><button id="install-app" type="button">Instalar versão do navegador</button><p id="install-status" role="status" aria-live="polite">A instalação da versão web é confirmada pelo navegador.</p><a class="back" href="https://github.com/Vallerkkk/calldojoao/releases/tag/v1.0.2" target="_blank" rel="noopener noreferrer">Notas da versão e verificação dos arquivos ↗</a></section>
-    <p class="security">O instalador desktop desta versão não possui assinatura digital comercial e pode receber um aviso do Windows/SmartScreen. Não é possível garantir ausência de alertas. A Órbita não pede para desativar o antivírus ou as proteções do computador. O aplicativo não inicia automaticamente com o Windows. A versão web continua disponível.</p>
+
+    <section class="platforms" id="plataformas" aria-labelledby="plat-title">
+      <div class="head reveal"><span class="eyebrow">PLATAFORMAS</span><h2 id="plat-title">Escolha onde usar</h2></div>
+      <div class="cards">
+        <article class="card reveal" data-card="windows">
+          <div class="card-top"><span class="os">⊞</span><span class="tag">Recomendado para PC</span></div>
+          <h3>Windows</h3><p>Janela própria, bandeja do sistema, compartilhamento de tela com áudio e atualizações automáticas.</p>
+          <ul><li>Windows 10 ou 11 · 64 bits</li><li>Versão 1.0.2 · ~107 MB</li></ul>
+          <div class="card-actions"><a class="btn primary" href="/baixar/Orbita-Setup.exe">Baixar instalador .exe ↓</a><a class="btn" href="/baixar/Orbita-Windows.zip">Baixar versão ZIP (~147 MB)</a></div>
+        </article>
+        <article class="card reveal" data-card="android">
+          <div class="card-top"><span class="os">▲</span><span class="tag">Novo · Órbita Mobile</span></div>
+          <h3>Android</h3><p>Aplicativo instalável com ícone na tela inicial, tela cheia e notificações. Abre direto na sua comunidade.</p>
+          <ul><li>Android 7 ou mais novo</li><li>Funciona melhor com o Chrome instalado</li></ul>
+          <div class="card-actions"><a class="btn primary" href="/baixar/Orbita.apk">Baixar APK ↓</a><button class="btn" type="button" data-pwa-install>Instalar pelo navegador</button></div>
+          <p class="fine">Ao abrir o APK, o Android pode pedir para permitir “instalar apps desta fonte”. Isso vale só para o arquivo baixado.</p>
+        </article>
+        <article class="card reveal" data-card="ios" id="iphone">
+          <div class="card-top"><span class="os">iOS</span><span class="tag">Pelo Safari</span></div>
+          <h3>iPhone e iPad</h3><p>Adicione a Órbita à Tela de Início. Ela abre em tela cheia, como um app, sem passar pela App Store.</p>
+          <ol class="steps">
+            <li><span class="ill"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></span><div><b>Toque em Compartilhar</b><small>O quadrado com a seta, na barra do Safari.</small></div></li>
+            <li><span class="ill"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/></svg></span><div><b>Adicionar à Tela de Início</b><small>Role a lista de opções até encontrar.</small></div></li>
+            <li><span class="ill"><img src="/static/icons/icon-192.png" width="26" height="26" alt=""></span><div><b>Toque em Adicionar</b><small>O ícone da Órbita aparece na sua tela.</small></div></li>
+          </ol>
+          <p class="fine">Precisa ser no Safari. Em outros navegadores do iPhone, abra este endereço no Safari primeiro.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="features" id="recursos" aria-labelledby="feat-title">
+      <div class="head reveal"><span class="eyebrow">RECURSOS</span><h2 id="feat-title">Tudo da Órbita, onde você estiver</h2></div>
+      <div class="grid">
+        <article class="feat wide reveal"><img src="/static/install/shot-perfil.webp" width="1200" height="750" alt="Tela de configurações de perfil da Órbita" loading="lazy"><div><h3>Seu perfil, seu estilo</h3><p>Banner, decorações e aparência sincronizados entre computador e celular.</p></div></article>
+        <article class="feat reveal"><span class="ico">◖</span><h3>Voz e vídeo</h3><p>Salas de voz, chamadas com câmera e compartilhamento de tela.</p></article>
+        <article class="feat reveal"><span class="ico">#</span><h3>Canais e feed</h3><p>Conversas organizadas por canais e um feed para acompanhar a comunidade.</p></article>
+        <article class="feat reveal"><span class="ico">↻</span><h3>Sempre atualizado</h3><p>O app desktop se atualiza sozinho. No celular, as novidades chegam ao abrir.</p></article>
+        <article class="feat reveal"><span class="ico">◉</span><h3>Privacidade</h3><p>Câmera e microfone só são ativados com a sua permissão.</p></article>
+      </div>
+    </section>
+
+    <section class="browser-option reveal" id="install-help" tabindex="-1" aria-labelledby="help-title">
+      <div><span class="eyebrow">SEM BAIXAR NADA</span><h2 id="help-title">Instale direto do navegador</h2>
+      <p>No Chrome ou Edge (computador ou Android), a Órbita pode ser instalada como aplicativo. Se o botão não funcionar, abra o menu do navegador e escolha <strong>Instalar aplicativo</strong> ou <strong>Adicionar à tela inicial</strong>. No iPhone, use Safari → Compartilhar → Adicionar à Tela de Início.</p></div>
+      <div class="browser-actions"><button id="install-app" type="button">Instalar versão do navegador</button><p id="install-status" role="status" aria-live="polite">A instalação da versão web é confirmada pelo navegador.</p></div>
+    </section>
+
+    <section class="faq" id="perguntas" aria-labelledby="faq-title">
+      <div class="head reveal"><span class="eyebrow">PERGUNTAS</span><h2 id="faq-title">Requisitos e dúvidas</h2></div>
+      <div class="qa reveal">
+        <details><summary>Quais são os requisitos?</summary><p>Windows 10 ou 11 de 64 bits; Android 7 ou mais novo; iPhone com iOS 16.4 ou mais novo usando o Safari. Mensagens e chamadas precisam de internet.</p></details>
+        <details><summary>O Windows mostrou um aviso do SmartScreen. É seguro?</summary><p>O instalador desta versão ainda não possui assinatura digital comercial, então o Windows pode exibir um aviso. Clique em “Mais informações” → “Executar assim mesmo”. A Órbita nunca pede para desativar o antivírus. <a href="https://github.com/Vallerkkk/calldojoao/releases/tag/v1.0.2" target="_blank" rel="noopener noreferrer">Notas da versão e verificação dos arquivos ↗</a></p></details>
+        <details><summary>Como atualizo o app do Windows?</summary><p>A partir da 1.0.2 as atualizações são baixadas em segundo plano e instaladas ao encerrar pela bandeja. Quem usa 1.0.0 ou 1.0.1 precisa instalar esta versão uma vez; seus dados são preservados.</p></details>
+        <details><summary>Qual a diferença entre o APK e instalar pelo navegador no Android?</summary><p>Os dois abrem a mesma Órbita em tela cheia. O APK aparece como um app normal na lista de aplicativos; a instalação pelo navegador é mais rápida e não exige permitir fontes externas.</p></details>
+        <details><summary>Preciso criar outra conta no celular?</summary><p>Não. Entre com a mesma conta e suas comunidades, mensagens e perfil estarão lá.</p></details>
+        <details><summary>Posso usar sem instalar?</summary><p>Sim. A Órbita funciona inteira no navegador: <a href="/">abrir no navegador ↗</a>.</p></details>
+      </div>
+    </section>
   </main>
-  <footer><a href="/">◉ Órbita</a><span>Conversas que acompanham você.</span></footer>
-  <script type="module" src="/static/app-install.js?v=desktop-20261020-1"></script>
+  <footer><a class="brand" href="/"><img src="/static/icons/icon-192.png" width="24" height="24" alt="">Órbita</a><span>Conversas que acompanham você.</span></footer>
+  <script type="module" src="/static/app-install.js?v=install-20261023-1"></script>
 </body>
 </html>

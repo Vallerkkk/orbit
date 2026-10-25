@@ -12,7 +12,7 @@ Os arquivos ficam em um bucket privado do Supabase e respeitam o acesso ao canal
 
 ## Publicação
 
-O Render publica a branch `main` usando `render.yaml`. Configure no Render as variáveis `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `LIVEKIT_URL`, `LIVEKIT_API_KEY` e `LIVEKIT_API_SECRET`. Não publique o arquivo `.env` nem use chaves secretas no navegador.
+O Render publica a branch `main` usando `render.yaml`. Configure no Render as variáveis `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `LIVEKIT_URL`, `LIVEKIT_API_KEY` e `LIVEKIT_API_SECRET`. Não publique o arquivo `.env` nem use chaves secretas no navegador. Chaves nunca entram no repositório: se alguma já foi commitada, gere uma nova no provedor e revogue a antiga.
 
 Em um projeto Supabase novo, execute uma vez o `supabase.sql` gerado. Em projetos existentes, aplique somente migrações ainda pendentes de `supabase/migrations/`, conferindo o histórico remoto. Não reaplique o baseline ou o arquivo completo em produção. As credenciais e chaves secretas devem ficar nas variáveis de ambiente do Render.
 
@@ -49,6 +49,25 @@ Cada participante pode precisar tocar em Reproduzir áudio aqui devido às regra
 
 A política Referrer-Policy envia somente a origem em solicitações externas HTTPS, permitindo ao YouTube identificar o site sem transmitir o caminho ou os parâmetros da página. A validação de inicialização usa o painel como referência porque a API substitui o elemento original por um iframe. Testes: tests/youtube-links.test.mjs e tests/youtube_watch_browser.cjs, incluindo dois participantes, PC/celular, troca de vídeo, chegada tardia, pausa, erros, nova tentativa, transferência do controle e saída da chamada.
 
+
+## YouTube no Órbita
+
+Ícone do YouTube no rail: início/Em alta, busca (vídeos, canais, playlists), página do vídeo com comentários e relacionados, canal, playlist, mini player flutuante que continua tocando enquanto você navega, Histórico e Assistir depois (tabela `youtube_library` com RLS) e "Enviar no Órbita" para canais/DMs. Links do YouTube no chat viram um card leve (thumbnail primeiro; o iframe só carrega no clique).
+
+Todas as chamadas passam pelo proxy `/api/youtube/*` (cache TTL em memória); a `YOUTUBE_API_KEY` nunca chega ao navegador. Sem a chave, a interface mostra um aviso em pt-BR.
+
+**Conta Google (opcional):** é apenas uma conexão do YouTube presa ao usuário logado do Órbita — não usa o provedor Google do Supabase Auth e não altera sessão, e-mail, @, nome, avatar ou perfil. O refresh token fica só no servidor, cifrado (AES-GCM) com `YOUTUBE_TOKEN_KEY`, em `orbita_private.youtube_tokens`, acessível apenas por RPCs do próprio dono. "Sair da conta Google" revoga o token e apaga a linha. Com a conta conectada: Inscrições, Minhas playlists e Vídeos curtidos.
+
+Variáveis no Render: `YOUTUBE_API_KEY`, `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `YOUTUBE_TOKEN_KEY`, `PUBLIC_BASE_URL`.
+
+Passos no Google Cloud Console:
+1. Crie/escolha um projeto e ative **YouTube Data API v3** (APIs e serviços → Biblioteca).
+2. Credenciais → Criar credenciais → **Chave de API**; restrinja à YouTube Data API v3 e use em `YOUTUBE_API_KEY`.
+3. Tela de consentimento OAuth: tipo Externo, escopo `https://www.googleapis.com/auth/youtube.readonly`, status **Testing** e adicione até 100 usuários de teste.
+4. Credenciais → Criar credenciais → **ID do cliente OAuth** → tipo **Aplicativo da Web**. Em "URIs de redirecionamento autorizados" adicione `<PUBLIC_BASE_URL>/api/youtube/oauth/callback` (e `http://localhost:8000/api/youtube/oauth/callback` para desenvolvimento).
+5. Copie o client id/secret para `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET`.
+
+`youtube.readonly` é um escopo sensível: para uso público (fora do modo Testing) o app precisa passar pela verificação do Google.
 
 ## Áudio separado e câmera do celular
 
@@ -148,4 +167,16 @@ A interface de produção é compilada com `npm ci` e `npm run build`, com arqui
 
 Consulte [recursos e operação](docs/social-expansion.md) para os novos controles, limites, login social, funções do Supabase e integrações preparadas sem contratação.
 
-LulaDroid: [transcrição consentida e assistente de voz](docs/luladroid.md).
+
+## Correção do deploy da interface no Render
+
+O build de produção da interface precisa ser executado durante o deploy. O `render.yaml` foi ajustado para instalar as dependências Python e, em seguida, executar `npm ci` e `npm run build`. Isso regenera `static/dist/` a partir dos arquivos atuais em `static/`, evitando publicar um bundle antigo.
+
+Se o deploy não atualizar a aparência, confirme nos logs do Render que `npm ci` e `npm run build` terminaram com sucesso e faça um **Manual Deploy → Clear build cache & deploy**. Não é necessário enviar `.env` nem a pasta `.venv/` para o repositório.
+
+Para reproduzir localmente, na pasta `jesus/` execute:
+
+```bash
+npm ci
+npm run build
+```

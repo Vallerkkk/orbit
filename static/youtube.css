@@ -77,3 +77,17 @@
 @media(max-width:1000px){.yt-watch{grid-template-columns:1fr}.yt-side{position:fixed;z-index:30;left:0;top:0;bottom:0;transform:translateX(-100%);visibility:hidden}.ytv.yt-side-open .yt-side{transform:none;visibility:visible;box-shadow:0 0 40px #000c}.yt-menu{display:grid}}
 @media(max-width:780px){.ytv .mobile-nav-btn{display:grid}.yt-top{padding:0 10px;gap:8px}.yt-content{padding:12px}.yt-grid{grid-template-columns:1fr}.yt-results .yt-rel .yt-thumb{width:160px}.yt-chan-row .yt-av-l{margin:0}.yt-w-title{font-size:17px}.yt-google span{display:none}.yt-google{padding:0 10px}
  .yt-dock.mini{right:8px;left:8px;bottom:76px;width:auto;display:flex;align-items:center}.yt-dock.mini .yt-frame{width:128px;flex:none}.yt-dock.mini .yt-mini-bar{flex:1;min-width:0}.yt-dock.mini .yt-mini-tops{position:static;order:3;padding-right:6px}.yt-dock.mini .yt-mini-tops .yt-mini-btn{background:none}.yt-dock.mini .yt-mini-progress{position:absolute;left:0;right:0;bottom:0}.yt-search input{font-size:16px}}
+
+/* Mini player melhorado */
+.yt-dock.mini {
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.5);
+  overflow: hidden;
+  resize: both;
+  min-width: 280px;
+  min-height: 160px;
+}
+.yt-dock.mini .yt-mini-controls {
+  background: linear-gradient(transparent, rgba(0,0,0,.8));
+  padding: 8px;
+}

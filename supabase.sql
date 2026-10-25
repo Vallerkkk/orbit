@@ -2206,3 +2206,1194 @@ create function orbita_private.reserve_diagnostic_analysis()returns boolean lang
 create function public.reserve_diagnostic_analysis()returns boolean language sql security invoker set search_path=''as $$select orbita_private.reserve_diagnostic_analysis()$$;
 revoke all on function public.reserve_diagnostic_analysis(),orbita_private.reserve_diagnostic_analysis()from public,anon;
 grant execute on function public.reserve_diagnostic_analysis(),orbita_private.reserve_diagnostic_analysis()to authenticated;
+
+-- Migration: 20261022223000_fix_message_insert_permissions.sql
+-- Corrige "permission denied" ao enviar mensagens (todos os canais).
+-- Idempotente: pode ser executado mais de uma vez.
+-- 1) Reaplica schema usage, grants de tabela/coluna e EXECUTE nas funções que as
+--    políticas de INSERT/SELECT de mensagens chamam com o papel do usuário.
+-- 2) Torna os gatilhos de validação SECURITY DEFINER, para que não dependam de
+--    grants do papel authenticated em tabelas auxiliares (community_moderation etc.).
+-- 3) Recria a política de INSERT de messages com a regra atual.
+
+grant usage on schema public to authenticated;
+grant usage on schema orbita_private to authenticated;
+
+grant select on public.profiles, public.channels, public.communities, public.community_members,
+  public.community_moderation, public.messages, public.direct_messages, public.attachments,
+  public.reactions, public.poll_votes, public.conversations to authenticated;
+
+grant insert (channel_id, author_id, content, attachment_id, reply_to, poll, thread_root) on public.messages to authenticated;
+grant update (content, pinned) on public.messages to authenticated;
+grant insert (conversation_id, author_id, content, attachment_id, reply_to, poll, thread_root) on public.direct_messages to authenticated;
+grant update (content, pinned) on public.direct_messages to authenticated;
+
+grant execute on function orbita_private.can_read_channel(uuid) to authenticated;
+grant execute on function orbita_private.can_community(uuid, text) to authenticated;
+grant execute on function orbita_private.is_banned(uuid, uuid) to authenticated;
+grant execute on function orbita_private.is_community_member(uuid) to authenticated;
+do $$ begin
+  if to_regprocedure('orbita_private.can_send_dm(uuid,uuid)') is not null then
+    execute 'grant execute on function orbita_private.can_send_dm(uuid,uuid) to authenticated';
+  end if;
+  if to_regprocedure('public.is_site_admin()') is not null then
+    execute 'grant execute on function public.is_site_admin() to authenticated';
+  end if;
+end $$;
+
+-- Gatilhos de validação rodam como dono (mantêm auth.uid() do usuário).
+alter function orbita_private.guard_message() security definer;
+alter function orbita_private.check_reply() security definer;
+revoke all on function orbita_private.guard_message(), orbita_private.check_reply() from public, anon, authenticated;
+
+alter table public.messages enable row level security;
+drop policy if exists messages_insert on public.messages;
+create policy messages_insert on public.messages for insert to authenticated with check(
+  author_id = (select auth.uid())
+  and exists(select 1 from public.channels c where c.id = channel_id and c.kind = 'text'
+    and orbita_private.can_read_channel(c.id)
+    and (not c.is_announcement or orbita_private.can_community(c.community_id, 'manage_messages')))
+  and (attachment_id is null or exists(select 1 from public.attachments a
+    where a.id = attachment_id and a.owner_id = author_id and a.channel_id = messages.channel_id)));
+
+-- Causa confirmada no banco: 42501 permission denied for function valid_poll.
+-- A constraint CHECK de messages/direct_messages chama orbita_private.valid_poll(jsonb),
+-- que estava sem EXECUTE para o papel authenticated. GRANT é idempotente.
+grant execute on function orbita_private.valid_poll(jsonb) to authenticated;
+
+notify pgrst, 'reload schema';
+
+-- Migration: 20261022235900_global_admin_commands.sql
+-- Comandos de moderação do ADM GLOBAL do app (site_roles: 'admin' ou 'creator').
+-- Toda checagem é feita aqui (SECURITY DEFINER) a partir de auth.uid(); nada vem do cliente.
+-- Cada ação grava em public.site_admin_actions (quem, o quê, quando, alvo).
+-- NÃO APLICADA AUTOMATICAMENTE: revisar e aplicar com o dono do projeto.
+
+create table if not exists public.site_admin_actions(
+  id bigint generated always as identity primary key,
+  actor_id uuid references auth.users(id) on delete set null,
+  action text not null check (action in ('delete_community','delete_channel','delete_message','remove_member','ban_member','unban_member','suspend_account','unsuspend_account','transfer_community','end_call','kick_participant')),
+  target_type text not null check (target_type in ('community','channel','message','user')),
+  target_id uuid not null,
+  target_label text not null default '',
+  community_id uuid,
+  reason text not null default '' check (char_length(reason)<=500),
+  details jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists site_admin_actions_created_idx on public.site_admin_actions(created_at desc);
+alter table public.site_admin_actions enable row level security;
+revoke all on public.site_admin_actions from anon, authenticated;
+grant select on public.site_admin_actions to authenticated;
+drop policy if exists site_admin_actions_read on public.site_admin_actions;
+create policy site_admin_actions_read on public.site_admin_actions for select to authenticated using ((select public.is_site_admin()));
+
+-- Exige ADM global vivo (relido do banco com trava de linha) e devolve o ator.
+create or replace function orbita_private.require_site_admin() returns uuid
+language plpgsql security definer set search_path to '' as $$
+declare actor uuid:=auth.uid();
+begin
+  if actor is null then raise exception 'Entre na sua conta.' using errcode='42501'; end if;
+  perform 1 from public.site_roles where user_id=actor and role in ('admin','creator') for share;
+  if not found then raise exception 'Somente administradores do app podem usar este comando.' using errcode='42501'; end if;
+  return actor;
+end $$;
+
+create or replace function orbita_private.admin_log(actor uuid, action_name text, ttype text, tid uuid, label text, community uuid, reason_text text, extra jsonb default '{}'::jsonb) returns void
+language sql security definer set search_path to '' as $$
+  insert into public.site_admin_actions(actor_id,action,target_type,target_id,target_label,community_id,reason,details)
+  values(actor,action_name,ttype,tid,coalesce(label,''),community,left(coalesce(reason_text,''),500),coalesce(extra,'{}'::jsonb));
+$$;
+
+create or replace function orbita_private.admin_delete_community(community uuid, confirm_name text, reason_text text default '') returns boolean
+language plpgsql security definer set search_path to '' as $$
+declare actor uuid:=orbita_private.require_site_admin(); c record;
+begin
+  select id,name,is_default into c from public.communities where id=community for update;
+  if not found then raise exception 'Servidor não encontrado.' using errcode='22023'; end if;
+  if c.is_default then raise exception 'O servidor padrão da Órbita não pode ser excluído.' using errcode='42501'; end if;
+  if confirm_name is distinct from c.name then raise exception 'Digite o nome exato do servidor para confirmar.' using errcode='22023'; end if;
+  perform orbita_private.admin_log(actor,'delete_community','community',c.id,c.name,null,reason_text);
+  delete from public.communities where id=c.id;
+  return true;
+end $$;
+
+create or replace function orbita_private.admin_delete_channel(channel uuid, confirm_name text, reason_text text default '') returns boolean
+language plpgsql security definer set search_path to '' as $$
+declare actor uuid:=orbita_private.require_site_admin(); ch record;
+begin
+  select id,name,community_id into ch from public.channels where id=channel for update;
+  if not found then raise exception 'Canal não encontrado.' using errcode='22023'; end if;
+  if confirm_name is distinct from ch.name then raise exception 'Digite o nome exato do canal para confirmar.' using errcode='22023'; end if;
+  perform orbita_private.admin_log(actor,'delete_channel','channel',ch.id,ch.name,ch.community_id,reason_text);
+  delete from public.channels where id=ch.id;
+  return true;
+end $$;
+
+create or replace function orbita_private.admin_delete_message(message uuid, reason_text text default '') returns boolean
+language plpgsql security definer set search_path to '' as $$
+declare actor uuid:=orbita_private.require_site_admin(); m record;
+begin
+  select ms.id,ms.author_id,left(ms.content,120) as preview,c.community_id into m from public.messages ms join public.channels c on c.id=ms.channel_id where ms.id=message for update of ms;
+  if not found then raise exception 'Mensagem não encontrada.' using errcode='22023'; end if;
+  perform orbita_private.admin_log(actor,'delete_message','message',m.id,coalesce(m.preview,''),m.community_id,reason_text,jsonb_build_object('author_id',m.author_id));
+  delete from public.messages where id=m.id;
+  return true;
+end $$;
+
+create or replace function orbita_private.admin_member_action(community uuid, member uuid, action_name text, reason_text text default '') returns boolean
+language plpgsql security definer set search_path to '' as $$
+declare actor uuid:=orbita_private.require_site_admin(); c record; who text;
+begin
+  if action_name not in ('remove','ban','unban') then raise exception 'Ação inválida.' using errcode='22023'; end if;
+  select id,name,created_by into c from public.communities where id=community;
+  if not found then raise exception 'Servidor não encontrado.' using errcode='22023'; end if;
+  select username into who from public.profiles where id=member;
+  if who is null then raise exception 'Conta não encontrada.' using errcode='22023'; end if;
+  if member=actor then raise exception 'Você não pode aplicar isso a si mesmo.' using errcode='42501'; end if;
+  if action_name<>'unban' and exists(select 1 from public.site_roles where user_id=member and role='creator') then raise exception 'Criadores do app estão protegidos.' using errcode='42501'; end if;
+  if action_name<>'unban' and c.created_by=member then raise exception 'Transfira a posse do servidor antes de remover o dono.' using errcode='42501'; end if;
+  if action_name in ('remove','ban') then delete from public.community_members where community_id=community and user_id=member; end if;
+  if action_name in ('ban','unban') then
+    insert into public.community_moderation(community_id,user_id,banned,reason,updated_by) values(community,member,action_name='ban',left(coalesce(reason_text,''),500),actor)
+    on conflict(community_id,user_id) do update set banned=(action_name='ban'),timeout_until=case when action_name='unban' then null else public.community_moderation.timeout_until end,reason=excluded.reason,updated_by=actor,updated_at=now();
+  end if;
+  perform orbita_private.admin_log(actor,case action_name when 'remove' then 'remove_member' when 'ban' then 'ban_member' else 'unban_member' end,'user',member,who,community,reason_text,jsonb_build_object('community_name',c.name));
+  return true;
+end $$;
+
+-- Suspensão de conta: usa auth.users.banned_until (bloqueia login e renovação de sessão).
+-- hours=0 retira a suspensão. Criadores e outros ADMs não podem ser suspensos.
+create or replace function orbita_private.admin_suspend_account(member uuid, confirm_username text, hours integer, reason_text text default '') returns boolean
+language plpgsql security definer set search_path to '' as $$
+declare actor uuid:=orbita_private.require_site_admin(); who text;
+begin
+  if hours is null or hours<0 or hours>87600 then raise exception 'Duração inválida (0 a 87600 horas).' using errcode='22023'; end if;
+  select username into who from public.profiles where id=member;
+  if who is null then raise exception 'Conta não encontrada.' using errcode='22023'; end if;
+  if member=actor then raise exception 'Você não pode suspender a própria conta.' using errcode='42501'; end if;
+  if exists(select 1 from public.site_roles where user_id=member) then raise exception 'Administradores e criadores não podem ser suspensos.' using errcode='42501'; end if;
+  if hours>0 and lower(coalesce(confirm_username,'')) is distinct from lower(who) then raise exception 'Digite o @ exato da conta para confirmar.' using errcode='22023'; end if;
+  update auth.users set banned_until=case when hours=0 then null else now()+make_interval(hours=>hours) end where id=member;
+  perform orbita_private.admin_log(actor,case when hours=0 then 'unsuspend_account' else 'suspend_account' end,'user',member,who,null,reason_text,jsonb_build_object('hours',hours));
+  return true;
+end $$;
+
+create or replace function orbita_private.admin_transfer_community(community uuid, new_owner uuid, confirm_name text, reason_text text default '') returns boolean
+language plpgsql security definer set search_path to '' as $$
+declare actor uuid:=orbita_private.require_site_admin(); c record; who text;
+begin
+  select id,name,created_by into c from public.communities where id=community for update;
+  if not found then raise exception 'Servidor não encontrado.' using errcode='22023'; end if;
+  if confirm_name is distinct from c.name then raise exception 'Digite o nome exato do servidor para confirmar.' using errcode='22023'; end if;
+  select username into who from public.profiles where id=new_owner;
+  if who is null then raise exception 'Novo dono não encontrado.' using errcode='22023'; end if;
+  if exists(select 1 from public.community_moderation where community_id=community and user_id=new_owner and banned) then raise exception 'Essa pessoa está banida deste servidor.' using errcode='22023'; end if;
+  insert into public.community_members(community_id,user_id) values(community,new_owner) on conflict do nothing;
+  update public.communities set created_by=new_owner where id=community;
+  perform orbita_private.admin_log(actor,'transfer_community','community',c.id,c.name,c.id,reason_text,jsonb_build_object('from',c.created_by,'to',new_owner,'to_username',who));
+  return true;
+end $$;
+
+-- Autoriza e registra ações de chamada (o backend executa no LiveKit só depois disto).
+create or replace function orbita_private.admin_call_action(channel uuid, action_name text, member uuid default null, reason_text text default '') returns text
+language plpgsql security definer set search_path to '' as $$
+declare actor uuid:=orbita_private.require_site_admin(); ch record; who text;
+begin
+  if action_name not in ('end_call','kick_participant') then raise exception 'Ação inválida.' using errcode='22023'; end if;
+  select id,name,kind,community_id into ch from public.channels where id=channel;
+  if not found or ch.kind<>'voice' then raise exception 'Sala de voz não encontrada.' using errcode='22023'; end if;
+  if action_name='kick_participant' then
+    select username into who from public.profiles where id=member;
+    if who is null then raise exception 'Participante não encontrado.' using errcode='22023'; end if;
+    if exists(select 1 from public.site_roles where user_id=member and role='creator') then raise exception 'Criadores do app estão protegidos.' using errcode='42501'; end if;
+  end if;
+  perform orbita_private.admin_log(actor,action_name,case when action_name='end_call' then 'channel' else 'user' end,coalesce(member,ch.id),coalesce(who,ch.name),ch.community_id,reason_text,jsonb_build_object('channel_id',ch.id,'channel_name',ch.name));
+  return ch.name;
+end $$;
+
+-- Wrappers públicos (invoker) — mesmo padrão de set_site_admin.
+create or replace function public.admin_delete_community(community uuid, confirm_name text, reason_text text default '') returns boolean language sql set search_path to '' as $$select orbita_private.admin_delete_community(community,confirm_name,reason_text)$$;
+create or replace function public.admin_delete_channel(channel uuid, confirm_name text, reason_text text default '') returns boolean language sql set search_path to '' as $$select orbita_private.admin_delete_channel(channel,confirm_name,reason_text)$$;
+create or replace function public.admin_delete_message(message uuid, reason_text text default '') returns boolean language sql set search_path to '' as $$select orbita_private.admin_delete_message(message,reason_text)$$;
+create or replace function public.admin_member_action(community uuid, member uuid, action_name text, reason_text text default '') returns boolean language sql set search_path to '' as $$select orbita_private.admin_member_action(community,member,action_name,reason_text)$$;
+create or replace function public.admin_suspend_account(member uuid, confirm_username text, hours integer, reason_text text default '') returns boolean language sql set search_path to '' as $$select orbita_private.admin_suspend_account(member,confirm_username,hours,reason_text)$$;
+create or replace function public.admin_transfer_community(community uuid, new_owner uuid, confirm_name text, reason_text text default '') returns boolean language sql set search_path to '' as $$select orbita_private.admin_transfer_community(community,new_owner,confirm_name,reason_text)$$;
+create or replace function public.admin_call_action(channel uuid, action_name text, member uuid default null, reason_text text default '') returns text language sql set search_path to '' as $$select orbita_private.admin_call_action(channel,action_name,member,reason_text)$$;
+
+do $$ declare f text; begin
+  foreach f in array array[
+    'orbita_private.require_site_admin()','orbita_private.admin_log(uuid,text,text,uuid,text,uuid,text,jsonb)',
+    'orbita_private.admin_delete_community(uuid,text,text)','orbita_private.admin_delete_channel(uuid,text,text)','orbita_private.admin_delete_message(uuid,text)',
+    'orbita_private.admin_member_action(uuid,uuid,text,text)','orbita_private.admin_suspend_account(uuid,text,integer,text)','orbita_private.admin_transfer_community(uuid,uuid,text,text)','orbita_private.admin_call_action(uuid,text,uuid,text)',
+    'public.admin_delete_community(uuid,text,text)','public.admin_delete_channel(uuid,text,text)','public.admin_delete_message(uuid,text)','public.admin_member_action(uuid,uuid,text,text)',
+    'public.admin_suspend_account(uuid,text,integer,text)','public.admin_transfer_community(uuid,uuid,text,text)','public.admin_call_action(uuid,text,uuid,text)']
+  loop execute format('revoke all on function %s from public, anon', f); end loop;
+end $$;
+revoke all on function orbita_private.admin_log(uuid,text,text,uuid,text,uuid,text,jsonb) from authenticated;
+grant execute on function orbita_private.require_site_admin(), orbita_private.admin_delete_community(uuid,text,text), orbita_private.admin_delete_channel(uuid,text,text), orbita_private.admin_delete_message(uuid,text), orbita_private.admin_member_action(uuid,uuid,text,text), orbita_private.admin_suspend_account(uuid,text,integer,text), orbita_private.admin_transfer_community(uuid,uuid,text,text), orbita_private.admin_call_action(uuid,text,uuid,text) to authenticated;
+grant execute on function public.admin_delete_community(uuid,text,text), public.admin_delete_channel(uuid,text,text), public.admin_delete_message(uuid,text), public.admin_member_action(uuid,uuid,text,text), public.admin_suspend_account(uuid,text,integer,text), public.admin_transfer_community(uuid,uuid,text,text), public.admin_call_action(uuid,text,uuid,text) to authenticated;
+
+-- Migration: 20261023000500_profile_studio_badges.sql
+-- Estúdio de perfil (aparência no banco), loja por pacotes e insígnias calculadas no servidor.
+-- GERADO por scripts/badges-sql.mjs. NÃO APLICADA AUTOMATICAMENTE: revisar e aplicar com o dono do projeto.
+
+-- 1) Aparência pública do perfil (antes ficava no localStorage e só ia pela presença).
+alter table public.profiles add column if not exists appearance jsonb not null default '{}'::jsonb;
+alter table public.profiles drop constraint if exists profiles_appearance_check;
+alter table public.profiles add constraint profiles_appearance_check check (jsonb_typeof(appearance)='object' and pg_column_size(appearance)<=4096);
+
+create or replace function orbita_private.guard_appearance() returns trigger
+language plpgsql security definer set search_path to '' as $$
+declare a jsonb:=coalesce(new.appearance,'{}'::jsonb); k text; v text;
+  items text[]:=array['cyberpunk-frame','cyberpunk-border','cyberpunk-effect','cyberpunk-server','cyberpunk-plate','anime-frame','anime-border','anime-effect','anime-server','anime-plate','espaco-frame','espaco-border','espaco-effect','espaco-server','espaco-plate','natureza-frame','natureza-border','natureza-effect','natureza-server','natureza-plate','halloween-frame','halloween-border','halloween-effect','halloween-server','halloween-plate','lofi-frame','lofi-border','lofi-effect','lofi-server','lofi-plate','retro-frame','retro-border','retro-effect','retro-server','retro-plate','oceano-frame','oceano-border','oceano-effect','oceano-server','oceano-plate','glitch-frame','glitch-border','glitch-effect','glitch-server','glitch-plate','orbita-staff-frame','orbita-staff-border','orbita-staff-effect','orbita-staff-server','orbita-staff-plate']::text[];
+  fonts text[]:=array['orbitron','pressstart','pacifico','bungee','monoton','creepster','righteous','audiowide','caveat','cinzel','silkscreen','lobster','spacemono','shrikhand']::text[];
+  effects text[]:=array['gradient','neon','glitch','shine','rainbow','fire','staff']::text[];
+  admin_only text[]:=array['orbita-staff-frame','orbita-staff-border','orbita-staff-effect','orbita-staff-server','orbita-staff-plate','name:staff']::text[];
+  admin boolean:=exists(select 1 from public.site_roles where user_id=new.id and role in ('admin','creator'));
+begin
+  if tg_op='UPDATE' and new.appearance is not distinct from old.appearance then return new; end if;
+  for k,v in select key,value#>>'{}' from jsonb_each(a) loop
+    if k in ('frame','border','effect','server','plate') then
+      if v<>'' and not (v=any(items) and v like '%-'||k) then raise exception 'Item de personalização inválido: %',v using errcode='22023'; end if;
+      if v=any(admin_only) and not admin then raise exception 'Este item é exclusivo dos administradores do app.' using errcode='42501'; end if;
+    elsif k='name_font' then if v<>'' and not v=any(fonts) then raise exception 'Fonte inválida.' using errcode='22023'; end if;
+    elsif k='name_effect' then
+      if v<>'' and not v=any(effects) then raise exception 'Efeito inválido.' using errcode='22023'; end if;
+      if v<>'' and ('name:'||v)=any(admin_only) and not admin then raise exception 'Este efeito é exclusivo dos administradores do app.' using errcode='42501'; end if;
+    elsif k='theme' then
+      if jsonb_typeof(a->'theme')<>'array' or jsonb_array_length(a->'theme')<>2 or exists(select 1 from jsonb_array_elements_text(a->'theme') c where c !~ '^#[0-9a-fA-F]{6}$') then raise exception 'Tema de cor inválido.' using errcode='22023'; end if;
+    elsif k='badges' then
+      if jsonb_typeof(a->'badges')<>'array' or jsonb_array_length(a->'badges')>3 then raise exception 'Fixe no máximo 3 insígnias.' using errcode='22023'; end if;
+    elsif k in ('legacy_frame','legacy_effect','banner_style') then
+      if char_length(v)>48 or v !~ '^[a-z0-9-]*$' then raise exception 'Valor inválido.' using errcode='22023'; end if;
+    else raise exception 'Campo de aparência desconhecido: %',k using errcode='22023';
+    end if;
+  end loop;
+  return new;
+end $$;
+drop trigger if exists profiles_guard_appearance on public.profiles;
+create trigger profiles_guard_appearance before insert or update of appearance on public.profiles for each row execute function orbita_private.guard_appearance();
+
+-- 2) Nota pessoal sobre outro perfil (só quem escreveu lê).
+create table if not exists public.profile_notes(
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  target_id uuid not null references auth.users(id) on delete cascade,
+  note text not null default '' check (char_length(note)<=256),
+  updated_at timestamptz not null default now(),
+  primary key(owner_id,target_id));
+alter table public.profile_notes enable row level security;
+revoke all on public.profile_notes from anon;
+grant select,insert,update,delete on public.profile_notes to authenticated;
+drop policy if exists profile_notes_own on public.profile_notes;
+create policy profile_notes_own on public.profile_notes for all to authenticated using (owner_id=(select auth.uid())) with check (owner_id=(select auth.uid()));
+
+-- 3) Insígnias.
+create table if not exists public.badge_catalog(
+  id text primary key, category text not null, metric text not null, thresholds int[] not null, rarity text not null, exclusive text);
+alter table public.badge_catalog enable row level security;
+grant select on public.badge_catalog to anon, authenticated;
+drop policy if exists badge_catalog_read on public.badge_catalog;
+create policy badge_catalog_read on public.badge_catalog for select using (true);
+delete from public.badge_catalog;
+insert into public.badge_catalog(id,category,metric,thresholds,rarity,exclusive) values
+('boas-vindas','inicio','account',array[1]::int[],'comum',null),
+('fundador','inicio','founder',array[1]::int[],'lendaria',null),
+('beta','inicio','founder',array[1]::int[],'epica',null),
+('primeiro-passo','inicio','messages',array[1]::int[],'comum',null),
+('veterano','tempo','join_days',array[1,30,90,180,365,730,1095,1825]::int[],'rara',null),
+('sequencia','tempo','streak',array[2,7,14,30,60,100,200,365]::int[],'epica',null),
+('primeiro-dia','tempo','active_days',array[1]::int[],'comum',null),
+('semana','tempo','active_days',array[7]::int[],'comum',null),
+('mes','tempo','active_days',array[30]::int[],'rara',null),
+('tagarela','chat','messages',array[10,100,500,1000,5000,10000,25000,50000]::int[],'rara',null),
+('reator','chat','reactions',array[10,50,200,500,1000,2500,5000,10000]::int[],'comum',null),
+('mencionado','chat','mentions',array[1,10,50,100,250,500,1000,2500]::int[],'rara',null),
+('gifeiro','chat','gifs',array[1,10,50,100,250,500,1000,2000]::int[],'comum',null),
+('colecionador-figurinhas','chat','stickers',array[1,10,50,100,250,500,1000,2000]::int[],'comum',null),
+('respondao','chat','replies',array[5,50,200,500,1000,2500,5000,10000]::int[],'comum',null),
+('enquete','chat','polls',array[1,5,20,50,100,200,350,500]::int[],'rara',null),
+('arquivista','chat','attachments',array[1,10,50,100,250,500,1000,2000]::int[],'comum',null),
+('editor','chat','edits',array[1,10,50,100,250,500,1000,2500]::int[],'comum',null),
+('voz-ativa','voz','call_minutes',array[10,60,300,600,1500,3000,6000,12000]::int[],'rara',null),
+('primeira-chamada','voz','call_minutes',array[1]::int[],'comum',null),
+('telao','voz','screenshare',array[1,5,20,50,100,200,400,800]::int[],'rara',null),
+('camera','voz','camera',array[1,10,60,300,600,1500,3000,6000]::int[],'comum',null),
+('ouvir-juntos','voz','watch_party',array[1,5,15,30,60,120,250,500]::int[],'epica',null),
+('maratonista','voz','long_call',array[1]::int[],'epica',null),
+('autor','feed','posts',array[1,10,50,100,250,500,1000,2500]::int[],'rara',null),
+('curtido','feed','likes_received',array[1,25,100,500,1000,5000,10000,50000]::int[],'epica',null),
+('seguido','feed','followers',array[1,10,50,100,500,1000,5000,10000]::int[],'lendaria',null),
+('repostado','feed','reposts_received',array[1,10,50,100,250,500,1000,5000]::int[],'epica',null),
+('primeira-publicacao','feed','posts',array[1]::int[],'comum',null),
+('seguidor','feed','following',array[1,10,50,100,250,500,750,1000]::int[],'comum',null),
+('amigavel','social','friends',array[1,5,10,25,50,100,200,500]::int[],'rara',null),
+('papo-reto','social','dms',array[1,25,100,500,1000,5000,10000,25000]::int[],'comum',null),
+('construtor','social','communities_created',array[1,2,3,5,8,12,16,20]::int[],'epica',null),
+('explorador','social','communities_joined',array[1,3,5,10,20,35,50,100]::int[],'comum',null),
+('conversas','social','conversations',array[1,5,10,25,50,100,150,250]::int[],'comum',null),
+('estiloso','estilo','decorations',array[1,2,3,4,5,6,7,8]::int[],'rara',null),
+('perfil-completo','estilo','profile_complete',array[4]::int[],'epica',null),
+('bio','estilo','has_bio',array[1]::int[],'comum',null),
+('avatar','estilo','has_avatar',array[1]::int[],'comum',null),
+('banner','estilo','has_banner',array[1]::int[],'comum',null),
+('fonte','estilo','has_font',array[1]::int[],'rara',null),
+('halloween','eventos','halloween',array[1,10,50,100,200,300,400,500]::int[],'epica',null),
+('natal','eventos','natal',array[1,10,50,100,200,300,400,500]::int[],'epica',null),
+('ano-novo','eventos','ano_novo',array[1]::int[],'lendaria',null),
+('carnaval','eventos','carnaval',array[1,10,50,100,200,300,400,500]::int[],'rara',null),
+('junina','eventos','junina',array[1,10,50,100,200,300,400,500]::int[],'rara',null),
+('dia-orbita','eventos','orbita_day',array[1]::int[],'lendaria',null),
+('ferias','eventos','ferias',array[1,25,100,250,500,750,1000,2000]::int[],'comum',null),
+('coruja','secretas','night',array[1,10,50,100,250,500,1000,2000]::int[],'epica',null),
+('madrugador','secretas','early',array[1,10,50,100,250,500,1000,2000]::int[],'rara',null),
+('fim-de-semana','secretas','weekend',array[10,50,100,250,500,1000,2500,5000]::int[],'rara',null),
+('enciclopedia','secretas','long_message',array[1,10,25,50,100,200,350,500]::int[],'epica',null),
+('fixador','secretas','pinned',array[1,5,10,25,50,100,150,250]::int[],'rara',null),
+('emoji-mestre','secretas','emoji_variety',array[5,10,20,30,40,50,75,100]::int[],'lendaria',null),
+('pioneiro','secretas','early_member',array[1]::int[],'lendaria',null),
+('constelacao','secretas','all_categories',array[1,2,3,4,5,6,7,8]::int[],'lendaria',null),
+('eco','secretas','threads',array[1,10,25,50,100,200,350,500]::int[],'rara',null),
+('anfitriao','secretas','invites',array[1,5,10,25,50,100,200,500]::int[],'epica',null),
+('adm','exclusivas','admin',array[1]::int[],'exclusiva','admin'),
+('criador','exclusivas','creator',array[1]::int[],'exclusiva','creator'),
+('dono','exclusivas','owner',array[1]::int[],'exclusiva','owner');
+
+-- Eventos validados pelo backend (tempo em call, tela, câmera, Ouvir juntos, dia ativo). Só entram via record_badge_event.
+create table if not exists orbita_private.badge_events(
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  kind text not null check (kind in ('active_day','call_minute','screenshare_minute','camera_minute','watch_party')),
+  amount int not null default 1 check (amount between 1 and 5),
+  day date not null default (now() at time zone 'America/Sao_Paulo')::date,
+  created_at timestamptz not null default now());
+create index if not exists badge_events_user_kind on orbita_private.badge_events(user_id,kind,created_at desc);
+create unique index if not exists badge_events_daily on orbita_private.badge_events(user_id,kind,day) where kind in ('active_day');
+
+-- Concessões manuais e permanentes (ex.: Dono). Ninguém escreve pelo cliente.
+create table if not exists public.badge_grants(
+  user_id uuid not null references auth.users(id) on delete cascade,
+  badge_id text not null references public.badge_catalog(id) on delete cascade,
+  permanent boolean not null default false,
+  granted_at timestamptz not null default now(),
+  primary key(user_id,badge_id));
+alter table public.badge_grants enable row level security;
+revoke all on public.badge_grants from anon, authenticated;
+grant select on public.badge_grants to authenticated;
+drop policy if exists badge_grants_read on public.badge_grants;
+create policy badge_grants_read on public.badge_grants for select to authenticated using (true);
+
+create table if not exists public.badge_unlocks(
+  user_id uuid not null references auth.users(id) on delete cascade,
+  badge_id text not null references public.badge_catalog(id) on delete cascade,
+  level int not null check (level between 1 and 8),
+  unlocked_at timestamptz not null default now(),
+  primary key(user_id,badge_id,level));
+alter table public.badge_unlocks enable row level security;
+revoke all on public.badge_unlocks from anon, authenticated;
+grant select on public.badge_unlocks to authenticated;
+drop policy if exists badge_unlocks_read on public.badge_unlocks;
+create policy badge_unlocks_read on public.badge_unlocks for select to authenticated using (true);
+
+-- O backend (FastAPI) só registra depois de confirmar no LiveKit; exige a mesma chave de transporte do push.
+create or replace function orbita_private.record_badge_event(transport_key text, event_kind text, event_amount int default 1) returns boolean
+language plpgsql security definer set search_path to '' as $$
+declare uid uuid:=auth.uid(); recent int;
+begin
+  if uid is null or not exists(select 1 from orbita_private.push_config where transport_hash=encode(sha256(convert_to(transport_key,'UTF8')),'hex')) then raise exception 'Transporte não autorizado.' using errcode='42501'; end if;
+  if event_kind='active_day' then
+    insert into orbita_private.badge_events(user_id,kind) values(uid,'active_day') on conflict do nothing; return true; end if;
+  if event_kind not in ('call_minute','screenshare_minute','camera_minute','watch_party') then raise exception 'Evento inválido.' using errcode='22023'; end if;
+  -- No máximo um registro por minuto e por tipo (watch_party: um a cada 30 min).
+  select count(*) into recent from orbita_private.badge_events where user_id=uid and kind=event_kind and created_at>now()-case when event_kind='watch_party' then interval '30 minutes' else interval '55 seconds' end;
+  if recent>0 then return false; end if;
+  insert into orbita_private.badge_events(user_id,kind,amount) values(uid,event_kind,least(greatest(coalesce(event_amount,1),1),1));
+  return true;
+end $$;
+
+create or replace function orbita_private.badge_metrics(target uuid) returns jsonb
+language sql stable security definer set search_path to '' as $$
+with p as (select pr.*, u.created_at as joined from public.profiles pr join auth.users u on u.id=pr.id where pr.id=target),
+m as (select ms.content, ms.reply_to, ms.poll, ms.attachment_id, ms.edited_at, ms.pinned, ms.id, (ms.created_at at time zone 'America/Sao_Paulo') as local from public.messages ms where ms.author_id=target),
+e as (select kind, amount, day from orbita_private.badge_events where user_id=target),
+days as (select distinct day from e where kind='active_day'),
+streak as (select count(*) n from (select day, day - (row_number() over (order by day))::int as grp from days) s
+  where grp=(select day - (row_number() over (order by day))::int from days order by day desc limit 1)
+  and (select max(day) from days)>=((now() at time zone 'America/Sao_Paulo')::date-1))
+select jsonb_build_object(
+ 'account',1,
+ 'founder',(select (joined<'2026-12-01')::int from p),
+ 'join_days',(select greatest(1,extract(day from now()-joined)::int) from p),
+ 'active_days',(select count(*) from days),
+ 'streak',coalesce((select n from streak),0),
+ 'messages',(select count(*) from m),
+ 'reactions',(select count(*) from public.reactions where user_id=target),
+ 'emoji_variety',(select count(distinct emoji) from public.reactions where user_id=target),
+ 'mentions',(select count(*) from public.messages x, p where x.author_id<>target and p.username is not null and x.content ilike '%@'||p.username||'%'),
+ 'gifs',(select count(*) from m where content like '[gif%'),
+ 'stickers',(select count(*) from m where content like '[figurinha%'),
+ 'replies',(select count(*) from m where reply_to is not null),
+ 'polls',(select count(*) from m where poll is not null),
+ 'attachments',(select count(*) from m where attachment_id is not null),
+ 'edits',(select count(*) from m where edited_at is not null),
+ 'pinned',(select count(*) from m where pinned),
+ 'long_message',(select count(*) from m where char_length(content)>1000),
+ 'threads',(select count(distinct x.thread_root) from public.messages x join m on m.id=x.thread_root),
+ 'night',(select count(*) from m where extract(hour from local) between 2 and 4),
+ 'early',(select count(*) from m where extract(hour from local) between 5 and 6),
+ 'weekend',(select count(*) from m where extract(isodow from local) in (6,7)),
+ 'halloween',(select count(*) from m where (extract(month from local)=10 and extract(day from local)>=25) or (extract(month from local)=11 and extract(day from local)<=2)),
+ 'natal',(select count(*) from m where extract(month from local)=12 and extract(day from local) between 20 and 26),
+ 'ano_novo',(select count(*) from m where (extract(month from local)=12 and extract(day from local)=31) or (extract(month from local)=1 and extract(day from local)=1)),
+ 'carnaval',(select count(*) from m where extract(month from local)=2),
+ 'junina',(select count(*) from m where extract(month from local)=6),
+ 'ferias',(select count(*) from m where extract(month from local) in (1,7)),
+ 'orbita_day',((select count(*) from days where extract(month from day)=10 and extract(day from day)=19)+(select count(*) from m where extract(month from local)=10 and extract(day from local)=19))
+) || jsonb_build_object(
+ 'call_minutes',coalesce((select sum(amount) from e where kind='call_minute'),0),
+ 'long_call',(select count(*) from (select day from e where kind='call_minute' group by day having sum(amount)>=180) d),
+ 'screenshare',coalesce((select sum(amount) from e where kind='screenshare_minute'),0),
+ 'camera',coalesce((select sum(amount) from e where kind='camera_minute'),0),
+ 'watch_party',(select count(*) from e where kind='watch_party'),
+ 'posts',(select count(*) from public.social_posts where author_id=target and not is_reply),
+ 'likes_received',(select count(*) from public.social_likes l join public.social_posts s on s.id=l.post_id where s.author_id=target and l.user_id<>target),
+ 'reposts_received',(select count(*) from public.social_reposts r join public.social_posts s on s.id=r.post_id where s.author_id=target and r.user_id<>target),
+ 'followers',(select count(*) from public.social_follows where following_id=target),
+ 'following',(select count(*) from public.social_follows where follower_id=target),
+ 'friends',(select count(*) from public.friendships where status='accepted' and target in (requester_id,recipient_id)),
+ 'dms',(select count(*) from public.direct_messages where author_id=target),
+ 'conversations',(select count(*) from public.conversations where target in (user_a,user_b)),
+ 'communities_created',(select count(*) from public.communities where created_by=target),
+ 'communities_joined',(select count(*) from public.community_members where user_id=target),
+ 'invites',(select count(*) from public.community_invites where created_by=target),
+ 'decorations',(select count(*) from p, jsonb_each_text(p.appearance) j where j.key in ('frame','border','effect','server','plate','name_font','name_effect','banner_style') and j.value<>'')+(select (p.appearance ? 'theme')::int from p),
+ 'profile_complete',(select (coalesce(bio,'')<>'')::int+(coalesce(pronouns,'')<>'')::int+(avatar_url is not null)::int+(banner_url is not null)::int from p),
+ 'has_bio',(select (coalesce(bio,'')<>'')::int from p),
+ 'has_avatar',(select (avatar_url is not null)::int from p),
+ 'has_banner',(select (banner_url is not null)::int from p),
+ 'has_font',(select (coalesce(appearance->>'name_font','')<>'')::int from p),
+ 'early_member',(select (count(*)<100)::int from auth.users u, p where u.created_at<p.joined),
+ 'admin',(select count(*) from public.site_roles where user_id=target and role in ('admin','creator')),
+ 'creator',(select count(*) from public.site_roles where user_id=target and role='creator'),
+ 'owner',(select count(*) from public.badge_grants where user_id=target and badge_id='dono'))
+$$;
+
+-- Estado completo: nível de cada insígnia, progresso e vitrine. ADM global = tudo no nível máximo.
+create or replace function public.badge_state(target uuid default null) returns jsonb
+language plpgsql stable security definer set search_path to '' as $$
+declare who uuid:=coalesce(target,auth.uid()); metrics jsonb; admin boolean; result jsonb; pinned jsonb; cats int;
+begin
+  if auth.uid() is null then raise exception 'Entre na sua conta.' using errcode='42501'; end if;
+  if not exists(select 1 from public.profiles where id=who) then raise exception 'Perfil não encontrado.' using errcode='22023'; end if;
+  metrics:=orbita_private.badge_metrics(who);
+  admin:=(metrics->>'admin')::int>0;
+  with lv as (
+    select c.id,c.category,c.thresholds,c.exclusive,coalesce((metrics->>c.metric)::int,0) as value,
+      case when admin then array_length(c.thresholds,1)
+           when exists(select 1 from public.badge_grants g where g.user_id=who and g.badge_id=c.id) then array_length(c.thresholds,1)
+           when c.exclusive is not null and c.exclusive<>'owner' then case when coalesce((metrics->>c.metric)::int,0)>0 then 1 else 0 end
+           when c.exclusive='owner' then 0
+           else (select count(*) from unnest(c.thresholds) t where t<=coalesce((metrics->>c.metric)::int,0)) end as level
+    from public.badge_catalog c)
+  select count(distinct category) into cats from lv where level>0 and category<>'secretas';
+  metrics:=metrics||jsonb_build_object('all_categories',cats);
+  select jsonb_agg(jsonb_build_object('id',c.id,'level',l.level,'max',array_length(c.thresholds,1),'value',l.value,
+      'next',case when l.level<array_length(c.thresholds,1) then c.thresholds[l.level+1] end,
+      'unlocked_at',(select min(u.unlocked_at) from public.badge_unlocks u where u.user_id=who and u.badge_id=c.id),
+      'permanent',exists(select 1 from public.badge_grants g where g.user_id=who and g.badge_id=c.id and g.permanent)) order by c.id)
+    into result
+  from public.badge_catalog c cross join lateral (select coalesce((metrics->>c.metric)::int,0) as value,
+      case when admin then array_length(c.thresholds,1)
+           when exists(select 1 from public.badge_grants g where g.user_id=who and g.badge_id=c.id) then array_length(c.thresholds,1)
+           when c.exclusive='owner' then 0
+           when c.exclusive is not null then least(1,coalesce((metrics->>c.metric)::int,0))
+           else (select count(*) from unnest(c.thresholds) t where t<=coalesce((metrics->>c.metric)::int,0))::int end as level) l;
+  -- Vitrine: permanentes primeiro (Dono), depois as escolhidas pelo usuário que estiverem desbloqueadas; máximo 3.
+  select coalesce(jsonb_agg(id),'[]'::jsonb) into pinned from (
+    select id from (
+      select g.badge_id as id, 0 as ord from public.badge_grants g where g.user_id=who and g.permanent
+      union all
+      select b.value#>>'{}', b.ordinality::int from public.profiles p, jsonb_array_elements(coalesce(p.appearance->'badges','[]'::jsonb)) with ordinality b where p.id=who
+    ) x where exists(select 1 from jsonb_array_elements(result) r where r->>'id'=x.id and (r->>'level')::int>0)
+    group by id order by min(ord) limit 3) s;
+  return jsonb_build_object('user_id',who,'admin',admin,'badges',coalesce(result,'[]'::jsonb),'showcase',pinned,'metrics',case when who=auth.uid() then metrics else null end);
+end $$;
+
+-- Grava a data de desbloqueio de cada nível alcançado (chamado pelo backend no heartbeat).
+create or replace function public.sync_my_badges() returns int
+language plpgsql security definer set search_path to '' as $$
+declare state jsonb:=public.badge_state(auth.uid()); r jsonb; n int:=0; lvl int;
+begin
+  for r in select * from jsonb_array_elements(state->'badges') loop
+    for lvl in 1..least(8,(r->>'level')::int) loop
+      insert into public.badge_unlocks(user_id,badge_id,level) values(auth.uid(),r->>'id',lvl) on conflict do nothing;
+      if found then n:=n+1; end if;
+    end loop;
+  end loop;
+  return n;
+end $$;
+
+create or replace function public.record_badge_event(transport_key text, event_kind text, event_amount int default 1) returns boolean
+language sql set search_path to '' as $$select orbita_private.record_badge_event(transport_key,event_kind,event_amount)$$;
+
+revoke all on function orbita_private.record_badge_event(text,text,int), orbita_private.badge_metrics(uuid), orbita_private.guard_appearance() from public, anon, authenticated;
+grant execute on function orbita_private.record_badge_event(text,text,int) to authenticated;
+revoke all on function public.badge_state(uuid), public.sync_my_badges(), public.record_badge_event(text,text,int) from public, anon;
+grant execute on function public.badge_state(uuid), public.sync_my_badges(), public.record_badge_event(text,text,int) to authenticated;
+
+-- 4) Insígnia de Dono, permanente: @kalioptha (50e5ae56-07e3-4023-9461-f653997fcc2e), conferido via leitura MCP.
+insert into public.badge_grants(user_id,badge_id,permanent)
+select id,'dono',true from public.profiles where id='50e5ae56-07e3-4023-9461-f653997fcc2e' and username='kalioptha'
+on conflict (user_id,badge_id) do update set permanent=true;
+
+-- Migration: 20261023001000_profile_appearance_grant.sql
+-- Corrige a migration de insígnias: o authenticated não tinha UPDATE na coluna
+-- profiles.appearance (o guard_appearance continua barrando itens de ADM), e
+-- orbita_private.badge_events ficou sem RLS (só é acessada por funções SECURITY DEFINER).
+grant update(appearance) on public.profiles to authenticated;
+alter table orbita_private.badge_events enable row level security;
+revoke all on orbita_private.badge_events from anon, authenticated;
+
+-- Migration: 20261023030000_restore_profile_column_grants.sql
+-- Restaura o UPDATE por coluna em public.profiles para authenticated.
+-- Causa: no banco, authenticated só tinha UPDATE em display_name, username, bio,
+-- avatar_color, presence_status, custom_status e appearance. Faltavam avatar_url,
+-- banner_url, pronouns e presence_activity (concedidos em community_invites_roles_profiles,
+-- mas ausentes no banco). Qualquer update que envie uma dessas colunas (salvar perfil,
+-- banner, avatar, atividade) falhava inteiro com "permission denied for table profiles".
+-- Idempotente; não toca no trigger guard_appearance (itens de ADM continuam barrados)
+-- nem na policy profiles_self_update (cada um só altera a própria linha).
+grant update (display_name, username, bio, avatar_color, presence_status, custom_status,
+  avatar_url, banner_url, pronouns, presence_activity, appearance)
+  on public.profiles to authenticated;
+
+-- Varredura: outros grants por coluna que o repositório concede (baseline e
+-- fix_message_insert_permissions) mas que faltavam no banco e geram o mesmo 42501.
+-- As policies de RLS e os gatilhos de guarda continuam decidindo quem pode o quê.
+grant insert (thread_root) on public.messages, public.direct_messages to authenticated;
+grant insert (storage_path) on public.attachments to authenticated;
+grant insert (is_stage, is_private, is_announcement, default_for_new_members),
+  update (is_stage, is_private, is_announcement, default_for_new_members)
+  on public.channels to authenticated;
+grant update (invite_only) on public.communities to authenticated;
+
+-- Migration: 20261023040000_new_members_feed.sql
+-- Feed "Novos membros": lista pública de quem entrou (só campos públicos de profiles + data de cadastro
+-- vinda de auth.users) e boas-vindas (👋) com RLS. Nunca expõe e-mail nem metadados privados.
+create table if not exists public.member_welcomes(
+  member_id uuid not null references public.profiles(id) on delete cascade,
+  user_id uuid not null default auth.uid() references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key(member_id,user_id),
+  constraint member_welcomes_not_self check(member_id<>user_id)
+);
+create index if not exists member_welcomes_user_idx on public.member_welcomes(user_id);
+alter table public.member_welcomes enable row level security;
+revoke all on public.member_welcomes from anon, authenticated;
+grant select, delete on public.member_welcomes to authenticated;
+grant insert(member_id) on public.member_welcomes to authenticated;
+drop policy if exists member_welcomes_read on public.member_welcomes;
+create policy member_welcomes_read on public.member_welcomes for select to authenticated using (true);
+drop policy if exists member_welcomes_insert_own on public.member_welcomes;
+create policy member_welcomes_insert_own on public.member_welcomes for insert to authenticated with check (user_id=(select auth.uid()));
+drop policy if exists member_welcomes_delete_own on public.member_welcomes;
+create policy member_welcomes_delete_own on public.member_welcomes for delete to authenticated using (user_id=(select auth.uid()));
+
+-- Página da timeline (keyset por data de cadastro). Número do membro = ordem de cadastro.
+create or replace function orbita_private.new_members(before_at timestamptz default null, before_id uuid default null, page_size int default 20)
+returns table(id uuid, username text, display_name text, avatar_color text, avatar_url text, banner_url text, pronouns text, bio text, appearance jsonb, joined_at timestamptz, member_number bigint, welcomes bigint, welcomed boolean, following boolean)
+language sql stable security definer set search_path='' as $$
+  with me as (select auth.uid() uid), ranked as (
+    select p.*, u.created_at joined, row_number() over(order by u.created_at, p.id) n
+    from public.profiles p join auth.users u on u.id=p.id)
+  select r.id, r.username, r.display_name, r.avatar_color, r.avatar_url, r.banner_url, r.pronouns, r.bio, r.appearance, r.joined, r.n,
+    (select count(*) from public.member_welcomes w where w.member_id=r.id),
+    exists(select 1 from public.member_welcomes w where w.member_id=r.id and w.user_id=(select uid from me)),
+    exists(select 1 from public.social_follows f where f.follower_id=(select uid from me) and f.following_id=r.id)
+  from ranked r
+  where (select uid from me) is not null
+    and (before_at is null or (r.joined, r.id) < (before_at, before_id))
+    and not exists(select 1 from public.social_blocks b where (b.blocker_id=(select uid from me) and b.blocked_id=r.id) or (b.blocker_id=r.id and b.blocked_id=(select uid from me)))
+  order by r.joined desc, r.id desc
+  limit least(greatest(coalesce(page_size,20),1),50)
+$$;
+create or replace function orbita_private.new_members_stats()
+returns jsonb language sql stable security definer set search_path='' as $$
+  select case when auth.uid() is null then null else jsonb_build_object(
+    'total',count(*),
+    'week',count(*) filter(where u.created_at>=now()-interval '7 days'),
+    'today',count(*) filter(where (u.created_at at time zone 'America/Sao_Paulo')::date=(now() at time zone 'America/Sao_Paulo')::date),
+    'me_joined',max(u.created_at) filter(where u.id=auth.uid()),
+    'me_number',(select n from (select u2.id, row_number() over(order by u2.created_at,u2.id) n from auth.users u2 join public.profiles p2 on p2.id=u2.id) x where x.id=auth.uid()))
+  end from auth.users u join public.profiles p on p.id=u.id
+$$;
+create or replace function public.new_members(before_at timestamptz default null, before_id uuid default null, page_size int default 20)
+returns table(id uuid, username text, display_name text, avatar_color text, avatar_url text, banner_url text, pronouns text, bio text, appearance jsonb, joined_at timestamptz, member_number bigint, welcomes bigint, welcomed boolean, following boolean)
+language sql stable set search_path='' as $$ select * from orbita_private.new_members(before_at,before_id,page_size) $$;
+create or replace function public.new_members_stats() returns jsonb language sql stable set search_path='' as $$ select orbita_private.new_members_stats() $$;
+revoke all on function orbita_private.new_members(timestamptz,uuid,int), orbita_private.new_members_stats(), public.new_members(timestamptz,uuid,int), public.new_members_stats() from public, anon;
+grant execute on function orbita_private.new_members(timestamptz,uuid,int), orbita_private.new_members_stats(), public.new_members(timestamptz,uuid,int), public.new_members_stats() to authenticated;
+
+-- Migration: 20261023050000_store_v2_card_border.sql
+-- Loja v2: coleções novas, "Borda de cartão" (card_border) e "Estilo de nome" (name_style) em profiles.appearance.
+-- GERADO por scripts/appearance-sql.mjs. Só troca a função do trigger; itens de ADM seguem bloqueados no servidor.
+create or replace function orbita_private.guard_appearance() returns trigger
+language plpgsql security definer set search_path to '' as $$
+declare a jsonb:=coalesce(new.appearance,'{}'::jsonb); k text; v text;
+  items text[]:=array['cyberpunk-frame','cyberpunk-border','cyberpunk-effect','cyberpunk-server','cyberpunk-plate','anime-frame','anime-border','anime-effect','anime-server','anime-plate','espaco-frame','espaco-border','espaco-effect','espaco-server','espaco-plate','natureza-frame','natureza-border','natureza-effect','natureza-server','natureza-plate','halloween-frame','halloween-border','halloween-effect','halloween-server','halloween-plate','lofi-frame','lofi-border','lofi-effect','lofi-server','lofi-plate','retro-frame','retro-border','retro-effect','retro-server','retro-plate','oceano-frame','oceano-border','oceano-effect','oceano-server','oceano-plate','glitch-frame','glitch-border','glitch-effect','glitch-server','glitch-plate','orbita-staff-frame','orbita-staff-border','orbita-staff-effect','orbita-staff-server','orbita-staff-plate','nebulosa-frame','nebulosa-effect','nebulosa-card_border','nebulosa-name_style','nebulosa-server','cyber-tokyo-frame','cyber-tokyo-effect','cyber-tokyo-card_border','cyber-tokyo-name_style','cyber-tokyo-server','floresta-frame','floresta-effect','floresta-card_border','floresta-name_style','floresta-server','inferno-frame','inferno-effect','inferno-card_border','inferno-name_style','inferno-server','abissal-frame','abissal-effect','abissal-card_border','abissal-name_style','abissal-server','sakura-frame','sakura-effect','sakura-card_border','sakura-name_style','sakura-server','arcade-frame','arcade-effect','arcade-card_border','arcade-name_style','arcade-server','tempestade-frame','tempestade-effect','tempestade-card_border','tempestade-name_style','tempestade-server','aurora-frame','aurora-effect','aurora-card_border','aurora-name_style','aurora-server','gelo-frame','gelo-effect','gelo-card_border','gelo-name_style','gelo-server','ouro-real-frame','ouro-real-effect','ouro-real-card_border','ouro-real-name_style','ouro-real-server','vaporwave-frame','vaporwave-effect','vaporwave-card_border','vaporwave-name_style','vaporwave-server','holografica-frame','holografica-effect','holografica-card_border','holografica-name_style','holografica-server','noite-bruxas-frame','noite-bruxas-effect','noite-bruxas-card_border','noite-bruxas-name_style','noite-bruxas-server','equipe-orbita-frame','equipe-orbita-effect','equipe-orbita-card_border','equipe-orbita-name_style','equipe-orbita-server']::text[];
+  fonts text[]:=array['orbitron','pressstart','pacifico','bungee','monoton','creepster','righteous','audiowide','caveat','cinzel','silkscreen','lobster','spacemono','shrikhand']::text[];
+  effects text[]:=array['gradient','neon','glitch','shine','rainbow','fire','staff']::text[];
+  admin_only text[]:=array['orbita-staff-frame','orbita-staff-border','orbita-staff-effect','orbita-staff-server','orbita-staff-plate','equipe-orbita-frame','equipe-orbita-effect','equipe-orbita-card_border','equipe-orbita-name_style','equipe-orbita-server','name:staff']::text[];
+  admin boolean:=exists(select 1 from public.site_roles where user_id=new.id and role in ('admin','creator'));
+begin
+  if tg_op='UPDATE' and new.appearance is not distinct from old.appearance then return new; end if;
+  for k,v in select key,value#>>'{}' from jsonb_each(a) loop
+    if k in ('frame','border','effect','server','plate','card_border','name_style') then
+      if jsonb_typeof(a->k)<>'string' then raise exception 'Item de personalização inválido.' using errcode='22023'; end if;
+      if v<>'' and not (v=any(items) and v like '%-'||k) then raise exception 'Item de personalização inválido: %',v using errcode='22023'; end if;
+      if v=any(admin_only) and not admin then raise exception 'Este item é exclusivo dos administradores do app.' using errcode='42501'; end if;
+    elsif k='name_font' then if v<>'' and not v=any(fonts) then raise exception 'Fonte inválida.' using errcode='22023'; end if;
+    elsif k='name_effect' then
+      if v<>'' and not v=any(effects) then raise exception 'Efeito inválido.' using errcode='22023'; end if;
+      if v<>'' and ('name:'||v)=any(admin_only) and not admin then raise exception 'Este efeito é exclusivo dos administradores do app.' using errcode='42501'; end if;
+    elsif k='theme' then
+      if jsonb_typeof(a->'theme')<>'array' or jsonb_array_length(a->'theme')<>2 or exists(select 1 from jsonb_array_elements_text(a->'theme') c where c !~ '^#[0-9a-fA-F]{6}$') then raise exception 'Tema de cor inválido.' using errcode='22023'; end if;
+    elsif k='badges' then
+      if jsonb_typeof(a->'badges')<>'array' or jsonb_array_length(a->'badges')>3 then raise exception 'Fixe no máximo 3 insígnias.' using errcode='22023'; end if;
+    elsif k in ('legacy_frame','legacy_effect','banner_style') then
+      if char_length(v)>48 or v !~ '^[a-z0-9-]*$' then raise exception 'Valor inválido.' using errcode='22023'; end if;
+    else raise exception 'Campo de aparência desconhecido: %',k using errcode='22023';
+    end if;
+  end loop;
+  return new;
+end $$;
+revoke all on function orbita_private.guard_appearance() from public, anon, authenticated;
+
+-- Migration: 20261023060000_handle_nickname_split.sql
+-- Separa @nome de usuário (username) de nickname (display_name).
+-- username: 3–24 [a-z0-9_], único sem diferenciar maiúsculas, nomes reservados
+-- bloqueados e no máximo uma troca a cada 24h (ADM global isento).
+-- display_name: 1–32 caracteres, emoji permitido, sem caracteres de controle.
+-- Menções continuam usando o username, que não muda sem a pessoa pedir.
+
+alter table public.profiles add column if not exists username_changed_at timestamptz;
+
+create table if not exists public.reserved_usernames (name text primary key check (name ~ '^[a-z0-9_]{1,24}$'));
+alter table public.reserved_usernames enable row level security;
+revoke all on public.reserved_usernames from anon, authenticated;
+insert into public.reserved_usernames(name) values
+  ('admin'),('adm'),('administrador'),('root'),('suporte'),('support'),('orbita'),('sistema'),('system'),
+  ('moderador'),('moderacao'),('mod'),('staff'),('equipe'),('oficial'),('official'),('null'),('undefined'),
+  ('everyone'),('here'),('todos'),('api'),('www'),('help'),('ajuda'),('dono'),('owner'),('seguranca'),('security')
+on conflict do nothing;
+
+alter table public.profiles drop constraint if exists profiles_display_name_check;
+alter table public.profiles add constraint profiles_display_name_check
+  check (char_length(display_name) between 1 and 32 and display_name !~ '[[:cntrl:]]');
+
+create or replace function orbita_private.unify_nickname()
+returns trigger language plpgsql security definer set search_path to '' as $$
+declare uid uuid:=(select auth.uid()); exempt boolean;
+begin
+  if new.display_name is distinct from old.display_name then
+    new.display_name:=btrim(new.display_name);
+    if char_length(new.display_name) not between 1 and 32 or new.display_name ~ '[[:cntrl:]]' then
+      raise exception 'O nickname precisa ter de 1 a 32 caracteres, sem caracteres de controle.' using errcode='23514';
+    end if;
+  end if;
+  if new.username is distinct from old.username then
+    new.username:=lower(btrim(new.username));
+    if new.username is not distinct from old.username then return new; end if;
+    if new.username !~ '^[a-z0-9_]{3,24}$' then
+      raise exception 'Use um @ de 3 a 24 letras minúsculas, números ou _.' using errcode='23514';
+    end if;
+    exempt:=uid is null or exists(select 1 from public.site_roles where user_id=uid and role in ('admin','creator'));
+    if not exempt and exists(select 1 from public.reserved_usernames where name=new.username) then
+      raise exception 'Este @ é reservado.' using errcode='23514';
+    end if;
+    if exists(select 1 from public.profiles where lower(username)=new.username and id<>new.id) then
+      raise exception 'Este @ já está em uso.' using errcode='23505';
+    end if;
+    if not exempt and old.username_changed_at is not null and old.username_changed_at > now()-interval '24 hours' then
+      raise exception 'Você só pode trocar o @ uma vez a cada 24 horas.' using errcode='P0001';
+    end if;
+    new.username_changed_at:=now();
+  elsif new.username_changed_at is distinct from old.username_changed_at then
+    new.username_changed_at:=old.username_changed_at;
+  end if;
+  return new;
+end $$;
+revoke all on function orbita_private.unify_nickname() from public, anon, authenticated;
+
+-- Novas contas: nickname até 32 caracteres; o @ inicial vem do nickname quando
+-- ele é um @ válido, livre e não reservado (senão fica o orbiter_* aleatório).
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path to '' as $$
+declare nick text:=left(coalesce(nullif(regexp_replace(btrim(new.raw_user_meta_data->>'display_name'),'[[:cntrl:]]','','g'), ''), 'Participante'),32);
+  handle text:=lower(nick);
+begin
+  if handle ~ '^[a-z0-9_]{3,24}$' and not exists(select 1 from public.profiles where lower(username)=handle)
+     and not exists(select 1 from public.reserved_usernames where name=handle) then
+    insert into public.profiles(id, display_name, username) values (new.id, nick, handle);
+  else
+    insert into public.profiles(id, display_name) values (new.id, nick);
+  end if;
+  return new;
+end $$;
+
+-- Disponibilidade do @ para a checagem ao vivo nas Configurações.
+create or replace function public.username_available(candidate text)
+returns jsonb language plpgsql stable security definer set search_path to '' as $$
+declare u text:=lower(btrim(coalesce(candidate,''))); uid uuid:=(select auth.uid()); exempt boolean; last timestamptz;
+begin
+  if uid is null then return jsonb_build_object('ok',false,'reason','auth'); end if;
+  if u !~ '^[a-z0-9_]{3,24}$' then return jsonb_build_object('ok',false,'reason','invalid'); end if;
+  if exists(select 1 from public.profiles where id=uid and lower(username)=u) then return jsonb_build_object('ok',true,'reason','current'); end if;
+  exempt:=exists(select 1 from public.site_roles where user_id=uid and role in ('admin','creator'));
+  if not exempt and exists(select 1 from public.reserved_usernames where name=u) then return jsonb_build_object('ok',false,'reason','reserved'); end if;
+  if exists(select 1 from public.profiles where lower(username)=u) then return jsonb_build_object('ok',false,'reason','taken'); end if;
+  select username_changed_at into last from public.profiles where id=uid;
+  if not exempt and last is not null and last > now()-interval '24 hours' then
+    return jsonb_build_object('ok',false,'reason','rate_limit','retry_at',last+interval '24 hours');
+  end if;
+  return jsonb_build_object('ok',true,'reason','available');
+end $$;
+revoke all on function public.username_available(text) from public, anon;
+grant execute on function public.username_available(text) to authenticated;
+
+-- Migration: 20261023070000_store_v3_classics.sql
+-- Loja v3: coleções clássicas refeitas (cada uma com moldura, efeito, borda de cartão, estilo de nome e tema)
+-- + coleções novas. Ids antigos (-border, -plate e os de pacote) seguem aceitos como apelidos.
+-- GERADO por scripts/appearance-sql.mjs. Só troca a função do trigger; itens de ADM seguem bloqueados no servidor.
+create or replace function orbita_private.guard_appearance() returns trigger
+language plpgsql security definer set search_path to '' as $$
+declare a jsonb:=coalesce(new.appearance,'{}'::jsonb); k text; v text;
+  items text[]:=array['cyberpunk-border','cyberpunk-plate','anime-border','anime-plate','espaco-border','espaco-plate','natureza-border','natureza-plate','halloween-border','halloween-plate','lofi-border','lofi-plate','retro-border','retro-plate','oceano-border','oceano-plate','glitch-border','glitch-plate','divino-border','divino-plate','sombrio-border','sombrio-plate','natal-border','natal-plate','romance-border','romance-plate','luxo-border','luxo-plate','zen-border','zen-plate','orbita-staff-border','orbita-staff-plate','nebulosa-frame','nebulosa-effect','nebulosa-card_border','nebulosa-name_style','nebulosa-server','cyber-tokyo-frame','cyber-tokyo-effect','cyber-tokyo-card_border','cyber-tokyo-name_style','cyber-tokyo-server','floresta-frame','floresta-effect','floresta-card_border','floresta-name_style','floresta-server','inferno-frame','inferno-effect','inferno-card_border','inferno-name_style','inferno-server','abissal-frame','abissal-effect','abissal-card_border','abissal-name_style','abissal-server','sakura-frame','sakura-effect','sakura-card_border','sakura-name_style','sakura-server','arcade-frame','arcade-effect','arcade-card_border','arcade-name_style','arcade-server','tempestade-frame','tempestade-effect','tempestade-card_border','tempestade-name_style','tempestade-server','aurora-frame','aurora-effect','aurora-card_border','aurora-name_style','aurora-server','gelo-frame','gelo-effect','gelo-card_border','gelo-name_style','gelo-server','ouro-real-frame','ouro-real-effect','ouro-real-card_border','ouro-real-name_style','ouro-real-server','vaporwave-frame','vaporwave-effect','vaporwave-card_border','vaporwave-name_style','vaporwave-server','holografica-frame','holografica-effect','holografica-card_border','holografica-name_style','holografica-server','noite-bruxas-frame','noite-bruxas-effect','noite-bruxas-card_border','noite-bruxas-name_style','noite-bruxas-server','equipe-orbita-frame','equipe-orbita-effect','equipe-orbita-card_border','equipe-orbita-name_style','equipe-orbita-server','cyberpunk-frame','cyberpunk-effect','cyberpunk-card_border','cyberpunk-name_style','cyberpunk-server','anime-frame','anime-effect','anime-card_border','anime-name_style','anime-server','espaco-frame','espaco-effect','espaco-card_border','espaco-name_style','espaco-server','natureza-frame','natureza-effect','natureza-card_border','natureza-name_style','natureza-server','halloween-frame','halloween-effect','halloween-card_border','halloween-name_style','halloween-server','lofi-frame','lofi-effect','lofi-card_border','lofi-name_style','lofi-server','retro-frame','retro-effect','retro-card_border','retro-name_style','retro-server','oceano-frame','oceano-effect','oceano-card_border','oceano-name_style','oceano-server','glitch-frame','glitch-effect','glitch-card_border','glitch-name_style','glitch-server','divino-frame','divino-effect','divino-card_border','divino-name_style','divino-server','sombrio-frame','sombrio-effect','sombrio-card_border','sombrio-name_style','sombrio-server','natal-frame','natal-effect','natal-card_border','natal-name_style','natal-server','romance-frame','romance-effect','romance-card_border','romance-name_style','romance-server','luxo-frame','luxo-effect','luxo-card_border','luxo-name_style','luxo-server','zen-frame','zen-effect','zen-card_border','zen-name_style','zen-server','orbita-staff-frame','orbita-staff-effect','orbita-staff-card_border','orbita-staff-name_style','orbita-staff-server']::text[];
+  fonts text[]:=array['orbitron','pressstart','pacifico','bungee','monoton','creepster','righteous','audiowide','caveat','cinzel','silkscreen','lobster','spacemono','shrikhand']::text[];
+  effects text[]:=array['gradient','neon','glitch','shine','rainbow','fire','staff']::text[];
+  admin_only text[]:=array['orbita-staff-border','orbita-staff-plate','equipe-orbita-frame','equipe-orbita-effect','equipe-orbita-card_border','equipe-orbita-name_style','equipe-orbita-server','orbita-staff-frame','orbita-staff-effect','orbita-staff-card_border','orbita-staff-name_style','orbita-staff-server','name:staff']::text[];
+  admin boolean:=exists(select 1 from public.site_roles where user_id=new.id and role in ('admin','creator'));
+begin
+  if tg_op='UPDATE' and new.appearance is not distinct from old.appearance then return new; end if;
+  for k,v in select key,value#>>'{}' from jsonb_each(a) loop
+    if k in ('frame','border','effect','server','plate','card_border','name_style') then
+      if jsonb_typeof(a->k)<>'string' then raise exception 'Item de personalização inválido.' using errcode='22023'; end if;
+      if v<>'' and not (v=any(items) and v like '%-'||k) then raise exception 'Item de personalização inválido: %',v using errcode='22023'; end if;
+      if v=any(admin_only) and not admin then raise exception 'Este item é exclusivo dos administradores do app.' using errcode='42501'; end if;
+    elsif k='name_font' then if v<>'' and not v=any(fonts) then raise exception 'Fonte inválida.' using errcode='22023'; end if;
+    elsif k='name_effect' then
+      if v<>'' and not v=any(effects) then raise exception 'Efeito inválido.' using errcode='22023'; end if;
+      if v<>'' and ('name:'||v)=any(admin_only) and not admin then raise exception 'Este efeito é exclusivo dos administradores do app.' using errcode='42501'; end if;
+    elsif k='theme' then
+      if jsonb_typeof(a->'theme')<>'array' or jsonb_array_length(a->'theme')<>2 or exists(select 1 from jsonb_array_elements_text(a->'theme') c where c !~ '^#[0-9a-fA-F]{6}$') then raise exception 'Tema de cor inválido.' using errcode='22023'; end if;
+    elsif k='badges' then
+      if jsonb_typeof(a->'badges')<>'array' or jsonb_array_length(a->'badges')>3 then raise exception 'Fixe no máximo 3 insígnias.' using errcode='22023'; end if;
+    elsif k in ('legacy_frame','legacy_effect','banner_style') then
+      if char_length(v)>48 or v !~ '^[a-z0-9-]*$' then raise exception 'Valor inválido.' using errcode='22023'; end if;
+    else raise exception 'Campo de aparência desconhecido: %',k using errcode='22023';
+    end if;
+  end loop;
+  return new;
+end $$;
+revoke all on function orbita_private.guard_appearance() from public, anon, authenticated;
+
+-- Migration: 20261023080000_youtube_library.sql
+-- YouTube no Órbita: histórico e "Assistir depois" por usuário (RLS: só o dono lê/escreve)
+-- e tokens OAuth do Google guardados criptografados (AES-GCM, chave YOUTUBE_TOKEN_KEY só no servidor)
+-- numa tabela fora da API (schema orbita_private), acessada apenas por RPCs ligadas a auth.uid().
+create table if not exists public.youtube_library(
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  kind text not null check (kind in ('history','later')),
+  video_id text not null check (video_id ~ '^[A-Za-z0-9_-]{11}$'),
+  title text not null default '' check (char_length(title)<=300),
+  channel_title text not null default '' check (char_length(channel_title)<=200),
+  channel_id text not null default '' check (char_length(channel_id)<=64),
+  duration text not null default '' check (char_length(duration)<=16),
+  position_seconds int not null default 0 check (position_seconds between 0 and 864000),
+  updated_at timestamptz not null default now(),
+  primary key(user_id,kind,video_id)
+);
+create index if not exists youtube_library_recent_idx on public.youtube_library(user_id,kind,updated_at desc);
+alter table public.youtube_library enable row level security;
+revoke all on public.youtube_library from anon, authenticated;
+grant select, insert, update, delete on public.youtube_library to authenticated;
+drop policy if exists youtube_library_own on public.youtube_library;
+create policy youtube_library_own on public.youtube_library for all to authenticated
+  using (user_id=(select auth.uid())) with check (user_id=(select auth.uid()));
+
+create schema if not exists orbita_private;
+create table if not exists orbita_private.youtube_tokens(
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  ciphertext text not null check (char_length(ciphertext) between 20 and 8000),
+  updated_at timestamptz not null default now()
+);
+alter table orbita_private.youtube_tokens enable row level security;
+revoke all on orbita_private.youtube_tokens from public, anon, authenticated;
+
+create or replace function public.youtube_token_put(ciphertext text) returns void
+language sql volatile security definer set search_path='' as $$
+  insert into orbita_private.youtube_tokens(user_id,ciphertext,updated_at)
+  select auth.uid(), youtube_token_put.ciphertext, now() where auth.uid() is not null
+  on conflict (user_id) do update set ciphertext=excluded.ciphertext, updated_at=now();
+$$;
+create or replace function public.youtube_token_get() returns text
+language sql stable security definer set search_path='' as $$
+  select t.ciphertext from orbita_private.youtube_tokens t where t.user_id=auth.uid();
+$$;
+create or replace function public.youtube_token_clear() returns void
+language sql volatile security definer set search_path='' as $$
+  delete from orbita_private.youtube_tokens where user_id=auth.uid();
+$$;
+revoke all on function public.youtube_token_put(text), public.youtube_token_get(), public.youtube_token_clear() from public, anon;
+grant execute on function public.youtube_token_put(text), public.youtube_token_get(), public.youtube_token_clear() to authenticated;
+
+-- Migration: 20261023190000_server_permissions_hardening.sql
+-- Endurece permissões de servidor (comunidade).
+-- Auditoria: o RLS de produção já barra membros comuns (communities_manage,
+-- channels_*, community_roles_manage, member_roles_manage, self_roles_safe).
+-- O relato veio do cliente (engrenagem visível a todos). Isto é defesa em
+-- profundidade:
+-- 1) Cargos self_assignable seguem sem permissões (já garantido por self_roles_safe).
+-- 2) Cargos não podem ser movidos entre servidores nem ter id/created_at trocados.
+-- 3) Edição dos dados do servidor (nome, descrição, convite) segue restrita ao
+--    dono e aos ADMs globais; helper único para o RLS e para o cliente.
+
+create or replace function orbita_private.guard_role_scope()
+returns trigger language plpgsql security invoker set search_path='' as $$
+begin
+  if tg_op='UPDATE' and new.community_id is distinct from old.community_id then
+    raise exception 'Cargos não podem mudar de servidor.' using errcode='42501';
+  end if;
+  return new;
+end $$;
+revoke all on function orbita_private.guard_role_scope() from public,anon,authenticated;
+drop trigger if exists community_roles_guard_scope on public.community_roles;
+create trigger community_roles_guard_scope before update on public.community_roles
+  for each row execute function orbita_private.guard_role_scope();
+
+revoke update (id, community_id, created_at) on public.community_roles from authenticated;
+
+create or replace function orbita_private.can_edit_community(target uuid)
+returns boolean language sql stable security definer set search_path='' as $$
+  select auth.uid() is not null and (
+    exists(select 1 from public.communities c where c.id=target and c.created_by=auth.uid())
+    or exists(select 1 from public.site_roles s where s.user_id=auth.uid() and s.role in('creator','admin')))
+$$;
+revoke all on function orbita_private.can_edit_community(uuid) from public,anon;
+grant execute on function orbita_private.can_edit_community(uuid) to authenticated;
+
+create or replace function public.can_edit_community(target uuid)
+returns boolean language sql stable security invoker set search_path='' as $$select orbita_private.can_edit_community(target)$$;
+revoke all on function public.can_edit_community(uuid) from public,anon;
+grant execute on function public.can_edit_community(uuid) to authenticated;
+
+drop policy if exists communities_manage on public.communities;
+create policy communities_manage on public.communities for update to authenticated
+  using (orbita_private.can_edit_community(id)) with check (orbita_private.can_edit_community(id));
+
+-- Migration: 20261023210000_ouvir_juntos_channel.sql
+-- Canal de texto do Ouvir juntos: um canal 'text' com is_music=true aceita só comandos (/tocar, /pular…)
+-- e links do YouTube. O resultado do comando fica salvo em messages.command_result (escrito pelo autor).
+alter table public.channels add column if not exists is_music boolean not null default false;
+grant insert(is_music), update(is_music) on public.channels to authenticated;
+
+alter table public.messages add column if not exists command_result text;
+alter table public.messages drop constraint if exists messages_command_result_len;
+alter table public.messages add constraint messages_command_result_len check (command_result is null or char_length(command_result) <= 400);
+grant update(command_result) on public.messages to authenticated;
+
+create or replace function orbita_private.guard_music_message() returns trigger
+language plpgsql set search_path = '' as $$
+declare music boolean;
+begin
+  select c.is_music into music from public.channels c where c.id = new.channel_id;
+  if tg_op = 'INSERT' and new.command_result is not null then
+    raise exception using errcode = '42501', message = 'Resultado de comando não pode ser enviado junto da mensagem.';
+  end if;
+  if tg_op = 'UPDATE' and new.command_result is distinct from old.command_result then
+    if not coalesce(music, false) then raise exception using errcode = '42501', message = 'Só mensagens do canal do Ouvir juntos têm resultado de comando.'; end if;
+    if auth.uid() is distinct from old.author_id then raise exception using errcode = '42501', message = 'Só o autor do comando registra o resultado.'; end if;
+  end if;
+  if coalesce(music, false) and (tg_op = 'INSERT' or new.content is distinct from old.content) then
+    if new.attachment_id is not null or new.poll is not null then
+      raise exception using errcode = '22023', message = 'O canal do Ouvir juntos só aceita comandos e links do YouTube.';
+    end if;
+    if btrim(new.content) !~ '^/' and new.content !~* '(^|\s|//)((www|m|music)\.)?(youtube\.com|youtu\.be)/' then
+      raise exception using errcode = '22023', message = 'Este canal só aceita comandos do Ouvir juntos (ex.: /tocar <link>, /pular, /ajuda) e links do YouTube.';
+    end if;
+  end if;
+  return new;
+end $$;
+drop trigger if exists messages_music_guard on public.messages;
+create trigger messages_music_guard before insert or update on public.messages for each row execute function orbita_private.guard_music_message();
+
+-- Novos servidores ganham #ouvir-juntos; os existentes recebem um agora.
+create or replace function orbita_private.add_music_channel() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  insert into public.channels(name, kind, position, community_id, description, is_music, created_by)
+  values ('ouvir-juntos', 'text', 50, new.id, 'Comandos do Ouvir juntos: /tocar, /pular, /fila, /ajuda…', true, new.created_by)
+  on conflict do nothing;
+  return new;
+end $$;
+revoke all on function orbita_private.add_music_channel() from public, anon, authenticated;
+drop trigger if exists community_music_channel on public.communities;
+create trigger community_music_channel after insert on public.communities for each row execute function orbita_private.add_music_channel();
+
+insert into public.channels(name, kind, position, community_id, description, is_music, created_by)
+select 'ouvir-juntos', 'text', coalesce((select max(x.position) from public.channels x where x.community_id = c.id), 0) + 1,
+       c.id, 'Comandos do Ouvir juntos: /tocar, /pular, /fila, /ajuda…', true, c.created_by
+from public.communities c
+where not exists (select 1 from public.channels x where x.community_id = c.id and (x.is_music or lower(x.name) = 'ouvir-juntos'));
+
+-- Migration: 20261023230000_ouvir_juntos_queue_commands.sql
+-- Ouvir juntos: /adicionar e /proxima enfileiram sem interromper. Nenhuma restrição do banco lista comandos
+-- (o guard só exige "/" ou link do YouTube); aqui só atualizamos a descrição padrão do canal.
+create or replace function orbita_private.add_music_channel() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  insert into public.channels(name, kind, position, community_id, description, is_music, created_by)
+  values ('ouvir-juntos', 'text', 50, new.id, 'Comandos do Ouvir juntos: /tocar, /adicionar, /proxima, /pular, /fila, /ajuda…', true, new.created_by)
+  on conflict do nothing;
+  return new;
+end $$;
+revoke all on function orbita_private.add_music_channel() from public, anon, authenticated;
+update public.channels set description = 'Comandos do Ouvir juntos: /tocar, /adicionar, /proxima, /pular, /fila, /ajuda…'
+where is_music and description = 'Comandos do Ouvir juntos: /tocar, /pular, /fila, /ajuda…';
+
+-- Migration: 20261024010000_dm_call_ringing.sql
+-- Private 1:1 calls (DM): ringing state, call kind and duration log.
+-- Rows are created by the caller (existing insert policy) and only change through call_event_transition.
+alter table public.call_events add column if not exists kind text not null default 'voice';
+alter table public.call_events add column if not exists status text not null default 'ringing';
+alter table public.call_events add column if not exists answered_at timestamptz;
+alter table public.call_events add column if not exists ended_at timestamptz;
+alter table public.call_events add column if not exists ended_by uuid references public.profiles(id) on delete set null;
+do $$begin
+ if not exists(select 1 from pg_constraint where conname='call_events_kind_check')then alter table public.call_events add constraint call_events_kind_check check(kind in('voice','video'));end if;
+ if not exists(select 1 from pg_constraint where conname='call_events_status_check')then alter table public.call_events add constraint call_events_status_check check(status in('ringing','accepted','declined','canceled','missed','ended'));end if;
+end $$;
+-- Legacy rows predate ringing: never let them ring again.
+update public.call_events set status='missed' where status='ringing' and created_at<now()-interval '2 minutes';
+create index if not exists call_events_ended_by_idx on public.call_events(ended_by);
+revoke insert on public.call_events from authenticated;
+grant insert(conversation_id,caller_id,kind) on public.call_events to authenticated;
+revoke update on public.call_events from authenticated;
+
+create or replace function public.call_event_transition(event uuid,next text)returns public.call_events
+language plpgsql security definer set search_path='' as $$
+declare me uuid:=auth.uid();ev public.call_events;callee uuid;
+begin
+ if me is null then raise exception 'Entre para continuar.' using errcode='42501';end if;
+ select e.* into ev from public.call_events e where e.id=event for update;
+ if not found then raise exception 'Chamada inexistente.' using errcode='P0002';end if;
+ select case when c.user_a=ev.caller_id then c.user_b else c.user_a end into callee from public.conversations c
+  where c.id=ev.conversation_id and me in(c.user_a,c.user_b);
+ if callee is null then raise exception 'Chamada sem acesso.' using errcode='42501';end if;
+ if next in('accepted','declined')then
+  if me<>callee then raise exception 'Só quem recebe pode atender ou recusar.' using errcode='42501';end if;
+  if ev.status<>'ringing' or ev.created_at<now()-interval '45 seconds' then raise exception 'Esta chamada já terminou.' using errcode='22023';end if;
+  if next='accepted' and not orbita_private.can_call_conversation(ev.conversation_id)then raise exception 'Chamada sem acesso.' using errcode='42501';end if;
+ elsif next='canceled' then
+  if me<>ev.caller_id then raise exception 'Só quem ligou pode cancelar.' using errcode='42501';end if;
+  if ev.status<>'ringing' then return ev;end if;
+ elsif next='missed' then
+  if ev.status<>'ringing' then return ev;end if;
+  if me<>ev.caller_id and ev.created_at>now()-interval '25 seconds' then raise exception 'A chamada ainda está tocando.' using errcode='22023';end if;
+ elsif next='ended' then
+  if ev.status<>'accepted' then return ev;end if;
+ else raise exception 'Estado de chamada inválido.' using errcode='22023';end if;
+ update public.call_events set status=next,
+  answered_at=case when next='accepted' then now() else answered_at end,
+  ended_at=case when next<>'accepted' then now() else ended_at end,
+  ended_by=case when next<>'accepted' then me else ended_by end
+ where id=event returning * into ev;
+ return ev;
+end $$;
+revoke all on function public.call_event_transition(uuid,text) from public,anon;
+grant execute on function public.call_event_transition(uuid,text) to authenticated;
+
+-- Migration: 20261024020000_dm_unread.sql
+-- Per-user read state for private conversations (DM unread badges in the server rail).
+create table if not exists public.conversation_reads(
+ user_id uuid not null references public.profiles(id) on delete cascade default auth.uid(),
+ conversation_id uuid not null references public.conversations(id) on delete cascade,
+ last_read_at timestamptz not null default now(),
+ primary key(user_id,conversation_id)
+);
+create index if not exists conversation_reads_conversation_idx on public.conversation_reads(conversation_id);
+alter table public.conversation_reads enable row level security;
+revoke all on public.conversation_reads from anon,authenticated;
+grant select on public.conversation_reads to authenticated;
+drop policy if exists conversation_reads_own on public.conversation_reads;
+create policy conversation_reads_own on public.conversation_reads for select to authenticated using(user_id=(select auth.uid()));
+
+create or replace function public.mark_conversation_read(target uuid)returns timestamptz
+language plpgsql security definer set search_path='' as $$
+declare me uuid:=auth.uid();stamp timestamptz:=now();
+begin
+ if me is null then raise exception 'Entre para continuar.' using errcode='42501';end if;
+ if not exists(select 1 from public.conversations c where c.id=target and me in(c.user_a,c.user_b))then raise exception 'Conversa sem acesso.' using errcode='42501';end if;
+ insert into public.conversation_reads(user_id,conversation_id,last_read_at)values(me,target,stamp)
+ on conflict(user_id,conversation_id)do update set last_read_at=greatest(public.conversation_reads.last_read_at,excluded.last_read_at);
+ return stamp;
+end $$;
+
+-- Unread counts per conversation for the caller; muted people (social_mutes) never badge.
+create or replace function public.dm_unread_counts()returns table(conversation_id uuid,other_id uuid,unread integer,last_at timestamptz)
+language sql stable security definer set search_path='' as $$
+ select c.id,case when c.user_a=auth.uid() then c.user_b else c.user_a end,count(m.id)::integer,max(m.created_at)
+ from public.conversations c
+ left join public.conversation_reads r on r.conversation_id=c.id and r.user_id=auth.uid()
+ join public.direct_messages m on m.conversation_id=c.id and m.author_id<>auth.uid() and m.thread_root is null
+  and m.created_at>coalesce(r.last_read_at,'-infinity'::timestamptz) and m.created_at>now()-interval '30 days'
+ where auth.uid() in(c.user_a,c.user_b)
+  and not exists(select 1 from public.social_mutes s where s.user_id=auth.uid() and s.target_id=case when c.user_a=auth.uid() then c.user_b else c.user_a end and s.mode='mute')
+ group by c.id
+ having count(m.id)>0
+ order by max(m.created_at) desc
+ limit 20
+$$;
+revoke all on function public.mark_conversation_read(uuid),public.dm_unread_counts() from public,anon;
+grant execute on function public.mark_conversation_read(uuid),public.dm_unread_counts() to authenticated;
+
+-- Migration: 20261024030000_dm_call_glare.sql
+-- One active private call per DM (fixes glare: A and B calling each other at once).
+-- start_dm_call serialises starts per conversation, expires stale rings (35 s) and
+-- returns the existing ringing/accepted call instead of creating a second one.
+update public.call_events set status='missed',ended_at=coalesce(ended_at,now())
+ where status='ringing' and created_at<now()-interval '35 seconds';
+update public.call_events set status='ended',ended_at=coalesce(ended_at,now())
+ where status='accepted' and coalesce(answered_at,created_at)<now()-interval '6 hours';
+-- Any duplicates left from before the guard: keep only the newest active row.
+update public.call_events e set status=case when e.status='ringing' then 'missed' else 'ended' end,ended_at=coalesce(e.ended_at,now())
+ where e.status in('ringing','accepted') and exists(select 1 from public.call_events n
+  where n.conversation_id=e.conversation_id and n.status in('ringing','accepted') and (n.created_at,n.id)>(e.created_at,e.id));
+create unique index if not exists call_events_one_active_per_dm on public.call_events(conversation_id) where status in('ringing','accepted');
+
+create or replace function public.start_dm_call(target uuid,call_kind text default 'voice')
+returns table(event public.call_events,existing boolean,server_now timestamptz)
+language plpgsql security definer set search_path='' as $$
+declare me uuid:=auth.uid();ev public.call_events;
+begin
+ if me is null then raise exception 'Entre para continuar.' using errcode='42501';end if;
+ if call_kind not in('voice','video') then raise exception 'Tipo de chamada inválido.' using errcode='22023';end if;
+ -- Row lock on the conversation makes simultaneous starts resolve to the first one.
+ perform 1 from public.conversations c where c.id=target and me in(c.user_a,c.user_b) for update;
+ if not found then raise exception 'Chamada sem acesso.' using errcode='42501';end if;
+ if not orbita_private.can_call_conversation(target) then raise exception 'Chamada sem acesso.' using errcode='42501';end if;
+ update public.call_events set status='missed',ended_at=now()
+  where conversation_id=target and status='ringing' and created_at<now()-interval '35 seconds';
+ update public.call_events set status='ended',ended_at=now()
+  where conversation_id=target and status='accepted' and coalesce(answered_at,created_at)<now()-interval '6 hours';
+ select e.* into ev from public.call_events e where e.conversation_id=target and e.status in('ringing','accepted') limit 1;
+ if found then return query select ev,true,now();return;end if;
+ insert into public.call_events(conversation_id,caller_id,kind) values(target,me,call_kind) returning * into ev;
+ return query select ev,false,now();
+end $$;
+revoke all on function public.start_dm_call(uuid,text) from public,anon;
+grant execute on function public.start_dm_call(uuid,text) to authenticated;
+
+-- Ringing calls addressed to me (fallback when realtime missed the INSERT, e.g. a
+-- background desktop tab), with the server clock so clients can ignore skew.
+create or replace function public.dm_ringing_calls()
+returns table(event public.call_events,server_now timestamptz)
+language sql stable security definer set search_path='' as $$
+ select e,now() from public.call_events e join public.conversations c on c.id=e.conversation_id
+ where (select auth.uid()) in(c.user_a,c.user_b) and e.caller_id<>(select auth.uid())
+  and e.status='ringing' and e.created_at>now()-interval '30 seconds'
+ order by e.created_at desc limit 3
+$$;
+revoke all on function public.dm_ringing_calls() from public,anon;
+grant execute on function public.dm_ringing_calls() to authenticated;
+
+-- Migration: 20261024100000_community_theme.sql
+-- Tema de servidor (item da Loja) salvo na comunidade, visível para todos os membros.
+-- Quem pode alterar: a policy communities_manage (orbita_private.can_edit_community).
+alter table public.communities add column if not exists theme text check (theme is null or theme ~ '^[a-z0-9-]{1,64}$');
+grant update(theme) on public.communities to authenticated;
+
+-- Migration: 20261024110000_bug_reports.sql
+-- Relatórios de bug: qualquer usuário autenticado envia e lê os seus; ADMs globais leem e mudam o status.
+create sequence if not exists public.bug_report_seq;
+create table if not exists public.bug_reports (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique default ('BUG-' || lpad(nextval('public.bug_report_seq')::text, 4, '0')),
+  reporter_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  description text not null check (char_length(btrim(description)) between 3 and 4000),
+  attachments text[] not null default '{}' check (cardinality(attachments) <= 6),
+  status text not null default 'aberto' check (status in ('aberto','em análise','resolvido','descartado')),
+  app_version text check (char_length(app_version) <= 64),
+  platform text check (char_length(platform) <= 64),
+  user_agent text check (char_length(user_agent) <= 512),
+  route text check (char_length(route) <= 256),
+  created_at timestamptz not null default now()
+);
+create index if not exists bug_reports_reporter_idx on public.bug_reports(reporter_id, created_at desc);
+alter table public.bug_reports enable row level security;
+revoke all on public.bug_reports from anon, authenticated;
+grant select on public.bug_reports to authenticated;
+grant insert (description, attachments, app_version, platform, user_agent, route) on public.bug_reports to authenticated;
+grant update (status) on public.bug_reports to authenticated;
+grant usage on sequence public.bug_report_seq to authenticated;
+create policy bug_reports_insert on public.bug_reports for insert to authenticated
+  with check (reporter_id = (select auth.uid()) and not exists (select 1 from unnest(attachments) a where a !~ ('^bug-reports/' || (select auth.uid())::text || '/[0-9a-f-]{36}\.(jpg|jpeg|png|webp|gif|mp4|webm|mov)$')));
+create policy bug_reports_read on public.bug_reports for select to authenticated
+  using (reporter_id = (select auth.uid()) or (select public.is_site_admin()));
+create policy bug_reports_admin_update on public.bug_reports for update to authenticated
+  using ((select public.is_site_admin())) with check ((select public.is_site_admin()));
+-- Anexos em orbita-files/bug-reports/<uid>/<uuid>.<ext>
+create policy orbita_files_bug_upload on storage.objects for insert to authenticated
+  with check (bucket_id = 'orbita-files' and (storage.foldername(name))[1] = 'bug-reports' and (storage.foldername(name))[2] = (select auth.uid())::text and name ~ '^bug-reports/[0-9a-f-]{36}/[0-9a-f-]{36}\.(jpg|jpeg|png|webp|gif|mp4|webm|mov)$');
+create policy orbita_files_bug_read on storage.objects for select to authenticated
+  using (bucket_id = 'orbita-files' and (storage.foldername(name))[1] = 'bug-reports' and ((storage.foldername(name))[2] = (select auth.uid())::text or (select public.is_site_admin())));
+
+-- Migration: 20261024120000_spotify_connections.sql
+-- Conexões com Spotify: tokens só no servidor. RLS ligada sem policies e sem grants para clientes;
+-- apenas o backend (service role) lê/escreve.
+create table if not exists public.spotify_connections (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  refresh_token text not null,
+  access_token text,
+  expires_at timestamptz,
+  display_name text check (char_length(display_name) <= 80),
+  show_on_profile boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.spotify_connections enable row level security;
+revoke all on public.spotify_connections from anon, authenticated;
+grant select, insert, update, delete on public.spotify_connections to service_role;
+
+-- Migration: 20261024130000_member_welcome_notify.sql
+-- Boas-vindas notificam o membro: aviso em tempo real (in-app) + push (se houver inscrição) e entrada em social_activity.
+create or replace function orbita_private.member_welcome_notify()
+returns trigger language plpgsql security definer set search_path='' as $$
+declare actor record; target record; msg text;
+begin
+ select id,display_name,username into actor from public.profiles where id=new.user_id;
+ select id,presence_status into target from public.profiles where id=new.member_id;
+ if actor.id is null or target.id is null then return new; end if;
+ msg:=coalesce(nullif(btrim(actor.display_name),''),'@'||actor.username,'Alguém')||' te deu boas-vindas na Órbita';
+ perform realtime.send(jsonb_build_object('actor_id',actor.id,'actor_name',coalesce(nullif(btrim(actor.display_name),''),actor.username),'text',msg,'created_at',new.created_at),'welcome','user:'||target.id,true);
+ if coalesce(target.presence_status,'')<>'dnd' and exists(select 1 from public.push_subscriptions where user_id=target.id)
+    and not exists(select 1 from orbita_private.push_jobs j where j.author_id=actor.id and j.recipient_id=target.id and j.payload->>'tag'='orbita-welcome-'||actor.id and j.created_at>now()-interval '1 day') then
+  insert into orbita_private.push_jobs(author_id,recipient_id,payload)
+  values(actor.id,target.id,jsonb_build_object('title','Boas-vindas · Órbita','body',msg,'url','/?members=1','tag','orbita-welcome-'||actor.id));
+ end if;
+ return new;
+end $$;
+revoke all on function orbita_private.member_welcome_notify() from public,anon,authenticated;
+drop trigger if exists member_welcome_notify on public.member_welcomes;
+create trigger member_welcome_notify after insert on public.member_welcomes for each row execute function orbita_private.member_welcome_notify();
+
+create or replace function public.social_activity() returns jsonb language sql stable security invoker set search_path='' as $$
+with events as (
+ select l.user_id actor_id,l.post_id,l.created_at,'like'::text kind from public.social_likes l join public.social_posts p on p.id=l.post_id where p.author_id=auth.uid() and l.user_id<>auth.uid()
+ union all select r.user_id,r.post_id,r.created_at,'repost' from public.social_reposts r join public.social_posts p on p.id=r.post_id where p.author_id=auth.uid() and r.user_id<>auth.uid()
+ union all select r.author_id,r.id,r.created_at,'reply' from public.social_posts r join public.social_posts p on p.id=r.reply_to where p.author_id=auth.uid() and r.author_id<>auth.uid()
+ union all select r.author_id,r.id,r.created_at,'quote' from public.social_posts r join public.social_posts p on p.id=r.quote_id where p.author_id=auth.uid() and r.author_id<>auth.uid()
+ union all select f.follower_id,null::uuid,f.created_at,'follow' from public.social_follows f where f.following_id=auth.uid()
+ union all select w.user_id,null::uuid,w.created_at,'welcome' from public.member_welcomes w where w.member_id=auth.uid() and w.user_id<>auth.uid()
+),page as (select * from events where orbita_private.social_visible(actor_id) order by created_at desc,actor_id limit 50)
+select coalesce(jsonb_agg(to_jsonb(e)||jsonb_build_object('actor',(select jsonb_build_object('id',u.id,'display_name',u.display_name,'username',u.username,'avatar_url',u.avatar_url,'avatar_color',u.avatar_color) from public.profiles u where u.id=e.actor_id)) order by e.created_at desc),'[]'::jsonb) from page e $$;

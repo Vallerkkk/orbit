@@ -5,11 +5,13 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "test:unit": "node --test tests/*.test.mjs",
-    "test:browser": "node scripts/browser-tests.cjs"
+    "test:browser": "node scripts/browser-tests.cjs",
+    "release-notes": "node scripts/release-notes.mjs"
   },
   "devDependencies": {
     "@sentry/browser": "11.8.0",
     "axe-core": "4.14.0",
+    "emojibase-data": "^18.0.0",
     "esbuild": "0.28.2",
     "lightningcss": "1.33.0",
     "playwright": "1.64.1"

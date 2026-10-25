@@ -52,6 +52,18 @@ export function initYouTube(ctx){
   addEventListener('resize',schedule,{passive:true});const ro=new ResizeObserver(schedule);
   function setPlaying(p){playing=p;playBtn.replaceChildren(svg(p?'pause':'play'));playBtn.setAttribute('aria-label',p?'Pausar':'Reproduzir');dock.classList.toggle('paused',!p);}
   function progressLoop(){clearInterval(tick);tick=setInterval(()=>{if(!player?.getCurrentTime||!current)return;const t=player.getCurrentTime()||0,d=player.getDuration?.()||current.duration||0;progressFill.style.width=d?Math.min(100,t/d*100)+'%':'0';miniSub.textContent=(current.channelTitle||'')+(d?' • '+formatDuration(t)+' / '+formatDuration(d):'');if(playing&&Date.now()-lastSave>30000){lastSave=Date.now();saveLibrary(current,'history',t).catch(()=>{});}},1000);}
+  async 
+  function recommendFromHistory(videos){
+    const history = JSON.parse(localStorage.getItem('orbita-yt-history')||'[]');
+    if(!history.length) return videos;
+    const recent = history.slice(-5).map(h => h.id);
+    return videos.sort((a,b) => {
+      const aScore = recent.includes(a.id) ? 1 : 0;
+      const bScore = recent.includes(b.id) ? 1 : 0;
+      return bScore - aScore;
+    });
+  }
+
   async function play(v,{start=0,list}={}){if(!v||!YT_ID.test(v.id))return;if(list)queue=list;current=v;miniTitle.textContent=v.title||'Vídeo do YouTube';miniSub.textContent=v.channelTitle||'';dock.hidden=false;schedule();
     const YT=await loadIframeApi();if(current!==v)return;
     if(player&&playerReady){player.loadVideoById({videoId:v.id,startSeconds:start});}
