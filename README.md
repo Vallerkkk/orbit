@@ -16,11 +16,14 @@ O Render publica a branch `main` usando `render.yaml`. Configure no Render as va
 
 Em um projeto Supabase novo, execute uma vez o `supabase.sql` gerado. Em projetos existentes, aplique somente migrações ainda pendentes de `supabase/migrations/`, conferindo o histórico remoto. Não reaplique o baseline ou o arquivo completo em produção. As credenciais e chaves secretas devem ficar nas variáveis de ambiente do Render.
 
-## Aplicativo para Windows
+## Aplicativos para Windows
 
-O cliente desktop recomendado é nativo, em **.NET 10 + WPF + WebView2** (`desktop-native/`). Ele usa o runtime do WebView2 já presente no Windows, sem embarcar Chromium/Node, e abre a mesma conta e a mesma interface do site, com janela e diálogos nativos, bandeja do Windows, instância única, permissões controladas e seletor de compartilhamento do WebView2.
+Há dois clientes nativos em **.NET 10 + WebView2**. Ambos usam o runtime do WebView2 já presente no Windows, sem embarcar Chromium/Node, e abrem a mesma conta e a mesma interface do site, com bandeja do Windows, instância única e confirmação de microfone, câmera e compartilhamento de tela:
 
-Para compilar, use o .NET 10 SDK e execute `cd desktop-native; .\build.ps1`. O ZIP autocontido e o SHA-256 são gerados em `desktop-native/out/`. O wrapper Electron 1.0.2 em `desktop/` permanece apenas como versão legada.
+- [`native/`](native/README.md) (WinForms): versão enxuta, com download de ~2 MB quando o .NET 10 Desktop Runtime já está instalado, ou ~50 MB autocontida. Tem release automatizada pelo workflow `native-release.yml` (tag `native-vX.Y.Z`).
+- [`desktop-native/`](desktop-native/README.md) (WPF): pacote autocontido win-x64 de ~66 MB, sem exigir o .NET instalado. Gera ZIP e SHA-256 com `cd desktop-native; .\build.ps1`.
+
+O wrapper Electron 1.0.2 em `desktop/` permanece apenas como versão legada.
 
 ## Desenvolvimento local
 
@@ -29,7 +32,7 @@ Copie `.env.example` para `.env`, configure as variáveis e execute `iniciar_orb
 A permissão de microfone, câmera e compartilhamento de tela é solicitada pelo navegador. Para transmitir áudio da tela, selecione uma aba ou janela compatível e marque a opção de compartilhar áudio oferecida pelo próprio navegador.
 ## Organização dos fontes
 
-A interface utilizada pelo servidor fica em `static/index.html`. O servidor inicia por `app:app`. A fonte editável do banco é `supabase/migrations/`; `supabase.sql` é gerado por `python scripts/database.py --write`. O cliente nativo para Windows fica em `desktop-native/`; o wrapper Electron legado e seu atualizador ficam em `desktop/`. As pastas `tests/`, `.github/` e os lockfiles são necessários para validação e publicação.
+A interface utilizada pelo servidor fica em `static/index.html`. O servidor inicia por `app:app`. A fonte editável do banco é `supabase/migrations/`; `supabase.sql` é gerado por `python scripts/database.py --write`. Os clientes nativos para Windows ficam em `native/` e `desktop-native/`; o wrapper Electron legado e seu atualizador ficam em `desktop/`. As pastas `tests/`, `.github/` e os lockfiles são necessários para validação e publicação.
 
 O arquivo `.env` e o ambiente `.venv/` são locais e não devem ser enviados ao GitHub ou Render.
 

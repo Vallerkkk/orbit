@@ -4,6 +4,8 @@ Cliente nativo do Órbita para Windows, escrito em **.NET 10 + WPF + WebView2**.
 
 O foco desta versão é **fluidez da interface e baixo consumo de RAM/CPU**: não há Chromium nem Node.js embarcados; a página usa o runtime do WebView2 já instalado no Windows, em um único processo de interface.
 
+> Há também um cliente WinForms mais enxuto em [`native/`](../native/README.md), com a mesma base .NET + WebView2. Os dois podem ficar instalados ao mesmo tempo: este guarda dados em `%LOCALAPPDATA%\OrbitaNative`, separado do outro.
+
 ## Requisitos
 
 - Windows 10 (1809 ou superior) ou Windows 11, x64.

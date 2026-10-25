@@ -1,6 +1,6 @@
 # Órbita Desktop 1.0.2 — Windows x64 (legado)
 
-> **Versão legada.** O cliente recomendado agora é o nativo em [`desktop-native/`](../desktop-native/README.md) (.NET 10 + WPF + WebView2, 2.0.0), com menos consumo de RAM/CPU. Este wrapper Electron continua documentado para quem ainda usa a versão 1.0.2.
+> **Versão legada.** Os clientes atuais são os nativos em [`native/`](../native/README.md) (.NET 10 + WinForms + WebView2) e [`desktop-native/`](../desktop-native/README.md) (.NET 10 + WPF + WebView2), com menos consumo de RAM/CPU. Este wrapper Electron continua documentado para quem ainda usa a versão 1.0.2.
 
 Aplicativo Electron com motor Chromium próprio, janela independente, sessão persistente, bandeja do Windows, notificações mediante permissão e seletor de telas/janelas com áudio do computador opcional. Não precisa de Brave, Chrome ou Edge instalados para abrir sua janela.
 
