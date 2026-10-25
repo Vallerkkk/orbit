@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Orbita.Native.Tests/Orbita.Native.Tests.csproj" />
+  <Project Path="Orbita.Native/Orbita.Native.csproj" />
+</Solution>

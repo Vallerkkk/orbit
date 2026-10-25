@@ -26,3 +26,7 @@ secrets.json
 
 # Ambiente local da ponte Discord
 .venv-bridge/
+
+# App nativo (.NET)
+native/**/bin/
+native/**/obj/

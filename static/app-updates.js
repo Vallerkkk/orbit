@@ -1,5 +1,5 @@
 export function initAppUpdates(ctx){
-  const desktop=!!window.orbitaDesktop||/Electron\//.test(navigator.userAgent);
+  const desktop=!!window.orbitaDesktop||/Electron\/|OrbitaNative\//.test(navigator.userAgent);
   let current=document.querySelector('meta[name="orbita-version"]')?.content,checking=false,latest,notice;
   async function check(){if(checking||document.hidden||!navigator.onLine)return;checking=true;const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);try{const response=await fetch('/api/version',{cache:'no-store',signal:controller.signal});if(!response.ok)return;const value=(await response.json()).version;if(typeof value!=='string'||value.length>80)return;if(!current){current=value;return;}if(value===current||value===latest)return;latest=value;show();}catch{}finally{clearTimeout(timeout);checking=false;}}
   function reloadApp(){if(ctx.room()&&!confirm('Atualizar vai encerrar sua chamada. Deseja continuar?'))return;if(ctx.dirty()&&!confirm('Você tem conteúdo não enviado. Deseja atualizar mesmo assim?'))return;ctx.beforeReload();location.reload();}
