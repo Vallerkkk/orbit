@@ -1,0 +1,21 @@
+{
+  "status": "static_structure_passed",
+  "native_compilation_executed": false,
+  "swift_typecheck_executed": false,
+  "xctest_executed": false,
+  "performance_measured": false,
+  "unit_test_methods_present": 14,
+  "ui_test_methods_present": 2,
+  "checks": [
+    "OpenStep project parsed; all object IDs unique",
+    "85 Xcode objects have valid references",
+    "All 19 Swift source files referenced once",
+    "App, unit tests and UI tests have isolated build phases",
+    "Shared schemes and workspace XML parsed",
+    "Info and privacy plists parsed; no ATS bypass or unrelated background modes",
+    "Asset JSON, PNG dimensions and opaque App Store icon validated",
+    "Direct SDK version constraints are exact (transitive lock requires Xcode)",
+    "No merge markers, embedded JWT/secret key or WebView implementation"
+  ],
+  "remaining": "Run scripts/validate-macos.sh with Xcode and test on physical iPhones."
+}

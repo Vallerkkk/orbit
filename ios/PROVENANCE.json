@@ -1,0 +1,29 @@
+{
+  "input": {
+    "filename": "orbit-main(2).zip",
+    "bytes": 5838751,
+    "sha256": "5618d18f142ab9a438dc383be08124546aea7b7637d77bc2af20fb917f0eff5f",
+    "extracted_files_verified_identical": 446
+  },
+  "created_local_date": "2026-10-24",
+  "timezone": "America/Sao_Paulo",
+  "deliverable": "New SwiftUI iPhone source project, isolated from previous outputs",
+  "backend_modified": false,
+  "production_login_or_write_executed": false,
+  "native_compilation_executed": false,
+  "reused_assets": [
+    {
+      "path": "static/icons/icon-512.png",
+      "sha256": "c8327f5a41eaf3169b1f40c34ffcdc7be67e985003733f14b5fec2c842c348dd"
+    }
+  ],
+  "source_references": [
+    "static/grafite.css",
+    "desktop/policy.cjs",
+    "app.py",
+    "integrations.py",
+    "supabase.sql",
+    "supabase/migrations/20261022223000_fix_message_insert_permissions.sql",
+    "supabase/migrations/20261022011531_social_expansion.sql"
+  ]
+}

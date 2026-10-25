@@ -1,0 +1,961 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+
+	};
+	objectVersion = 60;
+	objects = {
+		0D5257C81FD9BE924C081DB0 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Orbita/App/OrbitaApp.swift;
+			sourceTree = "<group>";
+		};
+		760C833D41EA6838308023E7 = {
+			isa = PBXBuildFile;
+			fileRef = 0D5257C81FD9BE924C081DB0;
+		};
+		26E557FAF4B77F50BEA306E2 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Orbita/Core/Models.swift;
+			sourceTree = "<group>";
+		};
+		3BB8C783096DF6ADB5488940 = {
+			isa = PBXBuildFile;
+			fileRef = 26E557FAF4B77F50BEA306E2;
+		};
+		F098044794CE77B502FD955C = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Orbita/Core/Theme.swift;
+			sourceTree = "<group>";
+		};
+		EE3FA18B0320519B17532DE9 = {
+			isa = PBXBuildFile;
+			fileRef = F098044794CE77B502FD955C;
+		};
+		EC55D1545DAE509C670259DF = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Orbita/Features/AttachmentPreview.swift;
+			sourceTree = "<group>";
+		};
+		E47C3BE11122520CC73249FA = {
+			isa = PBXBuildFile;
+			fileRef = EC55D1545DAE509C670259DF;
+		};
+		93854CB7321A20526E42FF1A = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Orbita/Features/CallView.swift;
+			sourceTree = "<group>";
+		};
+		9E707AAFF9463ACC35DDD795 = {
+			isa = PBXBuildFile;
+			fileRef = 93854CB7321A20526E42FF1A;
+		};
+		024EADC7BED2D62D9282EEFF = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Orbita/Features/ChatView.swift;
+			sourceTree = "<group>";
+		};
+		A469FEC890C0BA8D7EFB3365 = {
+			isa = PBXBuildFile;
+			fileRef = 024EADC7BED2D62D9282EEFF;
+		};
+		FE75E25F81AD6D260945AEA4 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Orbita/Features/CommunitiesView.swift;
+			sourceTree = "<group>";
+		};
+		9663F48BF162BAA1C569FF9C = {
+			isa = PBXBuildFile;
+			fileRef = FE75E25F81AD6D260945AEA4;
+		};
+		0A11FE9F01FF419763DB62F7 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Orbita/Features/ConversationsView.swift;
+			sourceTree = "<group>";
+		};
+		7E58AA6157E5801104179DAA = {
+			isa = PBXBuildFile;
+			fileRef = 0A11FE9F01FF419763DB62F7;
+		};
+		B2DDBEA27CC2BA7BB575561F = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Orbita/Features/FeedView.swift;
+			sourceTree = "<group>";
+		};
+		8121251E21B9B04CC57A14C8 = {
+			isa = PBXBuildFile;
+			fileRef = B2DDBEA27CC2BA7BB575561F;
+		};
+		9E6576B4B861929A38885F81 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Orbita/Features/ProfileView.swift;
+			sourceTree = "<group>";
+		};
+		14C9E63E814C66293B997413 = {
+			isa = PBXBuildFile;
+			fileRef = 9E6576B4B861929A38885F81;
+		};
+		E1AD6571593A5B17E40EEDE5 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Orbita/Preview/Demo.swift;
+			sourceTree = "<group>";
+		};
+		EF062202D7F2B1AB0F8CF01F = {
+			isa = PBXBuildFile;
+			fileRef = E1AD6571593A5B17E40EEDE5;
+		};
+		680E2C1C2BE653C04E546939 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Orbita/Services/APIClient.swift;
+			sourceTree = "<group>";
+		};
+		18FEF921A3B98434F949380B = {
+			isa = PBXBuildFile;
+			fileRef = 680E2C1C2BE653C04E546939;
+		};
+		8263518A8D8A9D5B41482170 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Orbita/Services/AppSession.swift;
+			sourceTree = "<group>";
+		};
+		43594EA4B7A251CC2E448023 = {
+			isa = PBXBuildFile;
+			fileRef = 8263518A8D8A9D5B41482170;
+		};
+		C89877725A82E5C13FDCB692 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Orbita/Services/CallCoordinator.swift;
+			sourceTree = "<group>";
+		};
+		B5309A3F7F9BC6EB2D6FCC1D = {
+			isa = PBXBuildFile;
+			fileRef = C89877725A82E5C13FDCB692;
+		};
+		0F791CC5BB73C5A2AA2BB03F = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Orbita/Services/ChatStore.swift;
+			sourceTree = "<group>";
+		};
+		23AC54F280144C3CEB2C6F37 = {
+			isa = PBXBuildFile;
+			fileRef = 0F791CC5BB73C5A2AA2BB03F;
+		};
+		65B8FB545716F180A45AF0D6 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Orbita/Services/FeedStore.swift;
+			sourceTree = "<group>";
+		};
+		858EF756E2CF4C92ABCFA0CD = {
+			isa = PBXBuildFile;
+			fileRef = 65B8FB545716F180A45AF0D6;
+		};
+		C0FC6E045A0029F996EB60D5 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Orbita/Services/MediaStore.swift;
+			sourceTree = "<group>";
+		};
+		7C0FCACC289041E2B63B8409 = {
+			isa = PBXBuildFile;
+			fileRef = C0FC6E045A0029F996EB60D5;
+		};
+		C2F3B6EC8714D0B6DA466C62 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = OrbitaTests/OrbitLogicTests.swift;
+			sourceTree = "<group>";
+		};
+		131B01402C40E3B0F77D3020 = {
+			isa = PBXBuildFile;
+			fileRef = C2F3B6EC8714D0B6DA466C62;
+		};
+		2C20FF9D790D64CA9B7C1339 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = OrbitaUITests/OrbitNavigationTests.swift;
+			sourceTree = "<group>";
+		};
+		D22502BC39846F11A81CADEE = {
+			isa = PBXBuildFile;
+			fileRef = 2C20FF9D790D64CA9B7C1339;
+		};
+		C75B12C5B15F2B6E88FAA163 = {
+			isa = PBXFileReference;
+			lastKnownFileType = folder.assetcatalog;
+			path = Orbita/Resources/Assets.xcassets;
+			sourceTree = "<group>";
+		};
+		A7F6A27FA25078C5E1F3E926 = {
+			isa = PBXBuildFile;
+			fileRef = C75B12C5B15F2B6E88FAA163;
+		};
+		2945EFE759F18866FE0C78D6 = {
+			isa = PBXFileReference;
+			lastKnownFileType = text.xml;
+			path = Orbita/Resources/PrivacyInfo.xcprivacy;
+			sourceTree = "<group>";
+		};
+		3962652B65355AF27193CBEE = {
+			isa = PBXBuildFile;
+			fileRef = 2945EFE759F18866FE0C78D6;
+		};
+		59BD0A3FF43B32849B319E64 = {
+			isa = PBXFileReference;
+			lastKnownFileType = text.plist.xml;
+			path = Orbita/Resources/Info.plist;
+			sourceTree = "<group>";
+		};
+		BC0000000000000000000001 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = BroadcastExtension/SampleHandler.swift;
+			sourceTree = "<group>";
+		};
+		BC0000000000000000000002 = {
+			isa = PBXBuildFile;
+			fileRef = BC0000000000000000000001;
+		};
+		BC0000000000000000000003 = {
+			isa = PBXFileReference;
+			lastKnownFileType = text.plist.xml;
+			path = BroadcastExtension/Info.plist;
+			sourceTree = "<group>";
+		};
+		BC0000000000000000000004 = {
+			isa = PBXFileReference;
+			lastKnownFileType = text.plist.xml;
+			path = BroadcastExtension.entitlements;
+			sourceTree = "<group>";
+		};
+		BC0000000000000000000005 = {
+			isa = PBXFileReference;
+			lastKnownFileType = text.plist.xml;
+			path = Orbita.entitlements;
+			sourceTree = "<group>";
+		};
+		3B2F72E2F12CC782031001F2 = {
+			isa = PBXFileReference;
+			explicitFileType = wrapper.application;
+			includeInIndex = 0;
+			path = Orbita.app;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		6DE900BE07DC296A75F417EF = {
+			isa = PBXFileReference;
+			explicitFileType = wrapper.cfbundle;
+			includeInIndex = 0;
+			path = OrbitaTests.xctest;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		FF0B25ED991F511F86319C7A = {
+			isa = PBXFileReference;
+			explicitFileType = wrapper.cfbundle;
+			includeInIndex = 0;
+			path = OrbitaUITests.xctest;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		BC0000000000000000000006 = {
+			isa = PBXFileReference;
+			explicitFileType = "wrapper.app-extension";
+			includeInIndex = 0;
+			path = BroadcastExtension.appex;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		A9012353AFD6A66EB75D4BE2 = {
+			isa = PBXGroup;
+			name = Sources;
+			children = (
+				0D5257C81FD9BE924C081DB0,
+				26E557FAF4B77F50BEA306E2,
+				F098044794CE77B502FD955C,
+				EC55D1545DAE509C670259DF,
+				93854CB7321A20526E42FF1A,
+				024EADC7BED2D62D9282EEFF,
+				FE75E25F81AD6D260945AEA4,
+				0A11FE9F01FF419763DB62F7,
+				B2DDBEA27CC2BA7BB575561F,
+				9E6576B4B861929A38885F81,
+				E1AD6571593A5B17E40EEDE5,
+				680E2C1C2BE653C04E546939,
+				8263518A8D8A9D5B41482170,
+				C89877725A82E5C13FDCB692,
+				0F791CC5BB73C5A2AA2BB03F,
+				65B8FB545716F180A45AF0D6,
+				C0FC6E045A0029F996EB60D5,
+			);
+			sourceTree = "<group>";
+		};
+		156052F04525D0F710673CF0 = {
+			isa = PBXGroup;
+			name = Tests;
+			children = (
+				C2F3B6EC8714D0B6DA466C62,
+			);
+			sourceTree = "<group>";
+		};
+		5A349263041B6A939BD7831F = {
+			isa = PBXGroup;
+			name = UITests;
+			children = (
+				2C20FF9D790D64CA9B7C1339,
+			);
+			sourceTree = "<group>";
+		};
+		A024F06580C79B7582C3806A = {
+			isa = PBXGroup;
+			name = Resources;
+			children = (
+				C75B12C5B15F2B6E88FAA163,
+				2945EFE759F18866FE0C78D6,
+				59BD0A3FF43B32849B319E64,
+			);
+			sourceTree = "<group>";
+		};
+		5151B46607EBC8890D8DFCC2 = {
+			isa = PBXGroup;
+			name = Products;
+			children = (
+				3B2F72E2F12CC782031001F2,
+				6DE900BE07DC296A75F417EF,
+				FF0B25ED991F511F86319C7A,
+				BC0000000000000000000006,
+			);
+			sourceTree = "<group>";
+		};
+		BC0000000000000000000007 = {
+			isa = PBXGroup;
+			name = BroadcastExtension;
+			children = (
+				BC0000000000000000000001,
+				BC0000000000000000000003,
+				BC0000000000000000000004,
+			);
+			sourceTree = "<group>";
+		};
+		931BAC40E0989DC841B8C1D2 = {
+			isa = PBXGroup;
+			name = Main;
+			children = (
+				A9012353AFD6A66EB75D4BE2,
+				156052F04525D0F710673CF0,
+				5A349263041B6A939BD7831F,
+				A024F06580C79B7582C3806A,
+				BC0000000000000000000007,
+				BC0000000000000000000005,
+				5151B46607EBC8890D8DFCC2,
+			);
+			sourceTree = "<group>";
+		};
+		0982F7AD3F291E737A30E0FD = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.55.4;
+			};
+		};
+		7F0B0203AF34E59E5E98A769 = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/livekit/client-sdk-swift.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.18.0;
+			};
+		};
+		2BF6B9D8CA12232A4C792AA9 = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0982F7AD3F291E737A30E0FD;
+			productName = Supabase;
+		};
+		1ADD02BD45F9852660B516F2 = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7F0B0203AF34E59E5E98A769;
+			productName = LiveKit;
+		};
+		41E529A4D2E234093FA7537D = {
+			isa = PBXBuildFile;
+			productRef = 2BF6B9D8CA12232A4C792AA9;
+		};
+		F8751A9CC99654959BDC1B4D = {
+			isa = PBXBuildFile;
+			productRef = 1ADD02BD45F9852660B516F2;
+		};
+		BC0000000000000000000008 = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7F0B0203AF34E59E5E98A769;
+			productName = LiveKit;
+		};
+		BC0000000000000000000009 = {
+			isa = PBXBuildFile;
+			productRef = BC0000000000000000000008;
+		};
+		95F93B32F4C5486ABD3E1C94 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				SWIFT_STRICT_CONCURRENCY = targeted;
+				ENABLE_TESTABILITY = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = BZKU299TT8;
+				CODE_SIGN_IDENTITY = "iPhone Distribution: Joao pedro Sousa (BZKU299TT8)";
+				PROVISIONING_PROFILE_SPECIFIER = "Orbita iOS AppStore v1";
+				TARGETED_DEVICE_FAMILY = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = (
+					DEBUG,
+					"$(inherited)",
+				);
+			};
+			name = Debug;
+		};
+		072D940E755E71CA4CA58476 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				SWIFT_STRICT_CONCURRENCY = targeted;
+				ENABLE_TESTABILITY = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = BZKU299TT8;
+				CODE_SIGN_IDENTITY = "iPhone Distribution: Joao pedro Sousa (BZKU299TT8)";
+				PROVISIONING_PROFILE_SPECIFIER = "Orbita iOS AppStore v1";
+				TARGETED_DEVICE_FAMILY = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		247BF104A9AD002C539DA531 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				95F93B32F4C5486ABD3E1C94,
+				072D940E755E71CA4CA58476,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B17790E1FC0B545A5830754D = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_BUNDLE_IDENTIFIER = app.orbitachat.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				INFOPLIST_FILE = Orbita/Resources/Info.plist;
+				GENERATE_INFOPLIST_FILE = NO;
+				CODE_SIGN_ENTITLEMENTS = Orbita.entitlements;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CURRENT_PROJECT_VERSION = 7;
+				MARKETING_VERSION = 1.0;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				ENABLE_PREVIEWS = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = (
+					DEBUG,
+					"$(inherited)",
+				);
+			};
+			name = Debug;
+		};
+		A384F425C0D6AF05FF53A8BC = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_BUNDLE_IDENTIFIER = app.orbitachat.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				INFOPLIST_FILE = Orbita/Resources/Info.plist;
+				GENERATE_INFOPLIST_FILE = NO;
+				CODE_SIGN_ENTITLEMENTS = Orbita.entitlements;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CURRENT_PROJECT_VERSION = 7;
+				MARKETING_VERSION = 1.0;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				ENABLE_PREVIEWS = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		9EA62D25DFD1EFBA21F6DE7B = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B17790E1FC0B545A5830754D,
+				A384F425C0D6AF05FF53A8BC,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BC0000000000000000000010 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_BUNDLE_IDENTIFIER = app.orbitachat.ios.broadcast;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				INFOPLIST_FILE = BroadcastExtension/Info.plist;
+				GENERATE_INFOPLIST_FILE = NO;
+				CODE_SIGN_ENTITLEMENTS = BroadcastExtension.entitlements;
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = BZKU299TT8;
+				CODE_SIGN_IDENTITY = "iPhone Distribution: Joao pedro Sousa (BZKU299TT8)";
+				PROVISIONING_PROFILE_SPECIFIER = "Orbita Broadcast AppStore v1";
+				CURRENT_PROJECT_VERSION = 7;
+				MARKETING_VERSION = 1.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
+				SKIP_INSTALL = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = (
+					DEBUG,
+					"$(inherited)",
+				);
+			};
+			name = Debug;
+		};
+		BC0000000000000000000011 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_BUNDLE_IDENTIFIER = app.orbitachat.ios.broadcast;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				INFOPLIST_FILE = BroadcastExtension/Info.plist;
+				GENERATE_INFOPLIST_FILE = NO;
+				CODE_SIGN_ENTITLEMENTS = BroadcastExtension.entitlements;
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = BZKU299TT8;
+				CODE_SIGN_IDENTITY = "iPhone Distribution: Joao pedro Sousa (BZKU299TT8)";
+				PROVISIONING_PROFILE_SPECIFIER = "Orbita Broadcast AppStore v1";
+				CURRENT_PROJECT_VERSION = 7;
+				MARKETING_VERSION = 1.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
+				SKIP_INSTALL = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		BC0000000000000000000012 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BC0000000000000000000010,
+				BC0000000000000000000011,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8682261519D15BD64A9E5D31 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				760C833D41EA6838308023E7,
+				3BB8C783096DF6ADB5488940,
+				EE3FA18B0320519B17532DE9,
+				E47C3BE11122520CC73249FA,
+				9E707AAFF9463ACC35DDD795,
+				A469FEC890C0BA8D7EFB3365,
+				9663F48BF162BAA1C569FF9C,
+				7E58AA6157E5801104179DAA,
+				8121251E21B9B04CC57A14C8,
+				14C9E63E814C66293B997413,
+				EF062202D7F2B1AB0F8CF01F,
+				18FEF921A3B98434F949380B,
+				43594EA4B7A251CC2E448023,
+				B5309A3F7F9BC6EB2D6FCC1D,
+				23AC54F280144C3CEB2C6F37,
+				858EF756E2CF4C92ABCFA0CD,
+				7C0FCACC289041E2B63B8409,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F001BC2AF9EB5498B3360756 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				41E529A4D2E234093FA7537D,
+				F8751A9CC99654959BDC1B4D,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E28FAD8F60ECDED9B4AD087A = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A7F6A27FA25078C5E1F3E926,
+				3962652B65355AF27193CBEE,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		29C7B681C8D62CBAC94D51C0 = {
+			isa = PBXNativeTarget;
+			name = Orbita;
+			productName = Orbita;
+			productReference = 3B2F72E2F12CC782031001F2;
+			productType = "com.apple.product-type.application";
+			buildConfigurationList = 9EA62D25DFD1EFBA21F6DE7B;
+			buildPhases = (
+				8682261519D15BD64A9E5D31,
+				F001BC2AF9EB5498B3360756,
+				E28FAD8F60ECDED9B4AD087A,
+				BC0000000000000000000021,
+			);
+			buildRules = ();
+			dependencies = (
+				BC0000000000000000000018,
+			);
+			packageProductDependencies = (
+				2BF6B9D8CA12232A4C792AA9,
+				1ADD02BD45F9852660B516F2,
+			);
+		};
+		BC0000000000000000000013 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BC0000000000000000000002,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BC0000000000000000000014 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BC0000000000000000000009,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BC0000000000000000000015 = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BC0000000000000000000016 = {
+			isa = PBXNativeTarget;
+			name = BroadcastExtension;
+			productName = BroadcastExtension;
+			productReference = BC0000000000000000000006;
+			productType = "com.apple.product-type.app-extension";
+			buildConfigurationList = BC0000000000000000000012;
+			buildPhases = (
+				BC0000000000000000000013,
+				BC0000000000000000000014,
+				BC0000000000000000000015,
+			);
+			buildRules = ();
+			dependencies = ();
+			packageProductDependencies = (
+				BC0000000000000000000008,
+			);
+		};
+		BC0000000000000000000017 = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 98F54143AB4E86B28C3AFEE0;
+			proxyType = 1;
+			remoteGlobalIDString = BC0000000000000000000016;
+			remoteInfo = BroadcastExtension;
+		};
+		BC0000000000000000000018 = {
+			isa = PBXTargetDependency;
+			target = BC0000000000000000000016;
+			targetProxy = BC0000000000000000000017;
+		};
+		BC0000000000000000000019 = {
+			isa = PBXBuildFile;
+			fileRef = BC0000000000000000000006;
+			settings = { ATTRIBUTES = (RemoveHeadersOnCopy, ); };
+		};
+		BC0000000000000000000021 = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				BC0000000000000000000019,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C5BE6A40C8F0E9A46F2ADB7C = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 98F54143AB4E86B28C3AFEE0;
+			proxyType = 1;
+			remoteGlobalIDString = 29C7B681C8D62CBAC94D51C0;
+			remoteInfo = Orbita;
+		};
+		ADF551D002AD6A2B2E190115 = {
+			isa = PBXTargetDependency;
+			target = 29C7B681C8D62CBAC94D51C0;
+			targetProxy = C5BE6A40C8F0E9A46F2ADB7C;
+		};
+		55137D613F8FF57871EAAD2D = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_BUNDLE_IDENTIFIER = app.orbita.ios.orbitatests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Orbita.app/Orbita";
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = (
+					DEBUG,
+					"$(inherited)",
+				);
+			};
+			name = Debug;
+		};
+		5E2AA07CCBF8F7A611A6EF96 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_BUNDLE_IDENTIFIER = app.orbita.ios.orbitatests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Orbita.app/Orbita";
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		FFF9074E4B859A2B46098113 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				55137D613F8FF57871EAAD2D,
+				5E2AA07CCBF8F7A611A6EF96,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B61FA7C7AA2CB76DC6ABC09D = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				131B01402C40E3B0F77D3020,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		985561D639A09516C8BA2857 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		049967DD9858AA310A1123B3 = {
+			isa = PBXNativeTarget;
+			name = OrbitaTests;
+			productName = OrbitaTests;
+			productReference = 6DE900BE07DC296A75F417EF;
+			productType = "com.apple.product-type.bundle.unit-test";
+			buildConfigurationList = FFF9074E4B859A2B46098113;
+			buildPhases = (
+				B61FA7C7AA2CB76DC6ABC09D,
+				985561D639A09516C8BA2857,
+			);
+			buildRules = ();
+			dependencies = (
+				ADF551D002AD6A2B2E190115,
+			);
+		};
+		5D420A254C87479B098E9A61 = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 98F54143AB4E86B28C3AFEE0;
+			proxyType = 1;
+			remoteGlobalIDString = 29C7B681C8D62CBAC94D51C0;
+			remoteInfo = Orbita;
+		};
+		6B8FF8CAE092A02C0ECE9D28 = {
+			isa = PBXTargetDependency;
+			target = 29C7B681C8D62CBAC94D51C0;
+			targetProxy = 5D420A254C87479B098E9A61;
+		};
+		5C94C1F3ED32DF737FD62CAD = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_BUNDLE_IDENTIFIER = app.orbita.ios.orbitauitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				TEST_TARGET_NAME = Orbita;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = (
+					DEBUG,
+					"$(inherited)",
+				);
+			};
+			name = Debug;
+		};
+		DB1D97455704A92C0FA1B7BE = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_BUNDLE_IDENTIFIER = app.orbita.ios.orbitauitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				TEST_TARGET_NAME = Orbita;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		EB376742DB340908FA62B295 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5C94C1F3ED32DF737FD62CAD,
+				DB1D97455704A92C0FA1B7BE,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B8E621A7039168652E54ABD7 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D22502BC39846F11A81CADEE,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		209FF3E1922F47F7E4CBD0A7 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3248268A79B1182D47F92F91 = {
+			isa = PBXNativeTarget;
+			name = OrbitaUITests;
+			productName = OrbitaUITests;
+			productReference = FF0B25ED991F511F86319C7A;
+			productType = "com.apple.product-type.bundle.ui-testing";
+			buildConfigurationList = EB376742DB340908FA62B295;
+			buildPhases = (
+				B8E621A7039168652E54ABD7,
+				209FF3E1922F47F7E4CBD0A7,
+			);
+			buildRules = ();
+			dependencies = (
+				6B8FF8CAE092A02C0ECE9D28,
+			);
+		};
+		98F54143AB4E86B28C3AFEE0 = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastSwiftUpdateCheck = 1630;
+				LastUpgradeCheck = 1630;
+				TargetAttributes = {
+					29C7B681C8D62CBAC94D51C0 = {
+						CreatedOnToolsVersion = 16.3;
+					};
+					049967DD9858AA310A1123B3 = {
+						CreatedOnToolsVersion = 16.3;
+					};
+					3248268A79B1182D47F92F91 = {
+						CreatedOnToolsVersion = 16.3;
+					};
+					BC0000000000000000000016 = {
+						CreatedOnToolsVersion = 16.3;
+					};
+				};
+			};
+			buildConfigurationList = 247BF104A9AD002C539DA531;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = "pt-BR";
+			knownRegions = (
+				"pt-BR",
+				en,
+				Base,
+			);
+			hasScannedForEncodings = 0;
+			mainGroup = 931BAC40E0989DC841B8C1D2;
+			productRefGroup = 5151B46607EBC8890D8DFCC2;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				29C7B681C8D62CBAC94D51C0,
+				049967DD9858AA310A1123B3,
+				3248268A79B1182D47F92F91,
+				BC0000000000000000000016,
+			);
+			packageReferences = (
+				0982F7AD3F291E737A30E0FD,
+				7F0B0203AF34E59E5E98A769,
+			);
+		};
+	};
+	rootObject = 98F54143AB4E86B28C3AFEE0;
+}
