@@ -25,11 +25,16 @@ export function dressCard(card,a){if(!card)return;const ap=cleanAppearance(a);
   const e=ap.effect&&packOf(ap.effect);if(e&&ap.effect.endsWith('-effect')){if(e.v2){const l=document.createElement('span');l.className='pk-fx pk-fx-v2';l.setAttribute('aria-hidden','true');card.prepend(l);mountFx(l,{preset:e.fx,colors:e.c,bg:e.bg,mode:'effect'});}else card.prepend(fxLayer(e));}
   cardBorder(card,ap);
   if(ap.theme){card.classList.add('ps-themed');card.style.setProperty('--pt1',ap.theme[0]);card.style.setProperty('--pt2',ap.theme[1]);}else{card.style.removeProperty('--pt1');card.style.removeProperty('--pt2');}}
-const NAMES='.message-meta strong, .up-name, .participant-name, .member-name, .member strong, .rp-name, .vt-name, .sf-name, .dm-name, .dm-head-name';
+const NAMES='.message-meta strong, .up-name, .participant-name, .member-name, .member strong, .rp-name, .vt-name, .sf-name, .dm-name, .dm-head-name, .thread-message>strong, .search-result>strong, .voice-chat-message>strong, .friend-info strong, .orb-card-head strong, .sf-notification strong';
+const AVATARS='.rp-avatar, #voice-view .participant .avatar, #user-avatar, .voice-tree-person .avatar';
+const CARDS='.rich-profile[data-user-id]';
 export function applyAppearanceEverywhere(root,ownerOf,appearanceOf){
+  if(!root?.querySelectorAll)return;
   // Só reestiliza quando a aparência mudou: evita recalcular o estilo de centenas de nomes do chat a cada mutação.
   const keys=new Map(),keyOf=id=>{if(!keys.has(id))keys.set(id,id+'|'+JSON.stringify(appearanceOf(id)||{}));return keys.get(id);};
-  root.querySelectorAll(NAMES).forEach(n=>{const id=ownerOf(n);if(!id)return;const k=keyOf(id);if(n.__apKey===k)return;n.__apKey=k;styleName(n,appearanceOf(id));});
-  root.querySelectorAll('.rp-avatar, #voice-view .participant .avatar, #user-avatar').forEach(av=>{const id=ownerOf(av);if(!id)return;const k=keyOf(id);if(av.__apKey===k)return;av.__apKey=k;frameAvatar(av,appearanceOf(id));});
-  root.querySelectorAll('.rich-profile[data-user-id]').forEach(c=>{if(!c.dataset.dressed){c.dataset.dressed='1';dressCard(c,appearanceOf(c.dataset.userId));}});
+  const each=(selector,apply)=>{root.querySelectorAll(selector).forEach(apply);if(root.matches?.(selector))apply(root);};
+  each(NAMES,n=>{const id=ownerOf(n);if(!id)return;const k=keyOf(id);if(n.__apKey===k)return;n.__apKey=k;styleName(n,appearanceOf(id));});
+  each(AVATARS,av=>{const id=ownerOf(av);if(!id)return;const k=keyOf(id);if(av.__apKey===k)return;av.__apKey=k;frameAvatar(av,appearanceOf(id));});
+  // O cartão é reaplicado quando a aparência muda (a carga da pessoa pode chegar depois dele).
+  each(CARDS,c=>{const id=c.dataset.userId;if(!id)return;const k=keyOf(id);c.dataset.dressed='1';if(c.__apKey===k)return;c.__apKey=k;dressCard(c,appearanceOf(id));});
 }

@@ -1,17 +1,24 @@
 // Motor de partículas leve (canvas 2D) da Loja v2.
 // - Um único requestAnimationFrame para todas as instâncias.
 // - Só anima o que está visível (IntersectionObserver) e com a aba ativa; fora da tela fica parado.
-// - prefers-reduced-motion: desenha um quadro estático e não anima.
+// - Movimento reduzido (SO ou ajuste do app): desenha um quadro estático, para o RAF e retoma ao desativar.
 // - DPR limitado a 1.5 e poucas partículas por instância para manter 60fps.
+import {prefersReducedMotion,onMotionPreferenceChange} from './motion-preference.js';
 const TAU=Math.PI*2,rnd=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.random()*a.length|0];
-const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+const reduced=()=>prefersReducedMotion();
 const live=new Set();let raf=0,last=0,tick=0;
-const io=typeof IntersectionObserver!=='undefined'?new IntersectionObserver(es=>{for(const e of es){const fx=e.target.__fx;if(fx){fx.visible=e.isIntersecting;if(fx.visible)fx.resize();}}kick();},{rootMargin:'80px'}):null;
+const io=typeof IntersectionObserver!=='undefined'?new IntersectionObserver(es=>{for(const e of es){const fx=e.target.__fx;if(fx){fx.visible=e.isIntersecting;if(fx.visible){fx.resize();if(reduced())fx.step(0,2);}}}kick();},{rootMargin:'80px'}):null;
 document.addEventListener('visibilitychange',kick);
 function kick(){if(!raf&&!document.hidden&&[...live].some(f=>f.visible)&&!reduced()){last=performance.now();raf=requestAnimationFrame(loop);}}
-function loop(now){raf=0;const dt=Math.min(.05,(now-last)/1000);last=now;tick++;let any=false;
+function loop(now){raf=0;if(reduced()){for(const fx of live)if(fx.visible)fx.step(0,now/1000);return;}const dt=Math.min(.05,(now-last)/1000);last=now;tick++;let any=false;
   for(const fx of live){if(tick%60===0&&!fx.canvas.isConnected){fx.destroy();continue;}if(!fx.visible)continue;any=true;fx.step(dt,now/1000);}
   if(any&&!document.hidden)raf=requestAnimationFrame(loop);}
+onMotionPreferenceChange(()=>{
+  if(!reduced())return kick();
+  if(raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(raf);
+  raf=0;
+  for(const fx of live)if(fx.visible){fx.resize();fx.step(0,2);}
+});
 
 // ---------- formas ----------
 const glow=(c,x,y,r,col,a=1)=>{const g=c.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,col);g.addColorStop(1,'transparent');c.globalAlpha=a;c.fillStyle=g;c.beginPath();c.arc(x,y,r,0,TAU);c.fill();};
@@ -173,7 +180,8 @@ export function mountFx(host,{preset='nebula',colors=['#9b7bff','#ff7ad9','#7fe3
       c.globalAlpha=1;c.globalCompositeOperation='source-over';},
     destroy(){live.delete(fx);io?.unobserve(canvas);canvas.remove();}};
   canvas.__fx=fx;live.add(fx);
-  if(reduced()){requestAnimationFrame(()=>{fx.resize();fx.step(0,2);});return fx;}
-  if(io)io.observe(canvas);else{fx.visible=true;kick();}return fx;
+  if(io)io.observe(canvas);else{fx.visible=true;kick();}
+  if(reduced())requestAnimationFrame(()=>{if(!canvas.isConnected)return;fx.resize();fx.step(0,2);});
+  return fx;
 }
 export function destroyFxIn(node){node?.querySelectorAll?.('canvas.fx-canvas').forEach(cv=>cv.__fx?.destroy());}

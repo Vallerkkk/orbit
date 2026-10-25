@@ -2,9 +2,10 @@
    Camada independente: observa o DOM já renderizado e acrescenta apenas
    classes/animações efêmeras. Nenhuma lógica de dados é alterada. */
 
-const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
-let motionOn = !reduceMotion.matches;
-reduceMotion.addEventListener?.('change', event => { motionOn = !event.matches; });
+import {prefersReducedMotion,onMotionPreferenceChange} from './motion-preference.js';
+
+let motionOn = !prefersReducedMotion();
+onMotionPreferenceChange(() => { motionOn = !prefersReducedMotion(); });
 
 const list = document.getElementById('message-list');
 const main = document.querySelector('.main');
@@ -24,7 +25,7 @@ if (list) {
     }
   };
   new MutationObserver(records => {
-    if (!motionOn || document.body.dataset.reduceMotion==='true' || records.length > 40) return;
+    if (!motionOn || records.length > 40) return;
     const added = [];
     for (const record of records) for (const node of record.addedNodes) {
       if (node.nodeType !== 1) continue;
@@ -52,7 +53,7 @@ if (list) {
   /* 3. Ao trocar de canal, um fade curto suaviza a substituição do histórico. */
   let scopeTimer;
   new MutationObserver(records => {
-    if (!motionOn || document.body.dataset.reduceMotion==='true') return;
+    if (!motionOn) return;
     let removed = 0, added = 0;
     for (const record of records) { removed += record.removedNodes.length; added += record.addedNodes.length; }
     if (removed < 5 || added < 5) return;

@@ -1,8 +1,9 @@
+import {prefersReducedMotion,onMotionPreferenceChange} from './motion-preference.js';
 export function initNavigationMotion(){
-  const media=matchMedia('(prefers-reduced-motion: reduce)'),animations=new WeakMap();
-  const reduced=()=>media.matches||localStorage.getItem('orbita-reduce-motion')==='true';
+  const animations=new WeakMap();
+  const reduced=()=>prefersReducedMotion();
   const apply=()=>{document.body.dataset.reduceMotion=String(reduced());if(reduced())document.getAnimations().forEach(animation=>animation.cancel());};
-  apply();media.addEventListener('change',apply);window.addEventListener('orbita:motion-changed',apply);
+  apply();onMotionPreferenceChange(apply);
   const observer=new MutationObserver(entries=>{
     if(reduced())return;
     for(const {target} of entries){if(target.hidden||!target.isConnected)continue;

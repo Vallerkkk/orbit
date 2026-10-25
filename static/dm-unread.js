@@ -5,6 +5,7 @@ export const badgeText = n => n > 99 ? '99+' : String(n);
 export function createDmUnread(ctx) {
   const { el, person, setAvatar } = ctx;
   let rows = [], task = 0, timer = 0;
+  const marking = new Map();
   const stack = el('div', 'rail-dm-unread'); stack.id = 'rail-dm-unread'; stack.setAttribute('aria-label', 'Mensagens diretas não lidas');
   const homeBadge = el('span', 'rail-unread-badge home-unread'); homeBadge.hidden = true;
   function render() {
@@ -28,17 +29,28 @@ export function createDmUnread(ctx) {
     const db = ctx.db(); if (!db || !ctx.me()) return;
     const ticket = ++task, { data, error } = await db.rpc('dm_unread_counts');
     if (error || ticket !== task) return;
-    rows = Array.isArray(data) ? data.filter(r => r && r.conversation_id && r.other_id) : [];
+    // Nunca reaplica uma conversa que está sendo marcada como lida: a resposta pode ter
+    // sido calculada antes do RPC de leitura confirmar no servidor.
+    rows = Array.isArray(data) ? data.filter(r => r && r.conversation_id && r.other_id && !marking.has(r.conversation_id)) : [];
     render();
   }
   function refresh() { clearTimeout(timer); timer = setTimeout(() => load().catch(() => {}), 250); }
   async function markRead(id) {
-    if (!id) return; const had = rows.some(r => r.conversation_id === id && r.unread);
+    if (!id) return;
+    clearTimeout(timer); task++;
     rows = rows.filter(r => r.conversation_id !== id); render();
-    const db = ctx.db(); if (!db) return;
-    try { await db.rpc('mark_conversation_read', { target: id }); } catch {}
-    if (had) refresh();
+    const pending = marking.get(id);
+    if (pending) { await pending; return; }
+    const db = ctx.db();
+    const run = (async () => { try { if (db) await db.rpc('mark_conversation_read', { target: id }); } catch {} })();
+    marking.set(id, run);
+    try { await run; }
+    finally {
+      if (marking.get(id) === run) marking.delete(id);
+      task++;
+    }
+    refresh();
   }
-  function reset() { rows = []; task++; render(); }
+  function reset() { clearTimeout(timer); task++; marking.clear(); rows = []; render(); }
   return { refresh, load, markRead, reset, render, get rows() { return rows; } };
 }

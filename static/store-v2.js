@@ -4,13 +4,14 @@ import {ITEMS,ITEM_KINDS,packOf,cleanAppearance} from './cosmetics.js';
 import {COLLECTIONS as NEW_COLS,CLASSICS,RARITY} from './store-collections.js';
 import {styleName,frameAvatar,cardBorder,packVars} from './appearance-runtime.js';
 import {mountFx,destroyFxIn} from './fx-engine.js';
+import {prefersReducedMotion} from './motion-preference.js';
 
 const V2=ITEMS.filter(i=>i.v2);
 const COLLECTIONS=[...NEW_COLS,...CLASSICS];
 const RANK=Object.keys(RARITY);
 const SORTS=[['col','Ordem da coleção'],['rar-desc','Raridade: maior primeiro'],['rar-asc','Raridade: menor primeiro'],['name','Nome (A–Z)']];
 const TABS=[['destaques','Destaques'],['colecoes','Coleções'],['frame','Molduras'],['effect','Efeitos de perfil'],['card_border','Bordas de cartão'],['name_style','Estilos de nome'],['server','Temas de servidor'],['equipados','Equipados']];
-const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+const reduced=()=>prefersReducedMotion();
 
 export function createStoreV2(o){
   // o: {el,button,sheet,ctx,me,mine,equip,renderFonts,renderPack,packCard,buildCard,toast}
@@ -33,7 +34,7 @@ export function createStoreV2(o){
 
   function pills(item){const r=el('div','sv-pills');const rp=el('span','sv-rar',RARITY[item.rarity].name);rp.style.setProperty('--rc',RARITY[item.rarity].color);r.append(rp);
     for(const t of item.tags||[])r.append(el('span','sv-tag sv-tag-'+t.toLowerCase(),t));if(item.admin)r.append(el('span','sv-tag sv-tag-adm','ADM'));return r;}
-  function tilt(card){if(reduced())return;card.addEventListener('pointermove',e=>{const r=card.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;card.style.setProperty('--rx',((.5-y)*10).toFixed(2)+'deg');card.style.setProperty('--ry',((x-.5)*12).toFixed(2)+'deg');card.style.setProperty('--mx',(x*100).toFixed(1)+'%');card.style.setProperty('--my',(y*100).toFixed(1)+'%');card.classList.add('tilting');});
+  function tilt(card){card.addEventListener('pointermove',e=>{if(reduced())return;const r=card.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;card.style.setProperty('--rx',((.5-y)*10).toFixed(2)+'deg');card.style.setProperty('--ry',((x-.5)*12).toFixed(2)+'deg');card.style.setProperty('--mx',(x*100).toFixed(1)+'%');card.style.setProperty('--my',(y*100).toFixed(1)+'%');card.classList.add('tilting');});
     card.addEventListener('pointerleave',()=>{card.classList.remove('tilting');card.style.removeProperty('--rx');card.style.removeProperty('--ry');});}
   function itemCard(item,open){const p=packOf(item.pack),c=el('article','sv-card');c.tabIndex=0;c.setAttribute('role','button');c.dataset.item=item.id;c.setAttribute('aria-label',`${item.name}, ${ITEM_KINDS[item.kind]}, ${RARITY[item.rarity].name}`);packVars(c,p);c.style.setProperty('--rc',RARITY[item.rarity].color);
     const on=o.mine()[item.kind]===item.id;c.classList.toggle('equipped',on);c.classList.toggle('locked',locked(item));
@@ -72,7 +73,7 @@ export function createStoreV2(o){
         for(const [j,d] of [...dots.children].entries())d.setAttribute('aria-current',String(j===k));};
       feat.forEach((c,j)=>{const d=button('',()=>{show(j);restart();},'sv-dot');d.setAttribute('aria-label','Mostrar '+c.name);dots.append(d);});
       const prev=button('‹',()=>{show(k-1);restart();},'sv-arrow prev'),next=button('›',()=>{show(k+1);restart();},'sv-arrow next');prev.setAttribute('aria-label','Anterior');next.setAttribute('aria-label','Próxima');
-      const restart=()=>{clearInterval(timer);if(!reduced())timer=setInterval(()=>{if(h.isConnected&&!document.hidden&&!h.matches(':hover'))show(k+1);},8000);};
+      const restart=()=>{clearInterval(timer);timer=setInterval(()=>{if(reduced()||!h.isConnected||document.hidden||h.matches(':hover'))return;show(k+1);},8000);};
       h.append(stage,prev,next,dots);show(0);restart();return h;}
     function kindGrid(kind,title,sub){const wrap=el('div','sv-kind');wrap.append(el('h3','sv-h',title),el('p','sv-sub',sub));const g=el('div','sv-grid');const items=order(V2.filter(i=>i.kind===kind&&match(i)&&(!i.admin||o.me().isAdmin)));for(const i of items)g.append(itemCard(i,detail));if(!items.length)g.append(el('p','sv-empty','Nada encontrado com esses filtros.'));wrap.append(g);return wrap;}
     function render(){const body=s.body;const keep=body.scrollTop;clear();

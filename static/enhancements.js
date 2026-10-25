@@ -6,6 +6,7 @@ import { requestWithDeadline } from './chat-state.js';
 import { requestAppInstall, runningAsApp } from './app-install.js';
 import { watchUploadedVideo } from './uploaded-video.js';
 import { attachmentMedia } from './media-viewer.js';
+import { prefersReducedMotion } from './motion-preference.js';
 
 export function initEnhancements(context) {
   const { el, button, toast, checked, showDialog, inputField } = context;
@@ -20,7 +21,40 @@ export function initEnhancements(context) {
   let lastSound = new Map(), searchTimer, searchVersion = 0, historyObserver, historyTimer, historyWanted = false, remoteSearch = false;
   const seenActivity = new Set(), typingUsers = new Map();
   const readSetting = (key, fallback) => localStorage.getItem('orbita-' + key) ?? fallback;
-  const saveUnread = () => { if (state().session) localStorage.setItem('orbita-unread-' + state().session.user.id, JSON.stringify(unread)); };
+  // Contadores por canal são gravados por várias abas. Mistura por carimbo em vez de
+  // sobrescrever o objeto inteiro, senão uma aba com dados antigos restaura badges já lidos.
+  const unreadKey = uid => 'orbita-unread-' + uid;
+  const unreadStamp = entry => Number(entry?.at) || Date.parse(entry?.seen) || 0;
+  function mergeUnreadEntry(current, incoming) {
+    if (!current) return { ...incoming };
+    if (unreadStamp(incoming) <= unreadStamp(current)) return current;
+    const count = Math.max(0, Number(incoming.count) || 0), currentCount = Math.max(0, Number(current.count) || 0);
+    if (count > 0 && currentCount > count) return { ...current };
+    return { ...current, ...incoming };
+  }
+  function mergeUnread(base, incoming) {
+    const merged = { ...base };
+    for (const [id, entry] of Object.entries(incoming || {})) if (entry && typeof entry === 'object') merged[id] = mergeUnreadEntry(merged[id], entry);
+    return merged;
+  }
+  function storedUnread(uid) {
+    try { const parsed = JSON.parse(localStorage.getItem(unreadKey(uid)) || '{}'); return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}; }
+    catch { return {}; }
+  }
+  const saveUnread = () => {
+    const s = state(); if (!s.session) return;
+    unread = mergeUnread(unread, storedUnread(s.session.user.id));
+    localStorage.setItem(unreadKey(s.session.user.id), JSON.stringify(unread));
+  };
+  addEventListener('storage', event => {
+    const uid = state().session?.user.id;
+    if (!uid || event.key !== unreadKey(uid) || !event.newValue) return;
+    let incoming; try { incoming = JSON.parse(event.newValue); } catch { return; }
+    if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) return;
+    const before = JSON.stringify(unread);
+    unread = mergeUnread(unread, incoming);
+    if (JSON.stringify(unread) !== before) decorateNavigation();
+  });
   const report = error => toast(context.errorText(error));
 
   function applyAppearance() {
@@ -109,8 +143,8 @@ export function initEnhancements(context) {
     const s = state(); if (!s.session || data.author_id === s.session.user.id) return;
     if (seenActivity.has(data.id)) return; seenActivity.add(data.id); if (seenActivity.size > 1000) seenActivity.delete(seenActivity.values().next().value);
     if (!document.hidden && s.selected?.id === data.scope && !s.home) { markRead(); return; }
-    const prior = unread[data.scope] || {count:0, seen:new Date().toISOString()};
-    unread[data.scope] = {...prior, count:Math.min(999, prior.count + 1)}; saveUnread(); decorateNavigation();
+    const prior = unread[data.scope] || {count:0, seen:new Date().toISOString(), at:Date.now()};
+    unread[data.scope] = {...prior, count:Math.min(999, prior.count + 1), at:Date.now()}; saveUnread(); decorateNavigation();
     if ((data.mentioned || data.private) && s.profile?.presence_status !== 'dnd'&&!isQuiet(s.session.user.id)&&channelNotifies(s.session.user.id,data)) { audio(); if (document.hidden && 'Notification' in window && Notification.permission === 'granted' && !s.config.pushConfigured) {
       const title = data.private ? 'Nova mensagem privada · Órbita' : 'Você foi mencionado · Órbita';
       if (registration) await registration.showNotification(title, {body:'Abra a Órbita para ler.', icon:'/static/icons/icon-192.png', tag:'orbita-' + data.id});
@@ -119,7 +153,7 @@ export function initEnhancements(context) {
   }
   function markRead() {
     const s = state(); if (!s.session || !s.selected || s.selected.kind!=='text' || s.home || document.hidden) return;
-    unread[s.selected.id] = {count:0, seen:new Date().toISOString()}; saveUnread(); decorateNavigation();
+    unread[s.selected.id] = {count:0, seen:new Date().toISOString(), at:Date.now()}; saveUnread(); decorateNavigation();
   }
   function decorateNavigation() {
     for (const node of document.querySelectorAll('[data-channel-id]')) {
@@ -133,11 +167,11 @@ export function initEnhancements(context) {
     const s=state(),uid=s.session?.user.id;if(!uid)return;
     const targets=[...s.channels.filter(c=>c.kind==='text'),...s.conversations.map(c=>({...c,private:true}))].slice(0,60);
     for(let index=0;index<targets.length;index+=4){await Promise.all(targets.slice(index,index+4).map(async target=>{
-      const since=unread[target.id]?.seen,priorCount=unread[target.id]?.count;if(!since)return;
+      const since=unread[target.id]?.seen,current=unread[target.id];if(!since||!current)return;
       const result=await s.db.from(target.private?'direct_messages':'messages').select('id',{head:true,count:'exact'}).eq(target.private?'conversation_id':'channel_id',target.id).neq('author_id',uid).gt('created_at',since);
       if(state().session?.user.id!==uid||unread[target.id]?.seen!==since||result.error)return;
-      const count=unread[target.id]?.count!==priorCount?Math.max(result.count||0,unread[target.id]?.count||0):result.count||0;
-      unread[target.id]={...unread[target.id],count};
+      const count=Math.max(result.count||0,unread[target.id]?.count||0);
+      unread[target.id]={...unread[target.id],count,at:Date.now()};
     }));if(state().session?.user.id!==uid)return;}
     saveUnread();markRead();decorateNavigation();
   }
@@ -150,8 +184,9 @@ export function initEnhancements(context) {
     if(version!==sessionVersion)return;
     if(uid)syncNotificationPreferences(s.db,uid).catch(()=>{});
     if (!uid) { const push = await registration?.pushManager?.getSubscription(); await push?.unsubscribe(); return; }
-    try { unread = JSON.parse(localStorage.getItem('orbita-unread-' + uid) || '{}'); } catch { unread = {}; }
-    for (const target of [...s.channels, ...s.conversations]) unread[target.id] ||= {count:0, seen:new Date().toISOString()};
+    unread = storedUnread(uid);
+    for (const entry of Object.values(unread)) if (entry && typeof entry === 'object' && !entry.at) entry.at = Date.parse(entry.seen) || 0;
+    for (const target of [...s.channels, ...s.conversations]) unread[target.id] ||= {count:0, seen:new Date().toISOString(), at:Date.now()};
     inbox = s.db.channel('user:' + uid, {config:{private:true}}).on('broadcast', {event:'activity'}, ({payload}) => notifyActivity(payload).catch(() => {}))
       .on('broadcast', {event:'welcome'}, ({payload}) => welcomed(payload))
       .on('postgres_changes',{event:'*',schema:'public',table:'community_moderation',filter:'user_id=eq.'+uid},payload=>context.moderationChanged(payload.new).catch(report));
@@ -198,7 +233,7 @@ export function initEnhancements(context) {
   function closePanel(restore=true) {const wasOpen=!!panel;panel?.remove();panel=null;panelKind=null;threadRoot=null;threadTarget=null;threadVersion++;searchVersion++;remoteSearch=false;if(wasOpen&&restore)focusElement(panelReturnFocus,$('message-input'));}
   function compactMessage(message) {
     const article=el('article','thread-message'),p=state().people.find(p=>p.id===message.author_id)||message.profiles||{};
-    article.dataset.messageId=message.id;article.append(el('strong','',p.display_name||'Participante'),el('time','muted',relativeTime(message.created_at)),context.richText(message.content));
+    article.dataset.messageId=message.id;article.dataset.userId=message.author_id;article.append(el('strong','',p.display_name||'Participante'),el('time','muted',relativeTime(message.created_at)),context.richText(message.content));
     article.orbitaMessage=message;
     if(message.attachments){const a=message.attachments;if(/^(image|video)\//.test(a.mime_type||''))article.append(attachmentMedia(a,{resolve:context.resolveAttachmentUrl,download:context.downloadAttachment,makeVideo:watchUploadedVideo}));article.append(button('↓ '+a.name,()=>context.downloadAttachment(a),'file-card'));}
     const actions=el('div','message-actions');actions.append(button('Responder',()=>{closePanel();context.replyToMessage(message);},'tiny-button'));
@@ -412,7 +447,7 @@ export function initEnhancements(context) {
   document.querySelector('#voice-view .chat-actions').append(button('Ouvir juntos',showWatch,'feature-options'));
   const oldSettings=$('settings').onclick;$('settings').onclick=()=>{oldSettings();preferenceFields($('dialog-content'));};
   $('btn-notif-toggle').onclick=()=>enableNotifications().catch(report);
-  const latest=button('↓ Mensagens recentes',()=>{$('message-list').scrollTo({top:$('message-list').scrollHeight,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches||document.body.dataset.reduceMotion==='true'?'auto':'smooth'});},'jump-latest');latest.hidden=true;document.querySelector('.message-form-wrap').append(latest);
+  const latest=button('↓ Mensagens recentes',()=>{$('message-list').scrollTo({top:$('message-list').scrollHeight,behavior:prefersReducedMotion()?'auto':'smooth'});},'jump-latest');latest.hidden=true;document.querySelector('.message-form-wrap').append(latest);
   function updateLatest(){const list=$('message-list');latest.hidden=list.scrollHeight-list.scrollTop-list.clientHeight<180;}
   $('message-list').addEventListener('scroll',updateLatest,{passive:true});new ResizeObserver(updateLatest).observe($('message-list'));
   document.addEventListener('click',event=>{for(const menu of document.querySelectorAll('.message-menu[open]'))if(!menu.contains(event.target)||event.target.closest('button'))menu.open=false;});

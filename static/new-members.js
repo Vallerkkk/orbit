@@ -1,6 +1,7 @@
 // Feed "Novos membros": timeline de cadastros (RPC new_members, só campos públicos) e boas-vindas 👋.
 // Toda regra de acesso é do banco (RLS em member_welcomes; RPCs só para authenticated).
 import {cleanAppearance} from './cosmetics.js';
+import {prefersReducedMotion} from './motion-preference.js';
 import {styleName,frameAvatar,cardBorder} from './appearance-runtime.js';
 import {badgeSvg} from './badges-catalog.js';
 import {installBadgeTooltips,markBadge} from './badge-tooltip.js';
@@ -12,7 +13,7 @@ export function cheer(){try{actx||=new (window.AudioContext||window.webkitAudioC
   [523.25,659.25,783.99,1046.5].forEach((f,i)=>{const o=actx.createOscillator(),g=actx.createGain();o.type=i===3?'sine':'triangle';o.frequency.value=f;const s=t+i*.07;g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(.9,s+.012);g.gain.exponentialRampToValueAtTime(.001,s+(i===3?.55:.22));o.connect(g).connect(out);o.start(s);o.stop(s+.6);});
   const n=actx.createOscillator(),g=actx.createGain();n.type='sine';n.frequency.setValueAtTime(2093,t+.28);n.frequency.exponentialRampToValueAtTime(3136,t+.5);g.gain.setValueAtTime(0,t+.28);g.gain.linearRampToValueAtTime(.25,t+.3);g.gain.exponentialRampToValueAtTime(.001,t+.62);n.connect(g).connect(out);n.start(t+.28);n.stop(t+.65);}catch{}}
 // Pequena explosão de confete/brilhos a partir do botão (WAAPI, removida em ~1s).
-export function burst(from){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const r=from.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;const layer=document.createElement('div');layer.className='nm-burst';layer.setAttribute('aria-hidden','true');document.body.append(layer);
+export function burst(from){if(prefersReducedMotion())return;const r=from.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;const layer=document.createElement('div');layer.className='nm-burst';layer.setAttribute('aria-hidden','true');document.body.append(layer);
   const cols=['#8b6cff','#c9b8ff','#7fe3ff','#ffd36e','#ff8fd1','#ffffff'];for(let i=0;i<22;i++){const d=document.createElement('i'),a=Math.random()*Math.PI*2,v=50+Math.random()*70,star=i%4===0;d.className=star?'nm-spark':'nm-conf';d.style.cssText=`left:${cx}px;top:${cy}px;background:${cols[i%cols.length]}`;layer.append(d);
     d.animate([{transform:'translate(-50%,-50%) scale(.4) rotate(0)',opacity:1},{transform:`translate(calc(-50% + ${Math.cos(a)*v}px),calc(-50% + ${Math.sin(a)*v-18}px)) scale(1) rotate(${Math.random()*540-270}deg)`,opacity:1,offset:.6},{transform:`translate(calc(-50% + ${Math.cos(a)*v*1.15}px),calc(-50% + ${Math.sin(a)*v+26}px)) scale(.7) rotate(${Math.random()*720-360}deg)`,opacity:0}],{duration:850+Math.random()*350,easing:'cubic-bezier(.2,.7,.3,1)',fill:'forwards'});}
   setTimeout(()=>layer.remove(),1400);}
