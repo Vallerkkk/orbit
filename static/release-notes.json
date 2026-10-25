@@ -2,15 +2,22 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.25+1394260",
+   "version": "2026.10.25+d3e2e4e",
    "date": "25 out 2026",
    "highlights": [
+    [
+     "visual",
+     "O assistente de voz Lula foi removido das chamadas."
+    ],
     [
      "chamadas",
      "Ponte de voz Discord <-> Órbita e botão 'ID da chamada' para ADMs"
     ]
    ],
    "items": {
+    "visual": [
+     "O assistente de voz Lula foi removido das chamadas."
+    ],
     "chamadas": [
      "Ponte de voz Discord <-> Órbita e botão 'ID da chamada' para ADMs"
     ]

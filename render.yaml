@@ -18,11 +18,3 @@ services:
         sync: false
       - key: SUPABASE_URL
         sync: false
-      - key: FLATKEY_API_KEY
-        sync: false
-      - key: FLATKEY_MODEL
-        value: MiniMax-H3
-      - key: STT_API_KEY
-        sync: false
-      - key: STT_MODEL
-        value: whisper-large-v3-turbo
