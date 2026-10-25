@@ -84,12 +84,27 @@ final class AppSession {
             return
         }
         do {
+            // Sem isto o iPhone continuaria recebendo as notificações da conta que saiu.
+            if let token = nativePushToken, let api { try? await api.unregisterIOSPushToken(token) }
             try await api?.supabase.auth.signOut(scope: .local)
             await reset()
             phase = .signIn
         } catch {
             self.error = "Não foi possível encerrar a sessão. Tente novamente."
         }
+    }
+
+    /// Sessão para as telas do site abertas no app. O app é o único que renova o
+    /// token (o site roda sem renovação automática), então entrega um token com
+    /// pelo menos 5 minutos de validade, renovando antes se precisar.
+    func webTokens(forceRefresh: Bool = false) async throws -> WebSessionTokens {
+        guard let api, !isDemo else { throw AppFailure.message("Entre na sua conta para abrir esta tela.") }
+        var session = try await api.currentSession()
+        if forceRefresh || session.expiresAt - Date().timeIntervalSince1970 < 300 {
+            session = try await api.supabase.auth.refreshSession()
+            api.cache(session: session)
+        }
+        return WebSessionTokens(accessToken: session.accessToken, refreshToken: session.refreshToken)
     }
 
     func startDemo() {
@@ -170,6 +185,8 @@ final class DirectoryStore {
     private(set) var conversations: [Conversation] = []
     private(set) var friendships: [Friendship] = []
     private(set) var incomingFriendRequests: [Friendship] = []
+    /// ADM global da Órbita (site_roles creator/admin), como no site.
+    private(set) var isSiteAdmin = false
     private(set) var profiles: [UUID: Profile] = [:]
     var selectedCommunityId: UUID?
     var loading = false
@@ -225,6 +242,12 @@ final class DirectoryStore {
             friendships = friends.filter { $0.status == "accepted" }
             incomingFriendRequests = friends.filter { $0.status == "pending" && $0.recipientId == user }
             me = profiles[user]
+            struct SiteRole: Decodable { let role: String }
+            // Falha aqui não impede o resto do app: só esconde as telas de ADM.
+            let roles: [SiteRole] = (try? await api.read("site_roles", query: [
+                .init(name: "select", value: "role"), .eq("user_id", user)])) ?? []
+            guard generation == stamp else { return }
+            isSiteAdmin = roles.contains { ["creator", "admin"].contains($0.role) }
             if !groups.contains(where: { $0.id == selectedCommunityId }) { selectedCommunityId = groups.first?.id }
             loaded = true
         } catch is CancellationError {
@@ -323,4 +346,10 @@ final class DirectoryStore {
         profiles[user] = row
         me = row
     }
+}
+
+/// Tokens entregues às telas web. Não são guardados em lugar nenhum pelo app.
+struct WebSessionTokens: Equatable {
+    let accessToken: String
+    let refreshToken: String
 }

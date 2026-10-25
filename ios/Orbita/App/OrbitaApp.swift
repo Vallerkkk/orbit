@@ -17,11 +17,12 @@ struct OrbitaApp: App {
     @UIApplicationDelegateAdaptor(OrbitaAppDelegate.self) private var appDelegate
     @State private var app = AppSession()
     @AppStorage("appearance") private var appearance = "system"
+    @AppStorage(OrbitTheme.storageKey) private var themeKey = OrbitTheme.defaultKey
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(app)
-                .tint(Orbit.pink)
+                .tint(Color(light: OrbitTheme.named(themeKey).accentLight, dark: OrbitTheme.named(themeKey).accent))
                 .preferredColorScheme(appearance == "dark" ? .dark : appearance == "light" ? .light : nil)
                 .task {
                     if ProcessInfo.processInfo.arguments.contains("-demo") { app.startDemo() }
@@ -33,6 +34,7 @@ struct OrbitaApp: App {
 
 struct RootView: View {
     @Environment(AppSession.self) private var app
+    @AppStorage(OrbitTheme.storageKey) private var themeKey = OrbitTheme.defaultKey
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         Group {
@@ -53,7 +55,9 @@ struct RootView: View {
                 SignInView()
                     .transition(.opacity.combined(with: .scale(scale: 1.02)))
             case .signedIn:
-                MainTabs().id(app.userId)
+                // Trocar de tema recria as abas (as cores Orbit.* são lidas de novo); a chamada
+                // e a sessão ficam no AppSession e continuam.
+                MainTabs().id("\(app.userId?.uuidString ?? "")-\(themeKey)")
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
             }
         }
@@ -125,7 +129,7 @@ private struct SignInView: View {
 struct MainTabs: View {
     @Environment(AppSession.self) private var app
     @Environment(\.scenePhase) private var scenePhase
-    @State private var tab = 0
+    @SceneStorage("orbita.tab") private var tab = 0
     var body: some View {
         @Bindable var calls = app.calls
         TabView(selection: $tab) {
