@@ -1,8 +1,8 @@
 {
-  "version": "bae430fa4e946127",
-  "entry": "/static/dist/app-QGDUP5KA.js",
+  "version": "4b632cb5074ec639",
+  "entry": "/static/dist/app-EKOE4NVI.js",
   "files": [
-    "/static/dist/app-QGDUP5KA.js",
+    "/static/dist/app-EKOE4NVI.js",
     "/static/dist/call-layout-41217c9121da3858.css",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js",
@@ -67,7 +67,7 @@
     "/static/grafite.css": "/static/dist/grafite-5bb1f2793321fb8e.css"
   },
   "integrity": {
-    "/static/dist/app-QGDUP5KA.js": "e3e273cf448d7c2400a56d9f479aee7b3150d4b599b9e3ce00387374ce3b074b",
+    "/static/dist/app-EKOE4NVI.js": "53ab49ee5cce1735d009038ab79a7cdfb20276f6c31bbd6f41965c51e055e3fa",
     "/static/dist/call-layout-41217c9121da3858.css": "41217c9121da385886b24e21b88d59a06c04e575277db89d6c1901b1a99d41da",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js": "20cfee0fc731efe53611da92202bd240b2f9d28e6b3115691ed50fc718851ee0",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js": "db2508c2c9152fbe631806e53dd148bd67a8b3695a0094caa6145d906b978027",
