@@ -1570,16 +1570,6 @@ dialog .check-field input{accent-color:var(--ac)}
 #auth-view .auth-card .notice{background:rgba(198,178,255,.06);border-color:rgba(201,167,255,.18);border-radius:12px}
 #auth-view .auth-card #auth-status:not(:empty){color:#ffb7bd!important}
 
-/* Tela de carregamento */
-.entry-animation{
-  background:
-    radial-gradient(55% 55% at 50% 38%,rgba(139,108,255,.18),transparent 70%),
-    radial-gradient(40% 40% at 80% 80%,rgba(224,122,214,.08),transparent 70%),
-    #08060f!important;
-}
-.entry-animation strong{font-family:var(--orb-display)!important;letter-spacing:-.03em}
-.entry-progress::after{background:var(--orb-grad)!important;box-shadow:0 0 14px color-mix(in srgb,var(--ac) 55%,transparent)!important}
-
 /* --------------------------------------------------------------------------
    13. Modo claro
    -------------------------------------------------------------------------- */
@@ -1881,11 +1871,6 @@ body[data-color-mode=light] #auth-view .auth-card .auth-install-link{border-colo
 body[data-color-mode=light] #auth-view .auth-card .auth-install-link:hover{background:rgba(122,90,245,.05)!important;color:#241c38!important}
 body[data-color-mode=light] #auth-view .auth-card .notice{background:rgba(122,90,245,.05);border-color:rgba(122,90,245,.16)}
 body[data-color-mode=light] #auth-view .auth-card #auth-status:not(:empty){color:#b3263b!important}
-body[data-color-mode=light] .entry-animation{background:radial-gradient(55% 55% at 50% 38%,rgba(139,108,255,.14),transparent 70%),#f6f3fc!important}
-body[data-color-mode=light] .entry-animation strong{color:#241c38}
-body[data-color-mode=light] .entry-animation span{color:#6f6588}
-body[data-color-mode=light] .entry-progress{background:rgba(60,30,120,.1)}
-
 /* --------------------------------------------------------------------------
    14. Responsivo
    -------------------------------------------------------------------------- */
