@@ -26,9 +26,11 @@ from badges import install_badges
 from youtube import install_youtube
 from upstream import client_for, new_client, read_json
 from videochamada import configured as videochamada_configured
+from astro_call import install_astro
 
 ROOT = Path(__file__).resolve().parent
 load_dotenv(ROOT / '.env')
+load_dotenv(ROOT / '.env.astro')
 @asynccontextmanager
 async def lifespan(application):
     async with new_client() as client:
@@ -232,6 +234,7 @@ def android_asset_links():
 
 
 install(app, current_user, settings, make_token)
+install_astro(app, current_user, settings)
 install_features(app, current_user, settings)
 install_media_search(app, current_user)
 install_youtube(app, current_user, settings)

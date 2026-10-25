@@ -1,3 +1,4 @@
+import {initAstro} from './astro-call.js';
 import {screenSupport,screenCaptureOptions,screenErrorText} from './screen-share.js';
 import {initScreenWatch} from './screen-watch.js';
 import {initMusicChannel} from './music-channel.js';
@@ -2558,3 +2559,6 @@ let spotifyApi;function spotify(){return spotifyApi??=createSpotify({session:()=
 if(/^#spotify=/.test(location.hash)){const ok=location.hash==='#spotify=conectado';history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>toast(ok?'Spotify conectado! Ele aparece no seu perfil enquanto você ouve.':'Não foi possível conectar o Spotify.'),1200);}
 
 window.orbitaJoinVoice=id=>joinVoiceChannel(id);import('./call-v3.js').then(m=>m.installCallV3()).catch(()=>{});
+
+// Astro acompanha a call realmente conectada, independentemente do canal selecionado.
+initAstro({el,button,apiFetch,state:()=>({room,callChannel,session,deafened})});

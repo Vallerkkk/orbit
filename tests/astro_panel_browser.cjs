@@ -1,0 +1,37 @@
+// Astro: o botão e o painel de transcrição aparecem na view de voz sem quebrar o app.
+const {chromium}=require(process.env.ORBITA_PLAYWRIGHT||'playwright');
+const {stub,VOICE}=require('./fixtures/supabase_fixture.cjs');
+const fs=require('fs'),path=require('path'),assert=require('node:assert/strict');
+const tmp=path.resolve(__dirname,'../work/browser-temp');fs.mkdirSync(tmp,{recursive:true});process.env.TEMP=tmp;process.env.TMP=tmp;
+let browser;
+(async()=>{
+ browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||undefined,args:['--no-sandbox']});
+ const context=await browser.newContext({viewport:{width:1280,height:900}});
+ await context.addInitScript(()=>localStorage.setItem('orbita-onboarded','1'));
+ await context.route('**/*',async route=>{const url=route.request().url();
+  if(url.includes('supabase-js'))return route.fulfill({contentType:'application/javascript',body:url.endsWith('/+esm')?stub:''});
+  if(url.endsWith('/api/config'))return route.fulfill({json:{configured:true,supabaseUrl:'https://qa.supabase.co',supabaseKey:'public-qa',callsConfigured:false,storageConfigured:true,pushConfigured:false}});
+  if(url.includes('/api/astro/'))return route.fulfill({json:{configured:false,events:[],cursor:0,window_seconds:900,busy:false}});
+  return route.continue();});
+ const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
+ await page.goto(process.env.ORBITA_TEST_URL||'http://127.0.0.1:8766/',{waitUntil:'networkidle'});
+ await page.evaluate(id=>document.querySelector(`[data-channel-id="${id}"]`)?.click(),VOICE);
+ await page.locator('#voice-view:not([hidden])').waitFor({state:'visible',timeout:10000});
+ const toggle=page.locator('#voice-view .chat-actions button:has-text("Astro")');
+ await toggle.waitFor({timeout:10000});
+ assert.equal(await toggle.getAttribute('aria-expanded'),'false','botão do Astro começou expandido');
+ await toggle.click();
+ const panel=page.locator('#astro-panel');
+ await panel.waitFor({state:'visible',timeout:5000});
+ assert(/Entre na call/i.test(await page.locator('#astro-panel p').first().textContent()),'status inicial do Astro inesperado');
+ const answers=page.locator('#astro-panel button:has-text("Respostas do Astro")');
+ await answers.click();
+ assert.equal(await answers.getAttribute('aria-pressed'),'true','aba de respostas não foi selecionada');
+ assert.equal(await page.locator('#astro-panel button:has-text("Transcrição")').getAttribute('aria-pressed'),'false','aba de transcrição continuou ativa');
+ await page.locator('#astro-panel button:has-text("Fechar")').click();
+ assert.equal(await page.evaluate(()=>document.getElementById('astro-panel').hidden),true,'Fechar não ocultou o painel');
+ assert.equal(await toggle.getAttribute('aria-expanded'),'false','Fechar não sincronizou o botão');
+ assert.deepEqual(errors,[]);
+ console.log(JSON.stringify({toggle:'ok',panel:'visible',tabs:'ok',errors:0}));
+ await browser.close();
+})().catch(async error=>{console.error(error);await browser?.close();process.exitCode=1;});

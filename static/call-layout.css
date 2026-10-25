@@ -190,3 +190,5 @@ body.camera-active #voice-view #camera-switch{min-width:88px;width:auto;padding-
   0%, 100% { opacity: 1; }
   50% { opacity: .7; }
 }
+
+.astro-panel{position:absolute;right:12px;top:64px;bottom:12px;width:min(380px,calc(100% - 24px));z-index:35;background:var(--bg-panel,var(--bg-input,#15151d));color:var(--text);border:1px solid var(--border);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 16px 50px #0008}.astro-panel[hidden]{display:none}.astro-panel header,.astro-panel>div:not(.astro-events){display:flex;align-items:center;gap:8px;flex-wrap:wrap}.astro-panel header{justify-content:space-between}.astro-panel h3,.astro-panel>p{margin:0}.astro-panel>p{font-size:12px;line-height:1.5}.astro-events{overflow:auto;flex:1;min-height:80px;overscroll-behavior:contain}.astro-events article{padding:12px 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere}.astro-events time{float:right;font-size:11px}.astro-events p{white-space:pre-wrap;line-height:1.5;margin:8px 0}.astro-panel button[aria-pressed=true]{outline:2px solid var(--accent,#9278ff)}

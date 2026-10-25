@@ -14,7 +14,7 @@ export function choosePrivateCall(context, conversation, integratedCall) {
       if (state().room) throw Error('Saia da chamada atual antes de iniciar outra.');
       const request = { request_id: crypto.randomUUID(), expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString() };
       showDialog('Chamada no Brasil', panel => {
-        panel.append(el('p', '', 'Até 4 participantes, sem gravação ou transcrição. O convite expira em cerca de uma hora.'));
+        panel.append(el('p', '', 'Até 4 participantes. O Astro transcreve os microfones abertos e usa contexto temporário de 15 minutos. Cada participante pode pausar seu áudio. O convite expira em cerca de uma hora.'));
         panel.append(el('p', 'muted', 'Envie o convite somente na conversa privada. Quem tiver o link poderá entrar. Não é necessário ativar câmera ou microfone para criar o convite.'));
         const status = el('p', 'muted'); status.setAttribute('role', 'status');
         const create = button('Criar convite privado', async () => {
