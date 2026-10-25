@@ -6,7 +6,7 @@ export function initThemeAccessibility(){
   const toCss=c=>'rgb('+c.map(Math.round).join(' ')+')';
   function apply(){for(const name of ['--text','--text-dim','--text-mut','--accent-foreground','--accent-ink'])body.style.removeProperty(name);const style=getComputedStyle(body),backgrounds=['--bg-main','--bg-input','--bg-sidebar','--bg-floating','--bg-elevated'].map(k=>rgb(style.getPropertyValue(k))),accent=rgb(style.getPropertyValue('--accent'));
     const readable=color=>{if(backgrounds.every(bg=>contrast(color,bg)>=4.6))return color;const black=[0,0,0],white=[255,255,255],target=Math.min(...backgrounds.map(bg=>contrast(black,bg)))>Math.min(...backgrounds.map(bg=>contrast(white,bg)))?black:white;for(let t=.05;t<=1.01;t+=.05){const next=color.map((v,i)=>v*(1-t)+target[i]*t);if(backgrounds.every(bg=>contrast(next,bg)>=4.6))return next;}return target;};
-    for(const name of ['--text','--text-dim','--text-mut'])body.style.setProperty(name,toCss(readable(rgb(style.getPropertyValue(name)))));
+    for(const name of ['--text','--text-dim','--text-mut'])body.style.setProperty(name,toCss(readable(rgb(style.getPropertyValue(name)))),'important');
     body.style.setProperty('--accent-foreground',contrast(accent,[0,0,0])>contrast(accent,[255,255,255])?'#000':'#fff');body.style.setProperty('--accent-ink',toCss(readable(accent)));
   }
   new MutationObserver(apply).observe(body,{attributes:true,attributeFilter:['data-theme','data-color-mode']});window.addEventListener('orbita:styles-ready',apply);apply();return {apply};

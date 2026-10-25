@@ -1957,3 +1957,12 @@ body[data-color-mode=light] #auth-view .auth-card #auth-status:not(:empty){color
   .messages.ui-scope-in{animation:none!important}
   *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
 }
+
+/* Use the contrast-corrected text token for small message timestamps. */
+#message-list .message-meta time{color:var(--text-dim)!important}
+
+/* Astro is a labeled action, so icon-only header widths must not clip it. */
+#voice-view .chat-actions .astro-toggle{width:auto!important;min-width:70px!important;max-width:none!important;flex:0 0 auto!important;padding:0 10px!important;font-size:12px!important;white-space:nowrap!important;color:var(--text-dim)!important}
+
+#voice-view .media-screen .resize-share{top:58px!important;right:10px!important;left:auto!important;z-index:5!important;pointer-events:auto;min-height:32px;padding:4px 8px;font-size:11px}
+@media(hover:none){#voice-view .media-screen .resize-share{opacity:1}}

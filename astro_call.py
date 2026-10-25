@@ -15,7 +15,7 @@ from uuid import UUID, uuid4
 import httpx
 from fastapi import Depends, HTTPException, Request
 from livekit import api
-from upstream import client_for
+from upstream import client_for, read_json
 
 WINDOW = 15 * 60
 WAKE = re.compile(r'\b(?:ei|hey|oi|e aí)[\s,!.:;-]+astro\b[\s,!.:;-]*', re.I)
@@ -102,7 +102,7 @@ async def groq_json(app, path, **kwargs):
             raise HTTPException(429, 'Limite da Groq atingido. O Astro tentará novamente em alguns segundos.')
         if response.is_error:
             raise HTTPException(502, 'A Groq não concluiu a solicitação. Confira a chave e os modelos no servidor.')
-        return response.json()
+        return read_json(response, dict)
     except (httpx.HTTPError, ValueError):
         raise HTTPException(502, 'A Groq está indisponível. Tente novamente.')
 
@@ -160,23 +160,26 @@ def install_astro(app, current_user, settings):
             raise HTTPException(429, 'Aguarde o trecho anterior ser processado.')
         if request.headers.get('content-type', '').split(';')[0] != 'audio/wav':
             raise HTTPException(415, 'Formato esperado: audio/wav.')
-        data = bytearray()
-        async for block in request.stream():
-            data.extend(block)
-            if len(data) > 400000:
-                raise HTTPException(413, 'Trecho de áudio muito grande.')
-        validate_wav(bytes(data))
+        # Reserve before the first body await: parallel streams cannot bypass the guard.
         call.uploading.add(uid)
-        call.last_upload[uid] = time.time()
         try:
+            data = bytearray()
+            async for block in request.stream():
+                data.extend(block)
+                if len(data) > 400000:
+                    raise HTTPException(413, 'Trecho de áudio muito grande.')
+            validate_wav(bytes(data))
+            call.last_upload[uid] = time.time()
             result = await groq_json(app, 'audio/transcriptions',
                 files={'file': ('call.wav', bytes(data), 'audio/wav')},
                 data={'model': os.getenv('ASTRO_STT_MODEL', 'whisper-large-v3-turbo'),
                       'language': 'pt', 'temperature': '0', 'response_format': 'verbose_json',
                       'prompt': 'Conversa em português brasileiro. O assistente se chama Astro. Ei Astro.'})
-            text = str(result.get('text', '')).strip()[:6000]
+            if not isinstance(result, dict) or not isinstance(result.get('text'), str):
+                raise HTTPException(502, 'A Groq retornou uma transcrição inválida.')
+            text = result['text'].strip()[:6000]
             segments = result.get('segments') or []
-            if segments and all(s.get('no_speech_prob', 0) > .8 for s in segments):
+            if isinstance(segments, list) and segments and all(isinstance(s, dict) and isinstance(s.get('no_speech_prob'), (int, float)) and s['no_speech_prob'] > .8 for s in segments):
                 text = ''
             call.seen[chunk] = time.time()
             if not text:
@@ -197,7 +200,7 @@ def install_astro(app, current_user, settings):
                         raise ValueError('empty answer')
                     call.add('answer', 'Astro', answer)
                     call.last_answer = time.time()
-                except (KeyError, IndexError, ValueError):
+                except (KeyError, IndexError, ValueError, TypeError, AttributeError):
                     call.add('error', 'Astro', 'Não consegui formar uma resposta. Chame o Astro novamente.')
                 except HTTPException as exc:
                     call.add('error', 'Astro', str(exc.detail))

@@ -9,6 +9,7 @@ import hashlib
 import os
 import secrets
 import time
+from collections import OrderedDict
 from datetime import datetime, timezone
 from urllib.parse import urlencode
 from uuid import UUID
@@ -16,6 +17,7 @@ from uuid import UUID
 import httpx
 from fastapi import Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel, ConfigDict
 
 from upstream import client_for, read_json
 
@@ -23,6 +25,12 @@ SCOPES = 'user-read-currently-playing user-read-playback-state'
 DEFAULT_REDIRECT = 'https://orbita-8nwu.onrender.com/api/spotify/callback'
 STATE_TTL = 600
 CACHE_TTL = 15
+CACHE_SIZE = 500
+
+
+class SpotifySettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    showOnProfile: bool
 
 
 def config():
@@ -42,7 +50,21 @@ def enabled(c=None):
 
 def install_spotify(app, current_user):
     states: dict[str, dict] = {}
-    cache: dict[str, tuple[float, dict]] = {}
+    cache = OrderedDict()
+    cache_epoch = 0
+
+    def invalidate(uid):
+        nonlocal cache_epoch
+        cache_epoch += 1
+        for key in ((uid, True), (uid, False)):
+            cache.pop(key, None)
+
+    async def request(method, url, **kwargs):
+        try:
+            async with client_for(app) as client:
+                return await getattr(client, method.lower())(url, **kwargs)
+        except httpx.HTTPError:
+            raise HTTPException(503, 'Spotify indisponível no momento.') from None
 
     def rest(c):
         return c['url'] + '/rest/v1/spotify_connections', {
@@ -50,8 +72,7 @@ def install_spotify(app, current_user):
 
     async def load(c, user_id):
         url, h = rest(c)
-        async with client_for(app) as client:
-            r = await client.get(url, headers=h, params={'user_id': 'eq.' + user_id, 'select': '*'})
+        r = await request('GET', url, headers=h, params={'user_id': 'eq.' + user_id, 'select': '*'})
         if r.status_code != 200:
             raise HTTPException(503, 'Spotify indisponível no momento.')
         rows = read_json(r, list)
@@ -59,17 +80,15 @@ def install_spotify(app, current_user):
 
     async def save(c, row):
         url, h = rest(c)
-        async with client_for(app) as client:
-            r = await client.post(url, headers={**h, 'Prefer': 'resolution=merge-duplicates,return=minimal'},
-                                  params={'on_conflict': 'user_id'}, json=row)
+        r = await request('POST', url, headers={**h, 'Prefer': 'resolution=merge-duplicates,return=minimal'},
+                          params={'on_conflict': 'user_id'}, json=row)
         if r.status_code >= 300:
             raise HTTPException(503, 'Não foi possível salvar a conexão com o Spotify.')
 
     async def token_call(c, data):
         auth = base64.b64encode(f"{c['client_id']}:{c['client_secret']}".encode()).decode()
-        async with client_for(app) as client:
-            r = await client.post('https://accounts.spotify.com/api/token', data=data,
-                                  headers={'Authorization': 'Basic ' + auth})
+        r = await request('POST', 'https://accounts.spotify.com/api/token', data=data,
+                          headers={'Authorization': 'Basic ' + auth})
         if r.status_code != 200:
             return None
         return read_json(r, dict)
@@ -133,22 +152,22 @@ def install_spotify(app, current_user):
         await save(c, {'user_id': pending['user'], 'access_token': t['access_token'], 'refresh_token': t['refresh_token'],
                        'expires_at': datetime.fromtimestamp(time.time() + int(t.get('expires_in', 3600)), timezone.utc).isoformat(),
                        'display_name': name})
-        cache.pop(pending['user'], None)
+        invalidate(pending['user'])
         return RedirectResponse('/#spotify=conectado', status_code=303)
 
     @app.post('/api/spotify/settings')
-    async def spotify_settings(request: Request, identity=Depends(current_user)):
+    async def spotify_settings(body: SpotifySettings, identity=Depends(current_user)):
         c = config()
         if not enabled(c):
             raise HTTPException(503, 'Integração com Spotify em breve.')
-        body = await request.json()
         uid = identity[0]['id']
         if not await load(c, uid):
             raise HTTPException(404, 'Spotify não conectado.')
         url, h = rest(c)
-        async with client_for(app) as client:
-            await client.patch(url, headers=h, params={'user_id': 'eq.' + uid}, json={'show_on_profile': bool(body.get('showOnProfile'))})
-        cache.pop(uid, None)
+        result = await request('PATCH', url, headers=h, params={'user_id': 'eq.' + uid}, json={'show_on_profile': body.showOnProfile})
+        if result.status_code >= 300:
+            raise HTTPException(503, 'Não foi possível salvar a privacidade do Spotify.')
+        invalidate(uid)
         return {'ok': True}
 
     @app.post('/api/spotify/disconnect')
@@ -157,9 +176,10 @@ def install_spotify(app, current_user):
         if not enabled(c):
             return {'ok': True}
         url, h = rest(c)
-        async with client_for(app) as client:
-            await client.delete(url, headers=h, params={'user_id': 'eq.' + identity[0]['id']})
-        cache.pop(identity[0]['id'], None)
+        result = await request('DELETE', url, headers=h, params={'user_id': 'eq.' + identity[0]['id']})
+        if result.status_code >= 300:
+            raise HTTPException(503, 'Não foi possível desconectar o Spotify.')
+        invalidate(identity[0]['id'])
         return {'ok': True}
 
     @app.get('/api/spotify/now-playing/{user_id}')
@@ -168,9 +188,13 @@ def install_spotify(app, current_user):
         if not enabled(c):
             return {'playing': False}
         uid = str(user_id)
-        hit = cache.get(uid)
+        # A private owner response must never be reused for another viewer.
+        cache_key = (uid, uid == identity[0]['id'])
+        hit = cache.get(cache_key)
         if hit and hit[0] > time.time():
+            cache.move_to_end(cache_key)
             return hit[1]
+        epoch = cache_epoch
         out = {'playing': False}
         row = await load(c, uid)
         if row and (row.get('show_on_profile', True) or uid == identity[0]['id']):
@@ -190,5 +214,11 @@ def install_spotify(app, current_user):
                                    'durationMs': item.get('duration_ms') or 0, 'fetchedAt': int(time.time() * 1000)}
                 except httpx.HTTPError:
                     pass
-        cache[uid] = (time.time() + CACHE_TTL, out)
+        # A settings/disconnect request may finish while playback is being fetched.
+        if epoch != cache_epoch:
+            return out
+        cache[cache_key] = (time.time() + CACHE_TTL, out)
+        cache.move_to_end(cache_key)
+        while len(cache) > CACHE_SIZE:
+            cache.popitem(last=False)
         return out

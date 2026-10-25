@@ -38,6 +38,13 @@ let browser;
   await page.evaluate(()=>{window.qaTracks.screen.t.emit('ended')});assert.equal(await page.locator('.media-tile').count(),0);
   await page.evaluate(()=>{const {t,publication}=window.qaTrack('local-without-sid','camera',undefined);t.sid=undefined;window.__qaRoom.emit('LocalTrackPublished',publication)});assert.equal(await page.locator('.media-tile').count(),1);
   await page.evaluate(()=>window.__qaRoom.emit('LocalTrackUnpublished',{trackSid:'local-without-sid'}));assert.equal(await page.locator('.media-tile').count(),0);
+  // Local screen sharing must construct its caption before adding resize controls.
+  await page.evaluate(()=>{const {publication}=window.qaTrack('local-screen','screen_share');window.__qaRoom.emit('LocalTrackPublished',publication)});
+  assert.equal(await page.locator('.media-screen .resize-share').count(),1);
+  await page.locator('.resize-share').click();
+  assert.equal(await page.locator('.media-screen').evaluate(node=>node.style.width),'60%');
+  await page.evaluate(()=>window.__qaRoom.emit('LocalTrackUnpublished',window.qaTracks['local-screen'].publication));
+  assert.equal(await page.locator('.media-tile').count(),0);
   await page.evaluate(()=>{const {t,publication}=window.qaTrack('departing-camera');window.__qaRoom.emit('TrackSubscribed',t,publication,window.qaRemote);window.__qaRoom.remoteParticipants.delete(window.qaRemote.identity);window.__qaRoom.emit('ParticipantDisconnected',window.qaRemote)});assert.equal(await page.locator('.media-tile').count(),0);
   // A silent track displays a readable loading state instead of an empty black rectangle.
   await page.evaluate(()=>{const t={kind:'video',source:'camera',sid:'silent',attach:()=>document.createElement('video'),detach:v=>{v.remove();return []}};window.__qaRoom.emit('LocalTrackPublished',{track:t,trackSid:'silent',source:'camera'})});
