@@ -1,6 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Órbita" xmlns:c2pa="http://c2pa.org/manifest">
-<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a8cff"/><stop offset="1" stop-color="#5b3df5"/></linearGradient></defs>
-<rect width="64" height="64" rx="18" fill="url(#g)"/>
-<g transform="rotate(-28 32 32)" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round">
-<path d="M8 32A24 9 0 0 1 56 32" opacity=".55"/><circle cx="32" cy="32" r="10.5" fill="#fff" stroke="none"/><path d="M8 32A24 9 0 0 0 56 32"/>
-<circle cx="52" cy="26.8" r="4" fill="#ff7a59" stroke="#5b3df5" stroke-width="2"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><g style="color:#7737f5"><g fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="100" cy="100" r="59" stroke-width="29"/><ellipse cx="100" cy="100" rx="93" ry="23" transform="rotate(-27 100 100)" stroke-width="10"/></g><circle cx="165" cy="34" r="11" fill="currentColor"/></g></svg>

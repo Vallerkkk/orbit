@@ -473,7 +473,7 @@ public partial class MainWindow : Window
 
         try
         {
-            ShowSplash("Conectando à sua comunidade…");
+            ShowSplash("PREPARANDO SEU UNIVERSO…");
             StartSlowHint();
 
             _environment ??= await CreateEnvironmentAsync();
@@ -981,7 +981,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        ShowSplash("Conectando à sua comunidade…");
+        ShowSplash("PREPARANDO SEU UNIVERSO…");
         StartSlowHint();
         _revealPending = true;
         Browser.CoreWebView2.Navigate(AppInfo.StartUri.AbsoluteUri);
@@ -995,7 +995,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        ShowSplash("Recarregando o Órbita…");
+        ShowSplash("RECARREGANDO O ÓRBITA…");
         _revealPending = true;
         Browser.CoreWebView2.Reload();
     }

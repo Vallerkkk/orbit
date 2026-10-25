@@ -26,11 +26,27 @@
 <link rel="stylesheet" href="/static/dist/grafite-5bb1f2793321fb8e.css">
 <link rel="stylesheet" href="/static/dist/refino-033c0f81e0e076f6.css">
 <link rel="stylesheet" href="/static/dist/cosmos-1b44ad4cc2689120.css">
+<link rel="stylesheet" href="/static/dist/loader-2d3fc658d3944c83.css">
 <link rel="preload" href="/static/vendor/fonts/inter-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/fonts/space-grotesk-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
-<meta name="orbita-version" content="1f511403c271c405"></head>
+<meta name="orbita-version" content="bc589085fd4f0ab3"></head>
 <body>
-<div id="entry-animation" class="entry-animation" role="status" aria-live="polite"><img src="/static/icons/icon.svg" width="72" height="72" alt=""><strong>Entrando na sua Órbita</strong><span>Preparando suas conversas…</span><div class="entry-progress" aria-hidden="true"></div></div>
+<div id="entry-animation" class="entry-animation" role="status" aria-live="polite" aria-label="Carregando Órbita">
+  <div class="orb-ambient" aria-hidden="true"></div>
+  <div class="orb-content">
+    <div class="orb-stage" id="orb-loader-stage" aria-hidden="true">
+      <div class="orb-aura"></div>
+      <div class="orb-ring orb-ring-a"><i></i></div>
+      <div class="orb-ring orb-ring-b"><i></i></div>
+      <div class="orb-logo-wrap"><img src="/static/icons/icon.svg" class="orb-logo" alt=""></div>
+      <span class="orb-star orb-star-a"></span><span class="orb-star orb-star-b"></span>
+    </div>
+    <img class="orb-wordmark" src="/static/assets/logo-horizontal-claro.svg" alt="Órbita">
+    <p class="orb-caption">Preparando seu universo<span class="orb-dots"></span></p>
+    <div class="orb-progress" aria-hidden="true"><div class="orb-progress-bar"></div></div>
+  </div>
+  <div class="orb-bottom"><span>CONEXÕES EM MOVIMENTO</span><span class="orb-credit">Valler <b>×</b> Kalil</span></div>
+</div>
 
 <section id="auth-view" class="auth-view">
   <div class="intro"><a class="wordmark" href="/">◉ ÓRBITA<span>BETA</span></a><div><p class="eyebrow">PERTO, DE QUALQUER LUGAR</p><h1>As melhores ideias<br>começam com<br><em>uma conversa.</em></h1><p class="intro-copy">Seu espaço para conversar, criar e estar junto.<br>Texto, voz e vídeo. Tudo na mesma órbita.</p><div class="orbit-art" aria-hidden="true"><div class="planet">◉</div><span class="sat s1">voz</span><span class="sat s2">ideias</span><span class="sat s3">conexões</span></div></div><small>Um espaço compartilhado. Infinitas conversas.</small></div>
@@ -527,4 +543,4 @@
 <button id="back-to-call-dock" hidden>Voltar à chamada</button>
 
 <dialog id="app-dialog" aria-labelledby="dialog-title"><div class="dialog-header"><h2 id="dialog-title"></h2><button id="dialog-close" aria-label="Fechar">×</button></div><div id="dialog-content"></div></dialog>
-<script type="module" src="/static/dist/app-5ASSFKW7.js"></script></body></html>
+<script type="module" src="/static/dist/app-WZWOGSUM.js"></script></body></html>

@@ -1,0 +1,183 @@
+/* Órbita — tela de carregamento (identidade cósmica) */
+#entry-animation{
+  position:fixed!important;
+  inset:0!important;
+  z-index:1000!important;
+  display:grid!important;
+  place-items:center!important;
+  gap:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+  background:
+    radial-gradient(ellipse at 52% 45%,#1a102c 0%,#0d0a15 40%,#09090e 78%)!important;
+  color:#f7f5ff!important;
+  font-family:var(--orb-body,Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif)!important;
+  opacity:1;
+  visibility:visible;
+  transition:opacity .62s cubic-bezier(.2,.8,.2,1),visibility .62s!important;
+}
+#entry-animation[hidden]{display:none!important}
+#entry-animation.is-complete{opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+
+#entry-animation .orb-ambient{
+  position:absolute;
+  inset:-30%;
+  pointer-events:none;
+  background:radial-gradient(ellipse at 50% 48%,rgba(109,51,222,.16),transparent 36%);
+  animation:orb-ambient-breathe 6s ease-in-out infinite alternate;
+}
+#entry-animation .orb-content{
+  position:relative;
+  width:min(90vw,520px);
+  display:flex;
+  align-items:center;
+  flex-direction:column;
+  transform:translateY(-2vh);
+}
+#entry-animation .orb-stage{
+  position:relative;
+  width:min(75vw,330px);
+  aspect-ratio:1;
+  display:grid;
+  place-items:center;
+  transform-style:preserve-3d;
+  transition:transform .25s ease-out;
+  cursor:crosshair;
+}
+#entry-animation .orb-aura{
+  position:absolute;
+  inset:22%;
+  border-radius:50%;
+  background:#7636f0;
+  filter:blur(64px);
+  opacity:.25;
+  animation:orb-ambient-breathe 4s ease-in-out infinite alternate;
+}
+#entry-animation .orb-logo-wrap{
+  width:58%;
+  position:relative;
+  z-index:3;
+  animation:orb-logo-hover 3.6s ease-in-out infinite;
+}
+#entry-animation .orb-logo{
+  display:block;
+  width:100%;
+  filter:drop-shadow(0 12px 27px rgba(116,56,237,.38));
+  animation:orb-logo-rotate 9s ease-in-out infinite;
+}
+#entry-animation .orb-ring{
+  position:absolute;
+  inset:23% 3%;
+  border:1px solid rgba(160,123,245,.42);
+  border-radius:50%;
+  transform-style:preserve-3d;
+  animation:orb-ring-spin 7s linear infinite;
+  pointer-events:none;
+}
+#entry-animation .orb-ring i{
+  position:absolute;
+  left:10%;
+  top:12%;
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#d4c3ff;
+  box-shadow:0 0 18px 5px rgba(155,100,255,.6);
+}
+#entry-animation .orb-ring-b{
+  inset:15% 9%;
+  border-color:rgba(160,123,245,.2);
+  animation:orb-ring-spin-reverse 11s linear infinite;
+}
+#entry-animation .orb-ring-b i{left:82%;top:16%;width:5px;height:5px}
+#entry-animation .orb-star{
+  position:absolute;
+  width:3px;
+  height:3px;
+  border-radius:50%;
+  background:#cdb3ff;
+  box-shadow:0 0 12px #a882ff;
+  animation:orb-twinkle 2s ease-in-out infinite;
+}
+#entry-animation .orb-star-a{left:8%;top:29%}
+#entry-animation .orb-star-b{right:13%;bottom:18%;animation-delay:1s}
+#entry-animation .orb-wordmark{
+  display:block;
+  width:min(56vw,212px);
+  height:52px;
+  object-fit:contain;
+  opacity:.94;
+  filter:none;
+  margin-top:-7px;
+  animation:orb-wordmark-breathe 4s ease-in-out infinite;
+}
+#entry-animation .orb-caption{
+  margin:28px 0 14px!important;
+  padding:0!important;
+  font-size:10px!important;
+  line-height:1.5!important;
+  font-weight:700!important;
+  letter-spacing:.29em!important;
+  color:#a59bb6!important;
+  text-align:center;
+  text-transform:uppercase;
+}
+#entry-animation .orb-dots::after{
+  content:"";
+  animation:orb-dots 1.5s steps(4,end) infinite;
+}
+#entry-animation .orb-progress{
+  width:min(56vw,190px);
+  height:2px;
+  overflow:hidden;
+  border-radius:9px;
+  background:rgba(255,255,255,.09);
+}
+#entry-animation .orb-progress-bar{
+  height:100%;
+  width:32%;
+  border-radius:9px;
+  background:linear-gradient(90deg,transparent,#8b5cf6,#d4baff);
+  animation:orb-progress-sweep 1.8s ease-in-out infinite;
+}
+#entry-animation .orb-bottom{
+  position:absolute;
+  bottom:clamp(24px,5vh,54px);
+  left:clamp(22px,5vw,70px);
+  right:clamp(22px,5vw,70px);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  color:#6e657c;
+  font-size:9px;
+  letter-spacing:.2em;
+}
+#entry-animation .orb-bottom>span{
+  color:inherit;
+  font-size:inherit;
+  opacity:1;
+}
+#entry-animation .orb-credit{letter-spacing:.09em;white-space:nowrap}
+#entry-animation .orb-credit b{color:#8b5cf6;font-weight:600}
+
+@keyframes orb-ring-spin{from{transform:rotate(-26deg) rotateY(0)}to{transform:rotate(334deg) rotateY(360deg)}}
+@keyframes orb-ring-spin-reverse{from{transform:rotate(45deg) rotateX(0)}to{transform:rotate(-315deg) rotateX(360deg)}}
+@keyframes orb-logo-hover{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-10px) scale(1.045)}}
+@keyframes orb-logo-rotate{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(6deg)}}
+@keyframes orb-ambient-breathe{from{opacity:.18;transform:scale(.92)}to{opacity:.42;transform:scale(1.16)}}
+@keyframes orb-wordmark-breathe{50%{opacity:1;filter:drop-shadow(0 0 12px rgba(139,92,246,.3))}}
+@keyframes orb-twinkle{50%{opacity:.25;transform:scale(.6)}}
+@keyframes orb-progress-sweep{0%{transform:translateX(-130%)}100%{transform:translateX(410%)}}
+@keyframes orb-dots{0%{content:""}25%{content:"."}50%{content:".."}75%,100%{content:"..."}}
+
+@media(max-width:600px){
+  #entry-animation .orb-bottom{font-size:8px}
+  #entry-animation .orb-bottom>span:first-child{max-width:145px;line-height:1.6}
+}
+@media(prefers-reduced-motion:reduce){
+  #entry-animation,
+  #entry-animation *{animation:none!important;transition:none!important}
+  #entry-animation .orb-progress-bar{width:100%}
+  #entry-animation .orb-stage{transform:none!important}
+}

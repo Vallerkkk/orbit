@@ -20,44 +20,105 @@
 
         <Grid x:Name="LoadingLayer">
             <Grid.Background>
-                <RadialGradientBrush Center="0.5,0.36" GradientOrigin="0.5,0.36" RadiusX="0.78" RadiusY="0.78">
-                    <GradientStop Color="#141A2B" Offset="0" />
-                    <GradientStop Color="#0B0C0F" Offset="1" />
+                <RadialGradientBrush Center="0.5,0.44" GradientOrigin="0.5,0.44" RadiusX="1.05" RadiusY="1.05">
+                    <GradientStop Color="#1A102C" Offset="0" />
+                    <GradientStop Color="#0D0A15" Offset="0.48" />
+                    <GradientStop Color="#09090E" Offset="1" />
                 </RadialGradientBrush>
             </Grid.Background>
 
             <StackPanel Width="430"
                         HorizontalAlignment="Center"
-                        VerticalAlignment="Center">
-                <Image Source="Assets/icon.png"
-                       Width="88"
-                       Height="88"
-                       Margin="0,0,0,22"
+                        VerticalAlignment="Center"
+                        Margin="0,-18,0,0">
+                <Grid Width="330" Height="292" HorizontalAlignment="Center">
+                    <Ellipse Width="228" Height="228" Opacity="0.65">
+                        <Ellipse.Fill>
+                            <RadialGradientBrush>
+                                <GradientStop Color="#8B5CF6" Offset="0" />
+                                <GradientStop Color="#3B1E70" Offset="0.52" />
+                                <GradientStop Color="#001A102C" Offset="1" />
+                            </RadialGradientBrush>
+                        </Ellipse.Fill>
+                    </Ellipse>
+
+                    <Ellipse Width="318" Height="144"
+                             Stroke="#6B5A8C"
+                             StrokeThickness="1"
+                             Opacity="0.65"
+                             RenderTransformOrigin="0.5,0.5">
+                        <Ellipse.RenderTransform>
+                            <RotateTransform Angle="-27" />
+                        </Ellipse.RenderTransform>
+                    </Ellipse>
+
+                    <Ellipse Width="344" Height="164"
+                             Stroke="#44385C"
+                             StrokeThickness="1"
+                             Opacity="0.55"
+                             RenderTransformOrigin="0.5,0.5">
+                        <Ellipse.RenderTransform>
+                            <RotateTransform Angle="40" />
+                        </Ellipse.RenderTransform>
+                    </Ellipse>
+
+                    <Canvas Width="330" Height="292" IsHitTestVisible="False">
+                        <Ellipse Canvas.Left="41" Canvas.Top="90" Width="7" Height="7" Fill="#D4C3FF">
+                            <Ellipse.Effect>
+                                <DropShadowEffect Color="#9B64FF" BlurRadius="16" ShadowDepth="0" Opacity="0.8" />
+                            </Ellipse.Effect>
+                        </Ellipse>
+                        <Ellipse Canvas.Left="274" Canvas.Top="150" Width="5" Height="5" Fill="#CDB3FF">
+                            <Ellipse.Effect>
+                                <DropShadowEffect Color="#A882FF" BlurRadius="12" ShadowDepth="0" Opacity="0.7" />
+                            </Ellipse.Effect>
+                        </Ellipse>
+                        <Ellipse Canvas.Left="44" Canvas.Top="214" Width="3" Height="3" Fill="#CDB3FF" Opacity="0.8" />
+                        <Ellipse Canvas.Left="288" Canvas.Top="76" Width="3" Height="3" Fill="#CDB3FF" Opacity="0.6" />
+                    </Canvas>
+
+                    <Image Source="Assets/loader-icon.png"
+                           Width="190"
+                           Height="162"
+                           RenderOptions.BitmapScalingMode="HighQuality">
+                        <Image.Effect>
+                            <DropShadowEffect Color="#7438ED" BlurRadius="36" ShadowDepth="0" Opacity="0.42" />
+                        </Image.Effect>
+                    </Image>
+                </Grid>
+
+                <Image Source="Assets/wordmark.png"
+                       Width="212"
+                       Height="56"
+                       Margin="0,-14,0,0"
+                       Stretch="Uniform"
                        HorizontalAlignment="Center"
                        RenderOptions.BitmapScalingMode="HighQuality" />
 
-                <TextBlock Text="ÓRBITA"
-                           FontSize="26"
-                           FontWeight="SemiBold"
-                           HorizontalAlignment="Center" />
-
                 <TextBlock x:Name="LoadingText"
-                           Text="Conectando à sua comunidade…"
-                           Margin="0,12,0,0"
-                           FontSize="13.5"
-                           Foreground="{StaticResource MutedBrush}"
+                           Text="PREPARANDO SEU UNIVERSO…"
+                           Margin="0,24,0,0"
+                           FontSize="10.5"
+                           FontWeight="SemiBold"
+                           Foreground="#A59BB6"
                            HorizontalAlignment="Center"
                            TextAlignment="Center"
                            TextWrapping="Wrap" />
 
-                <Grid Width="240" Height="3" Margin="0,26,0,0" ClipToBounds="True" HorizontalAlignment="Center">
-                    <Border Background="#1B1E25" CornerRadius="2" />
+                <Grid Width="190" Height="2" Margin="0,14,0,0" ClipToBounds="True" HorizontalAlignment="Center">
+                    <Border Background="#16FFFFFF" CornerRadius="1" />
                     <Border x:Name="LoadingPulse"
-                            Width="82"
+                            Width="62"
                             HorizontalAlignment="Left"
-                            Background="{StaticResource AccentBrush}"
-                            CornerRadius="2"
-                            Opacity="0.85">
+                            CornerRadius="1"
+                            Opacity="0.95">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                <GradientStop Color="#008B5CF6" Offset="0" />
+                                <GradientStop Color="#8B5CF6" Offset="0.5" />
+                                <GradientStop Color="#D4BAFF" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
                         <Border.RenderTransform>
                             <TranslateTransform x:Name="LoadingPulseTransform" X="-90" />
                         </Border.RenderTransform>
@@ -66,20 +127,27 @@
 
                 <TextBlock x:Name="LoadingHint"
                            Text="A primeira abertura pode levar alguns segundos."
-                           Margin="0,20,0,0"
-                           FontSize="11.5"
-                           Foreground="#6E7480"
+                           Margin="0,16,0,0"
+                           FontSize="10.5"
+                           Foreground="#6E657C"
                            HorizontalAlignment="Center"
                            TextAlignment="Center"
                            TextWrapping="Wrap" />
             </StackPanel>
 
-            <TextBlock Text="2.0.0"
-                       FontSize="11"
-                       Foreground="#565C68"
+            <TextBlock Text="CONEXÕES EM MOVIMENTO"
+                       FontSize="9"
+                       Foreground="#6E657C"
+                       HorizontalAlignment="Left"
+                       VerticalAlignment="Bottom"
+                       Margin="26,0,0,26" />
+
+            <TextBlock Text="Valler × Kalil"
+                       FontSize="9.5"
+                       Foreground="#6E657C"
                        HorizontalAlignment="Right"
                        VerticalAlignment="Bottom"
-                       Margin="0,0,18,14" />
+                       Margin="0,0,26,26" />
         </Grid>
 
         <Grid x:Name="StatusLayer" Background="{StaticResource BgBrush}" Visibility="Collapsed">

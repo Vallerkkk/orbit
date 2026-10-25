@@ -929,7 +929,32 @@ function callMediaSession(){if(!('mediaSession'in navigator))return;try{if(room&
 window.addEventListener('pagehide', event => { if(event.persisted&&room)return;shuttingDown = true;cancelCallJoin();if(presenceChannel)presenceChannel.untrack();leaveCall().catch(()=>{}); });
 window.addEventListener('pageshow', event => { shuttingDown = false;if(event.persisted&&session){publishVoicePresence(true).catch(()=>{});if(!home&&selected?.kind==='text'){subscribeMessages(selected,generation);loadMessages(generation,true);}} });
 
-function setEntryBusy(busy){const entry=$('entry-animation');if(entry)entry.hidden=!busy;$('app-view').inert=busy;$('auth-view').inert=busy;}
+let entryHideTimer;
+function setEntryBusy(busy){
+  const entry=$('entry-animation');
+  if(entry){
+    clearTimeout(entryHideTimer);
+    if(busy){
+      entry.hidden=false;entry.classList.remove('is-complete');entry.removeAttribute('aria-hidden');
+    }else{
+      entry.classList.add('is-complete');entry.setAttribute('aria-hidden','true');
+      entryHideTimer=setTimeout(()=>{entry.hidden=true;entry.classList.remove('is-complete');},640);
+    }
+  }
+  $('app-view').inert=busy;$('auth-view').inert=busy;
+}
+{
+  const stage=$('orb-loader-stage');
+  if(stage&&matchMedia('(pointer:fine)').matches&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+    stage.addEventListener('pointermove',event=>{
+      const rect=stage.getBoundingClientRect();
+      const x=(event.clientX-rect.left)/rect.width-.5;
+      const y=(event.clientY-rect.top)/rect.height-.5;
+      stage.style.transform=`perspective(750px) rotateY(${x*17}deg) rotateX(${-y*17}deg)`;
+    },{passive:true});
+    stage.addEventListener('pointerleave',()=>{stage.style.transform='';});
+  }
+}
 const startupRetry=el('button','soft-button','Tentar novamente');startupRetry.type='button';startupRetry.hidden=true;startupRetry.onclick=()=>boot();$('auth-status').after(startupRetry);
 const sessionRecovery=el('div','session-recovery');sessionRecovery.hidden=true;sessionRecovery.setAttribute('role','status');sessionRecovery.append(el('p','','Não foi possível carregar sua comunidade.'),button('Tentar carregar novamente',()=>showSession(session)));document.body.append(sessionRecovery);
 let booting=false;

@@ -38,7 +38,8 @@
 
   <ItemGroup>
     <Resource Include="Assets\icon.ico" />
-    <None Update="Assets\icon.png" CopyToOutputDirectory="PreserveNewest" />
+    <Resource Include="Assets\loader-icon.png" />
+    <Resource Include="Assets\wordmark.png" />
   </ItemGroup>
 
 </Project>
