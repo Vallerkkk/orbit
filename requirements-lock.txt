@@ -47,3 +47,6 @@ six==1.17.0
 urllib3==2.8.0
 uvloop==0.23.0; sys_platform != "win32" and platform_python_implementation == "CPython"
 colorama==0.4.6; sys_platform == "win32"
+h2==4.4.1
+hpack==4.2.0
+hyperframe==6.1.0
