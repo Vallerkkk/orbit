@@ -92,4 +92,52 @@ class AstroTests(unittest.TestCase):
         with patch.object(astro,'groq_json',fail):self.assertEqual(self.audio().status_code,429)
         self.assertEqual(self.app.state.astro_calls[ROOM].uploading,set())
 
-if __name__=='__main__':unittest.main()
+
+class AstroConcurrencyTests(unittest.IsolatedAsyncioTestCase):
+    async def test_overlapping_streams_cannot_transcribe_twice(self):
+        import httpx
+        app = FastAPI()
+        async def user(): return ({'id': UID}, {})
+        astro.install_astro(app, user, lambda: dict(LIVEKIT_URL='x', LIVEKIT_API_KEY='x', LIVEKIT_API_SECRET='x'))
+        started, release = asyncio.Event(), asyncio.Event()
+        provider_calls = []
+        async def body():
+            data = wav()
+            yield data[:100]
+            started.set()
+            await release.wait()
+            yield data[100:]
+        async def groq(*args, **kwargs):
+            provider_calls.append(True)
+            return {'text': 'Conversa de teste'}
+        FakeLiveKit.allowed = FakeLiveKit.can_publish = True
+        path = f'/api/astro/{ROOM}/audio?chunk_id={CHUNK}'
+        headers = {'Content-Type': 'audio/wav'}
+        with patch.object(astro.api, 'LiveKitAPI', FakeLiveKit), patch.object(astro, 'groq_json', groq):
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+                first = asyncio.create_task(client.post(path, content=body(), headers=headers))
+                try:
+                    await asyncio.wait_for(started.wait(), 2)
+                    second = await client.post(path, content=wav(), headers=headers)
+                    self.assertEqual(second.status_code, 429)
+                finally:
+                    release.set()
+                    response = await first
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(len(provider_calls), 1)
+                self.assertEqual(app.state.astro_calls[ROOM].uploading, set())
+
+    async def test_bad_wav_releases_stream_reservation(self):
+        import httpx
+        app = FastAPI()
+        async def user(): return ({'id': UID}, {})
+        astro.install_astro(app, user, lambda: dict(LIVEKIT_URL='x', LIVEKIT_API_KEY='x', LIVEKIT_API_SECRET='x'))
+        FakeLiveKit.allowed = FakeLiveKit.can_publish = True
+        with patch.object(astro.api, 'LiveKitAPI', FakeLiveKit):
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+                response = await client.post(f'/api/astro/{ROOM}/audio?chunk_id={CHUNK}', content=b'invalid', headers={'Content-Type':'audio/wav'})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(app.state.astro_calls[ROOM].uploading, set())
+
+if __name__ == '__main__':
+    unittest.main()

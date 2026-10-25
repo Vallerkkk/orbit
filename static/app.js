@@ -638,6 +638,10 @@ function onTrack(track, participant, publication) {
         box.append(button('Fechar', () => $('app-dialog').close(), 'soft-button'));
       });
     };
+    const caption = el('figcaption');
+    media.muted = true; media.playsInline = true;
+    if(isScreen){const pill=el('span','tile-live-pill','Compartilhando tela');figure.append(pill);}
+    caption.append(el('span', '', (peopleById.get(participant.identity)?.display_name || participant.name || 'Participante') + (isScreen ? ' · Tela' : ' · Câmera')));
     if(isScreen && participant.isLocal){
       const resize = el('button','resize-share','Redimensionar');
       resize.type='button';
@@ -648,10 +652,6 @@ function onTrack(track, participant, publication) {
       };
       caption.append(resize);
     }
-    media.muted = true; media.playsInline = true;
-    const caption = el('figcaption');
-    if(isScreen){const pill=el('span','tile-live-pill','Compartilhando tela');figure.append(pill);}
-    caption.append(el('span', '', (peopleById.get(participant.identity)?.display_name || participant.name || 'Participante') + (isScreen ? ' · Tela' : ' · Câmera')));
     const expand = el('button', 'expand-video', 'Tela cheia');
     expand.type = 'button'; expand.setAttribute('aria-label', `Ver ${isScreen ? 'tela' : 'câmera'} de ${peopleById.get(participant.identity)?.display_name || participant.name || 'Participante'} em tela cheia`);
     expand.onclick = async () => {
@@ -963,25 +963,7 @@ const sessionRecovery=el('div','session-recovery');sessionRecovery.hidden=true;s
 let booting=false;
 window.addEventListener('online',()=>{if(!startupRetry.hidden)boot();});
 
-function showQuickOnboarding(){
-  if(localStorage.getItem('orbita-onboarded')) return;
-  showDialog('Bem-vindo ao Órbita', container => {
-    container.append(el('p','','Em 3 passos você já pode conversar:'));
-    const steps = el('ol');
-    steps.append(el('li','','Adicione um amigo'));
-    steps.append(el('li','','Entre ou crie uma comunidade'));
-    steps.append(el('li','','Inicie uma chamada'));
-    container.append(steps);
-    container.append(button('Começar', () => {
-      localStorage.setItem('orbita-onboarded','1');
-      $('app-dialog').close();
-      showFriends();
-    }, 'primary'));
-  });
-}
-
 async function boot(){
-  setTimeout(showQuickOnboarding, 800);
   if(booting)return;booting=true;setEntryBusy(true);startupRetry.hidden=true;$('auth-status').textContent='';
   try {
     config=await requestWithDeadline(async signal=>{const response=await fetch('/api/config',{signal});if(!response.ok)throw Error('O servidor está indisponível. Aguarde e tente novamente.');return response.json();},{timeout:30000});
@@ -1028,7 +1010,7 @@ async function checked(query) { const result=await query; if(result.error) throw
 async function apiFetch(path, options={}) {
   const account=session?.user.id;if(!account)throw Error('Entre novamente na sua conta.');
   let fresh=await authRecovery.get(account);
-  const send=()=>requestWithDeadline(signal=>fetch(path,{...options,signal,headers:{...options.headers,Authorization:`Bearer ${fresh.access_token}`}}),{signal:options.signal,timeout:30000});
+  const send=()=>requestWithDeadline(signal=>fetch(path,{...options,signal,headers:{...options.headers,Authorization:`Bearer ${fresh.access_token}`}}),{signal:options.signal,timeout:options.timeout??30000});
   let response=await send();
   if(response.status===401){fresh=await authRecovery.refresh(account);if(session?.user.id!==account)throw new DOMException('A conta mudou.','AbortError');response=await send();if(response.status===401)await authRecovery.expire(account);}
   if(!response.ok) {if(!path.startsWith('/api/diagnostics')&&!path.startsWith('/api/admin/diagnostics'))window.dispatchEvent(new CustomEvent('orbita:technical-signal',{detail:'api_error'}));const error=await response.json().catch(()=>({}));throw Error(error.detail||'Não foi possível concluir.');}
@@ -2555,7 +2537,7 @@ async function shareAttachment(a){try{
 let bugApi;function bugReports(){return bugApi??=createBugReports({db,session:()=>session,isAdmin,showDialog,el,button,toast});}
 document.getElementById('bug-report-btn')?.addEventListener('click',()=>{if(session)bugReports().open();});
 
-let spotifyApi;function spotify(){return spotifyApi??=createSpotify({session:()=>session,el,button,toast});}
+let spotifyApi;function spotify(){return spotifyApi??=createSpotify({session:()=>session,el,button,toast,apiFetch});}
 if(/^#spotify=/.test(location.hash)){const ok=location.hash==='#spotify=conectado';history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>toast(ok?'Spotify conectado! Ele aparece no seu perfil enquanto você ouve.':'Não foi possível conectar o Spotify.'),1200);}
 
 window.orbitaJoinVoice=id=>joinVoiceChannel(id);import('./call-v3.js').then(m=>m.installCallV3()).catch(()=>{});
