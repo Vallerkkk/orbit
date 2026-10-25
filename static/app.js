@@ -54,7 +54,7 @@ function updateComposer() { $('send').disabled=!navigator.onLine||pendingSends.h
 const $ = id => document.getElementById(id);
 let db, config, session, channels = [], selected, signup = false;
 let subscription, generation = 0, messages = new Map(), oldest, hasMore = false, loading = false;
-let voiceChat,voiceChatTask,lulaDroid,lulaDroidTask,diagnostics;
+let voiceChat,voiceChatTask,diagnostics;
 let room, callChannel, joining = false, shuttingDown = false, callJoin;
 function cancelCallJoin() { callJoin?.abort(); callJoin=null; joining=false; }
 let cameraFacing=localStorage.getItem('orbita-camera-facing')==='environment'?'environment':'user',cameraTask;
@@ -721,7 +721,7 @@ function updateSpeakingUI() {
 async function leaveCall({preserveJoin=false}={}) {
   if(!preserveJoin)cancelCallJoin();
   cameraTask=null;const previous = room,leftTarget=callChannel;if(previous)microphoneSwitch.set(previous.localParticipant,false);room = null;callChannel = null;talkHeld=false;
-  lulaDroid?.stop();lulaDroid=null;lulaDroidTask=null;screenWatch.reset();
+  screenWatch.reset();
   enhancements?.callEnded(previous);callReactions?.clear();
   if (previous) previous.removeAllListeners();
   for(const entry of [...callMedia.values()])disposeMedia(entry);
@@ -796,7 +796,6 @@ $('join-call').onclick = async () => {
     if(!current()||room!==connected){await connected.disconnect();return;}
     enhancements.connected(connected,RoomEvent,result);
     syncVoiceChat(true).catch(()=>{});
-    syncLuladroid(true).catch(()=>{});
     try { if(result.canPublish!==false)await connected.localParticipant.setMicrophoneEnabled(!pushToTalk&&!deafened, audioCapture()); }
     catch (error) { toast('Você entrou sem microfone. ' + errorText(error)); }
     if(current()&&room===connected)await audioTools?.connected(connected);
@@ -1536,7 +1535,7 @@ selectChannel=async channel=>{
   if(channel.community_id&&activeCommunity!==channel.community_id){activeCommunity=channel.community_id;if(!await loadCommunityAccess())return;}
   if(intent!==navigationEpoch||channel.community_id&&activeCommunity!==channel.community_id)return;
   replyTarget=null;$('reply-banner').classList.add('hidden');
-  await baseSelect(channel);syncVoiceChat().catch(error=>toast(errorText(error)));syncLuladroid().catch(error=>toast(errorText(error)));navigation(!!channel.private);renderCommunityRail();rememberCommunity();
+  await baseSelect(channel);syncVoiceChat().catch(error=>toast(errorText(error)));navigation(!!channel.private);renderCommunityRail();rememberCommunity();
   $('message-input').placeholder=channel.private?'Mensagem para '+channel.name:'Conversar em #'+channel.name;
   syncDmHeader(channel);if(channel.private&&channel.kind==='text')dmUnread?.markRead(channel.id);
   $('message-form').hidden=!!channel.is_announcement&&!hasCommunityPermission('manage_messages');
@@ -2247,10 +2246,6 @@ async function syncVoiceChat(force=false){
  if(voiceChatTask){await voiceChatTask;voiceChat.update();}
 }
 
-async function syncLuladroid(force=false){
- if(!lulaDroidTask&&(force||selected?.kind==='voice'))lulaDroidTask=import('./luladroid.js').then(module=>lulaDroid=module.initLuladroid({el,button,toast,showDialog,apiFetch,state:()=>({session,selected,room,callChannel,siteRoles,isAdmin:isAdmin()})})).catch(error=>{lulaDroidTask=null;throw error;});
- if(lulaDroidTask){await lulaDroidTask;lulaDroid?.update();}
-}
 
 const authRecovery=createAuthRecovery({auth:()=>db.auth,currentUser:()=>session?.user.id,onExpired:async account=>{
  if(session?.user.id!==account)return;

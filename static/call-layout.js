@@ -58,7 +58,7 @@ export function initCallLayout(context) {
   // ── Controles consolidados: 1 controle por função ──
   // Barra central: mic, câmera, tela, ouvir juntos, áudio, mais, sair. O resto vai para o popover "Mais".
   Object.assign(icons,{settings:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
-    watch:'M2 7h20v12H2zM8 3l4 4 4-4M10 10.5v5l4.5-2.5z',camera:'M23 7l-7 5 7 5zM1 5h15v14H1z',screenaudio:'M3 4h18v12H3zM8 20h8M12 16v4',bot:'M12 2v3M5 8h14v11H5zM9 13h.01M15 13h.01M2 13h3M19 13h3',text:'M4 7V4h16v3M9 20h6M12 4v16'});
+    watch:'M2 7h20v12H2zM8 3l4 4 4-4M10 10.5v5l4.5-2.5z',camera:'M23 7l-7 5 7 5zM1 5h15v14H1z',screenaudio:'M3 4h18v12H3zM8 20h8M12 16v4',text:'M4 7V4h16v3M9 20h6M12 4v16'});
   const audioBtn=action('call-audio','settings','Áudio e dispositivos',()=>context.dialog('Áudio e dispositivos',box=>{const devices=context.button('Entrada, saída e redução de ruído',()=>context.audioSettings());const mic=context.button('Microfone, sensibilidade e pressionar para falar',()=>context.micSettings());box.append(devices,mic);}),controls);
   const more=$('call-more');controls.insertBefore(audioBtn,more);controls.append(more);controls.append($('leave-call'));
   const pop=document.createElement('div');pop.className='call-more-pop';pop.setAttribute('role','menu');pop.hidden=true;pop.id='call-more-menu';footer.append(pop);
@@ -68,7 +68,7 @@ export function initCallLayout(context) {
     ['call-invite','people','Convidar'],['voice-chat-toggle','chat','Chat da sala'],['back-to-call','text','Canal de texto'],
     ['vc-react-call','reaction','Reações'],['call-soundboard','sound','Efeitos sonoros'],['deafen','headphones',context.state().deafened?'Voltar a ouvir':'Ensurdecer'],
     ['camera-options','camera','Câmera frontal/traseira'],['screen-options','screenaudio','Áudio da tela'],['connection-info','connection','Conexão'],
-    ['call-popout','popout','Vídeo flutuante'],['call-fullscreen','fullscreen',document.fullscreenElement===view?'Sair da tela cheia':'Tela cheia'],['luladroid-toggle','bot','LulaDroid']];
+    ['call-popout','popout','Vídeo flutuante'],['call-fullscreen','fullscreen',document.fullscreenElement===view?'Sair da tela cheia':'Tela cheia']];
   function closeMore(){pop.hidden=true;more.setAttribute('aria-expanded','false');}
   function openMore(){pop.replaceChildren();for(const [id,ic,label] of entries()){const target=$(id);if(!target)continue;const item=document.createElement('button');item.type='button';item.className='cm-item';item.setAttribute('role','menuitem');icon(item,ic,label);const span=document.createElement('span');span.textContent=label;item.append(span);item.dataset.target=id;
       if(target.getAttribute('aria-pressed')==='true'||target.getAttribute('aria-expanded')==='true')item.classList.add('on');item.onclick=()=>{closeMore();target.click();};pop.append(item);}

@@ -2,7 +2,6 @@
 import os
 import json
 import re
-import time
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from pathlib import Path
@@ -10,7 +9,7 @@ from uuid import UUID
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, HTMLResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
@@ -18,7 +17,6 @@ from starlette.middleware.gzip import GZipMiddleware
 from livekit import api
 from integrations import install
 from public_pages import install_public_pages
-from luladroid import install_luladroid
 from diagnostics import install_diagnostics
 from spotify import install_spotify
 from community_features import install_features
@@ -239,19 +237,9 @@ install_media_search(app, current_user)
 install_youtube(app, current_user, settings)
 install_badges(app, current_user, settings)
 install_public_pages(app, settings)
-install_luladroid(app, current_user, settings)
 install_diagnostics(app, current_user, settings)
 install_spotify(app, current_user)
 
-
-# ===== IA de Chamadas =====
-from ai_call import (
-    is_enabled as ai_enabled,
-    get_recent_transcript,
-    generate_answer,
-    clear_call,
-    add_transcript,
-)
 
 async def is_site_admin(identity):
     """Confirma o cargo no banco com o JWT do usuário, nunca com dado do cliente."""
@@ -271,145 +259,6 @@ async def is_site_admin(identity):
     return any(isinstance(r, dict) and r.get('role') in ('admin', 'creator') for r in roles)
 
 install_site_admin(app, current_user, settings, is_site_admin)
-
-async def require_site_admin(identity):
-    if not await is_site_admin(identity):
-        raise HTTPException(403, 'Transcrições disponíveis somente aos administradores.')
-    return identity
-
-def ai_call_id(value):
-    call_id = str(value or '').strip()
-    if not re.fullmatch(r'[A-Za-z0-9_-]{1,80}', call_id):
-        raise HTTPException(400, 'call_id inválido.')
-    return call_id
-
-def stt_provider() -> str:
-    """Transcrição de áudio no servidor: Groq Whisper (STT_API_KEY) ou Gemini
-    (GEMINI_API_KEY, que já serve ao diagnóstico). Flatkey não oferece rota de áudio."""
-    if os.getenv("STT_API_KEY", "").strip():
-        return "groq"
-    if os.getenv("GEMINI_API_KEY", "").strip():
-        return "gemini"
-    return ""
-
-
-async def gemini_transcribe(audio: bytes, media: str) -> str:
-    import base64
-    model = os.getenv("GEMINI_STT_MODEL", os.getenv("GEMINI_MODEL", "gemini-2.5-flash")).strip()
-    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,80}", model):
-        raise HTTPException(503, "Modelo de transcrição inválido.")
-    body = {
-        "contents": [{"role": "user", "parts": [
-            {"text": "Transcreva literalmente a fala deste áudio em português do Brasil. Responda só com o texto falado; se não houver fala, responda vazio."},
-            {"inline_data": {"mime_type": media, "data": base64.b64encode(audio).decode()}},
-        ]}],
-        "generationConfig": {"temperature": 0, "maxOutputTokens": 400},
-    }
-    try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(40.0, connect=8.0)) as client:
-            response = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-                headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"].strip()}, json=body)
-    except httpx.HTTPError:
-        raise HTTPException(503, "Serviço de transcrição indisponível.") from None
-    if response.status_code == 429:
-        raise HTTPException(429, "Limite de transcrição atingido.")
-    if response.status_code != 200:
-        raise HTTPException(502, "Não foi possível transcrever o áudio.")
-    try:
-        parts = response.json()["candidates"][0]["content"].get("parts", [])
-        return " ".join(str(p.get("text") or "") for p in parts).strip()[:2000]
-    except (ValueError, KeyError, IndexError, AttributeError, TypeError):
-        return ""
-
-
-@app.get("/api/ai/status")
-async def ai_status():
-    return {"enabled": ai_enabled(), "stt": "server-audio" if stt_provider() else "browser-speech-recognition", "stt_provider": stt_provider() or "none", "llm": "flatkey" if os.getenv("FLATKEY_API_KEY", "").strip() else "not-configured"}
-
-@app.post("/api/ai/transcribe-audio")
-async def ai_transcribe_audio(request: Request, identity=Depends(current_user)):
-    """Desktop fallback: transcribe audio via a separately configured STT service."""
-    if not ai_enabled():
-        raise HTTPException(503, "IA de chamadas desativada.")
-    provider = stt_provider()
-    if not provider:
-        raise HTTPException(503, "A transcrição por voz não está disponível no app de PC. Digite sua pergunta ao Lula ou use o navegador.")
-    key = os.getenv("STT_API_KEY", "").strip()
-    if request.headers.get("content-type", "").split(";")[0] not in ("audio/webm", "audio/ogg", "audio/mp4"):
-        raise HTTPException(415, "Formato de áudio não suportado.")
-    if request.headers.get("content-length", "").isdigit() and int(request.headers["content-length"]) > 4_000_000:
-        raise HTTPException(413, "Áudio grande demais.")
-    audio = await request.body()
-    if not audio or len(audio) > 4_000_000:
-        raise HTTPException(413, "Áudio vazio ou grande demais.")
-    media = request.headers["content-type"].split(";")[0]
-    suffix = {"audio/webm": "webm", "audio/ogg": "ogg", "audio/mp4": "mp4"}[media]
-    if provider == "gemini":
-        return {"text": await gemini_transcribe(audio, media)}
-    try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(40.0, connect=8.0)) as client:
-            response = await client.post(
-                "https://api.groq.com/openai/v1/audio/transcriptions",
-                headers={"Authorization": "Bearer " + key},
-                files={"file": ("speech." + suffix, audio, media)},
-                data={"model": os.getenv("STT_MODEL", "whisper-large-v3-turbo"), "language": "pt", "response_format": "json"},
-            )
-    except httpx.HTTPError:
-        raise HTTPException(503, "Serviço de transcrição indisponível.") from None
-    if response.status_code in (401, 403):
-        raise HTTPException(503, "Credencial STT inválida ou sem acesso.")
-    if response.status_code == 429:
-        raise HTTPException(429, "Limite de transcrição atingido.")
-    if response.status_code != 200:
-        raise HTTPException(502, "Não foi possível transcrever o áudio.")
-    try:
-        text = str(response.json().get("text") or "").strip()[:2000]
-    except (ValueError, AttributeError):
-        raise HTTPException(502, "Resposta de transcrição inválida.") from None
-    return {"text": text}
-
-
-@app.post("/api/ai/transcript")
-async def ai_transcript(payload: dict, identity=Depends(current_user)):
-    """Recebe uma fala já transcrita. O autor vem sempre do token, não do corpo."""
-    if not ai_enabled():
-        raise HTTPException(503, "IA de chamadas desativada.")
-    user, _ = identity
-    call_id = ai_call_id(payload.get("call_id"))
-    text = str(payload.get("text") or "").strip()
-    if not text:
-        raise HTTPException(400, "text é obrigatório.")
-    if len(text) > 2000:
-        raise HTTPException(413, "Fala limitada a 2000 caracteres.")
-    display_name = str(payload.get("display_name") or (user.get('user_metadata') or {}).get('display_name') or "Participante").strip()[:60]
-    entry = add_transcript(call_id, user['id'], display_name, text, time.time(), time.time())
-    return {"ok": True, "entry": entry}
-
-@app.get("/api/ai/transcript/{call_id}")
-async def ai_get_transcript(call_id: str, identity=Depends(current_user)):
-    await require_site_admin(identity)
-    call_id = ai_call_id(call_id)
-    items = get_recent_transcript(call_id)
-    return {"call_id": call_id, "items": items, "count": len(items)}
-
-@app.post("/api/ai/opinion")
-async def ai_opinion(payload: dict, identity=Depends(current_user)):
-    """Pede opinião da IA. Contexto de chamada só é usado para administradores."""
-    if not ai_enabled():
-        raise HTTPException(503, "IA de chamadas desativada.")
-    call_id = ai_call_id(payload.get("call_id"))
-    question = str(payload.get("question") or "").strip()[:1000]
-    context = get_recent_transcript(call_id) if await is_site_admin(identity) else []
-    result = await generate_answer(context, question)
-    return result
-
-@app.delete("/api/ai/transcript/{call_id}")
-async def ai_clear(call_id: str, identity=Depends(current_user)):
-    await require_site_admin(identity)
-    call_id = ai_call_id(call_id)
-    clear_call(call_id)
-    return {"ok": True}
 
 
 app.mount('/static', StaticFiles(directory=ROOT / 'static'), name='static')

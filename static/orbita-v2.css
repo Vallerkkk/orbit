@@ -510,7 +510,7 @@ body[data-color-mode=light] #app-dialog #dialog-title { color: #1b1d2b; } body[d
 
 /* ── Call: controles consolidados (1 por função) ── */
 .call-consolidated :is(#vc-react-call,#call-soundboard,#call-chat,#call-popout,#call-fullscreen,#mic-options,#camera-options,#screen-options,#deafen,#connection-info,#back-to-call){display:none!important}
-.call-consolidated:has(#active-controls:not([hidden])) :is(#call-invite,#voice-chat-toggle,#luladroid-toggle){display:none!important}
+.call-consolidated:has(#active-controls:not([hidden])) :is(#call-invite,#voice-chat-toggle){display:none!important}
 body:has(#voice-view:not([hidden]) .call-footer:not([hidden])) .vb-actions{display:none}
 #voice-view .call-footer{position:relative;display:flex;justify-content:center}
 #voice-view .call-footer-side:empty{display:none}
