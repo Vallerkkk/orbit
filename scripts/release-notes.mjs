@@ -9,16 +9,16 @@ import {fileURLToPath} from 'node:url';
 
 const MONTHS=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 const safeJson=text=>{try{return JSON.parse(text);}catch{return null;}};
-export const SKIP=/^(chore|test|tests|refactor|ci|build|docs|style)(\(|:|\b)|^merge\b|^rebuild\b|\bbuild final\b|\bdist\b|service ?worker|\bSW v\d|\bcache\b|deployment instructions|api key|secrets?\b|^testes?\b|^set requested|^document\b|^configure\b|\(n[ãa]o aplicada\)/i;
+export const SKIP=/^(chore|test|tests|refactor|ci|build|docs|style)(\(|:|\b)|^merge\b|^rebuild\b|\bbuild final\b|\bdist\b|service ?worker|\bSW v\d|\bcache\b|deployment instructions|api key|secrets?\b|^testes?\b|^set requested|^document\b|^configure\b|\.gitignore|meta\.json|\(n[ãa]o aplicada\)/i;
 export const AREAS=[
-  ['chamadas',/\b(chamada|call|v[íi]deo|livekit|tile|ouvir juntos|tela)\b/i],
-  ['loja',/\b(loja|store|cosm[ée]tic|cole[çc][õo]es|pacote)/i],
+  ['chamadas',/\b(chamadas?|calls?|v[íi]deos?|livekit|tiles?|ouvir juntos|telas?)\b/i],
+  ['loja',/\b(lojas?|stores?|cosm[ée]tic|cole[çc][õo]es|pacotes?)\b/i],
   ['adm',/\b(adm|admin|modera[çc][ãa]o|administra)/i],
   ['feed',/\b(feed|novos membros|publica[çc]|trilho|novidades)/i],
-  ['perfil',/\b(perfil|ins[íi]gnia|avatar|nome|handle|profile)/i],
-  ['audio',/\b(áudio|audio|microfone|ru[íi]do|som|sons)\b/i],
-  ['chat',/\b(chat|mensage|dm|canal|canais)\b/i],
-  ['visual',/\b(visual|tema|paleta|redesign|configura[çc]|layout|grafite)/i]
+  ['perfil',/\b(perfis?|ins[íi]gnia|avatars?|nome|handle|profiles?)\b/i],
+  ['audio',/\b(áudios?|audio|microfones?|ru[íi]do|sons?)\b/i],
+  ['chat',/\b(chats?|mensage|dms?|canal|canais)\b/i],
+  ['visual',/\b(visual|temas?|paletas?|redesign|configura[çc]|layout|grafite)\b/i]
 ];
 export const FIX=/^(fix|corrige|corre[çc][ãa]o|conserta)\b|\bfix(es)?\b|\bcorrige\b/i;
 export function classify(text){if(FIX.test(text))return 'correcoes';const head=/^[^:]{2,40}:/.test(text)?text.split(':')[0]:'';for(const part of [head,text])if(part)for(const [key,re] of AREAS)if(re.test(part))return key;return 'visual';}
@@ -57,9 +57,13 @@ export function mergeHistory(notes,previous){
   const dayOf=r=>String(r.version||'').split('+')[0].replaceAll('.','-');
   const oldByDay=new Map((previous?.releases||[]).map(r=>[dayOf(r),r]));
   const combine=(fresh,prev)=>{
-    const items={};
+    // Uma categoria pode mudar entre execuções (o texto é o mesmo, o rótulo não): cada
+    // novidade aparece uma única vez no "Ver tudo", na primeira categoria em que surgir.
+    const items={},used=new Set();
     for(const src of [fresh.items,prev.items])for(const [k,v] of Object.entries(src||{})){
-      const list=items[k]||=[];for(const t of v)if(!list.includes(t))list.push(t);
+      const list=items[k]||(items[k]=[]);
+      for(const t of v)if(!used.has(t)){used.add(t);list.push(t);}
+      if(!list.length)delete items[k];
     }
     const merged=[...new Map([...fresh.highlights,...prev.highlights].map(h=>[h[1],h])).values()];
     return {version:fresh.version.includes('+')?fresh.version:prev.version,date:fresh.date||prev.date,

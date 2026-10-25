@@ -2,16 +2,16 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.25+af667d3",
+   "version": "2026.10.25+04db2f8",
    "date": "25 out 2026",
    "highlights": [
     [
      "visual",
-     "Integra o Astro às calls com transcrição e respostas pela Groq"
+     "Endurece o backend contra falhas silenciosas de terceiros"
     ],
     [
      "visual",
-     "Deixa de rastrear o meta.json do build, que já estava no .gitignore"
+     "Integra o Astro às calls com transcrição e respostas pela Groq"
     ],
     [
      "chamadas",
@@ -23,20 +23,22 @@
     ]
    ],
    "items": {
+    "correcoes": [
+     "Corrige detalhes de interface, contraste e listeners que ficavam presos",
+     "Corrige downloads repetidos, badges de não lidas, aparência em elementos novos e reduzir…",
+     "Atualiza com os arquivos de Orbita-boot-corrigido"
+    ],
     "visual": [
-     "Integra o Astro às calls com transcrição e respostas pela Groq",
-     "Deixa de rastrear o meta.json do build, que já estava no .gitignore",
+     "Endurece o backend contra falhas silenciosas de terceiros",
      "Redesenha a interface com identidade cósmica própria",
      "Integra os clientes nativos e o login social no app WPF",
      "Adiciona cliente Windows nativo",
      "Adiciona app nativo para Windows",
+     "Deixa de rastrear o meta.json do build, que já estava no .gitignore",
      "O assistente de voz Lula foi removido das chamadas."
     ],
-    "correcoes": [
-     "Corrige downloads repetidos, badges de não lidas, aparência em elementos novos e reduzir…",
-     "Atualiza com os arquivos de Orbita-boot-corrigido"
-    ],
     "chamadas": [
+     "Integra o Astro às calls com transcrição e respostas pela Groq",
      "Remove a tela de carregamento antiga",
      "Substitui logos e aplica a nova tela de carregamento",
      "Ponte de voz Discord <-> Órbita e botão 'ID da chamada' para ADMs"

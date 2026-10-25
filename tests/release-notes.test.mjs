@@ -17,3 +17,10 @@ test('um git mais curto que o histórico publicado não apaga novidades antigas'
   assert.deepEqual(n.releases.map(r=>r.version),['2026.10.25+ddd1111','2026.10.24+eee2222','2026.10.23+bbb3333']);
   assert.deepEqual(n.releases[2].items,{feed:['Curado antigo'],chamadas:['Chamada x']});
   assert.deepEqual(mergeHistory(fresh,null).releases.length,2);});
+test('plural entra na área certa e a mesma novidade não se repete em duas categorias',()=>{
+  assert.equal(classify('Integra o Astro às calls'),'chamadas');
+  assert.equal(classify('Remove a tela de carregamento antiga'),'chamadas');
+  assert.ok(SKIP.test('Deixa de rastrear o meta.json do build, que já estava no .gitignore'));
+  const n=mergeHistory(buildNotes([c('fff1111','2026-10-25T10:00','Loja: capas novas')]),
+    {releases:[{version:'2026.10.25+eee0000',date:'25 out 2026',highlights:[],items:{visual:['Loja: capas novas']}}]});
+  assert.deepEqual(n.releases[0].items,{loja:['Loja: capas novas']});assert.equal(n.releases[0].version,'2026.10.25+fff1111');});
