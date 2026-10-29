@@ -21,6 +21,7 @@ from diagnostics import install_diagnostics
 from spotify import install_spotify
 from community_features import install_features
 from site_admin import install_site_admin
+from admin_dashboard import install_admin_dashboard
 from media_search import install_media_search
 from badges import install_badges
 from youtube import install_youtube
@@ -262,6 +263,7 @@ async def is_site_admin(identity):
     return any(isinstance(r, dict) and r.get('role') in ('admin', 'creator') for r in roles)
 
 install_site_admin(app, current_user, settings, is_site_admin)
+install_admin_dashboard(app, current_user, settings, is_site_admin, ROOT)
 
 
 app.mount('/static', StaticFiles(directory=ROOT / 'static'), name='static')

@@ -144,6 +144,7 @@ let sessionTransition=0,sessionReady=false,sessionInitializing=false;
 async function showSession(next) {
   diagnostics?.sync();
   if(!next){
+    document.getElementById('orbita-adm-shortcut')?.remove();
     $('auth-view').hidden=false;$('app-view').hidden=true;$('app-dialog').close();closeMobileMenu();
     document.body.classList.remove('big-picture','call-focus','call-navigation-open');document.querySelector('.bp-bar')?.remove();
     if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
@@ -190,6 +191,17 @@ async function showSession(next) {
     if(transition!==sessionTransition||session?.user.id!==next.user.id)return;channels=loadedChannels;
     if (!channels.length) {renderCommunityRail();showFriends();sessionReady=true;await enhancements.sessionChanged();return;}
     renderChannels();await loadCommunityAccess();
+    document.getElementById('orbita-adm-shortcut')?.remove();
+    if (isSiteAdmin(siteRoles,next.user.id)) {
+      const admLink=document.createElement('a');
+      admLink.id='orbita-adm-shortcut';
+      admLink.href='/ADM';
+      admLink.className='server-icon action-rail';
+      admLink.title='ADM — monitoramento e auditoria';
+      admLink.setAttribute('aria-label','Abrir painel ADM (novo login obrigatório)');
+      admLink.textContent='⚙';
+      $('server-rail').append(admLink);
+    }
     if(transition!==sessionTransition||session?.user.id!==next.user.id)return;
     await selectChannel(channels.find(c => c.community_id===activeCommunity&&c.default_for_new_members&&c.kind==='text')||channels.find(c => c.community_id===activeCommunity&&c.kind === 'text') || channels.find(c=>c.community_id===activeCommunity) || channels[0]);
     if(transition===sessionTransition){sessionReady=true;trackVisibleActivity().catch(()=>{});}
