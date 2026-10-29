@@ -11,7 +11,9 @@ Object.assign(ITEM_KINDS,KIND_V2);
 const LEGACY_ITEMS=CLASSICS.flatMap(p=>[['border','card_border'],['plate','name_style']].map(([kind,to])=>({id:`${p.id}-${kind}`,pack:p.id,kind,alias:`${p.id}-${to}`,name:p.items[to][0],admin:!!p.admin})));
 // Loja v2: coleções com 5 itens cada (nome, descrição e raridade próprios).
 const V2_KINDS=['frame','effect','card_border','name_style','server'];
-const V2_ITEMS=[...COLLECTIONS,...CLASSICS].flatMap(p=>V2_KINDS.map((kind,i)=>({id:`${p.id}-${kind}`,pack:p.id,kind,name:p.items[kind][0],desc:p.items[kind][1],rarity:p.rarity[i],admin:!!p.admin,v2:true,classic:!!p.classic,tags:p.tags||[]})));
+const V2_ITEMS=[...COLLECTIONS,...CLASSICS].flatMap(p=>V2_KINDS.map((kind,i)=>({id:`${p.id}-${kind}`,pack:p.id,kind,name:p.items[kind][0],desc:p.items[kind][1],rarity:p.rarity[i],admin:!!p.admin,v2:true,classic:!!p.classic,tags:p.tags||[],...(p.owner?{owner:p.owner}:{})})));
+// Item extra da coleção exclusiva Graça Divina: moldura "Coroa de Espinhos" (SVG próprio em appearance-runtime).
+V2_ITEMS.push({id:'coroa-espinhos-frame',pack:'graca-divina',kind:'frame',name:'Coroa de Espinhos',desc:'Ramos de espinhos entrelaçados em marfim e branco, com reflexos de ouro, brilho divino suave e motes de luz.',rarity:'lendaria',admin:false,v2:true,classic:false,tags:['Exclusivo'],owner:'50e5ae56-07e3-4023-9461-f653997fcc2e',crown:true});
 PACKS.push(...COLLECTIONS,...CLASSICS);
 export const ITEMS=[...LEGACY_ITEMS,...V2_ITEMS];
 export const itemById=new Map(ITEMS.map(i=>[i.id,i]));
@@ -26,6 +28,9 @@ export const NAME_FONTS=[
 ];
 export const NAME_EFFECTS=[{id:'gradient',name:'Gradiente'},{id:'neon',name:'Neon'},{id:'glitch',name:'Glitch'},{id:'shine',name:'Brilho'},{id:'rainbow',name:'Arco-íris'},{id:'fire',name:'Chamas'},{id:'staff',name:'Halo da equipe',admin:true}];
 export const ADMIN_ONLY=[...ITEMS.filter(i=>i.admin).map(i=>i.id),...NAME_EFFECTS.filter(e=>e.admin).map(e=>'name:'+e.id)];
+// Itens de dono único (coleções exclusivas): só o usuário dono vê e equipa; o banco só aceita dele.
+export const OWNER_ONLY=ITEMS.filter(i=>i.owner).map(i=>({id:i.id,owner:i.owner}));
+export const ownerOf=id=>itemById.get(id)?.owner||'';
 const loaded=new Set();
 export function loadNameFont(id){const f=NAME_FONTS.find(f=>f.id===id);if(!f||loaded.has(id))return;loaded.add(id);const l=document.createElement('link');l.rel='stylesheet';l.href=`https://fonts.googleapis.com/css2?family=${f.family.replace(/ /g,'+')}:wght@${f.w}&display=swap`;document.head.append(l);}
 // Normaliza a aparência salva no banco (profiles.appearance); qualquer coisa fora do catálogo é descartada.

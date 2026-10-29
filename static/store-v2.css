@@ -217,3 +217,15 @@
 .ns-hearts{animation-duration:5s}
 .ns-jewel{background-image:linear-gradient(100deg,#a57a1f 20%,#fff3c4 38%,#9be7ff 50%,#f7d774 62%,#a57a1f 80%);animation-duration:3s;filter:drop-shadow(0 0 6px #f7d77466)}
 @media (max-width:640px){.sv-tools{flex-wrap:wrap}.sv-tools .sv-search{flex:1 1 100%;max-width:none}.sv-tools .sv-select{flex:1 1 calc(33% - 6px);min-width:0;padding:0 6px;font-size:12px}}
+/* Coroa de Espinhos (Graça Divina, exclusiva de @kalioptha) */
+.pk-crown{position:relative;overflow:visible!important}
+.pk-crown>.cr-ring{position:absolute;inset:-22%;pointer-events:none;z-index:3;filter:drop-shadow(0 0 6px #fff3c8aa) drop-shadow(0 0 14px #f2cf7444)}
+.pk-crown>.cr-ring svg{width:100%;height:100%;display:block;overflow:visible;animation:cr-turn 40s linear infinite}
+.cr-ring .cr-shine{animation:cr-shine 3.6s linear infinite}
+.cr-ring .cr-halo{animation:cr-breathe 4s ease-in-out infinite}
+.cr-ring .cr-mote{fill:#fffbe8;animation:cr-mote 3.2s ease-in-out infinite}
+@keyframes cr-turn{to{transform:rotate(360deg)}}
+@keyframes cr-shine{to{stroke-dashoffset:-100}}
+@keyframes cr-breathe{50%{stroke-opacity:.26}}
+@keyframes cr-mote{0%,100%{opacity:0;transform:translateY(1.5px)}50%{opacity:1;transform:translateY(-1.5px)}}
+@media (prefers-reduced-motion:reduce){.cr-ring svg,.cr-ring .cr-shine,.cr-ring .cr-halo,.cr-ring .cr-mote{animation:none!important}}
