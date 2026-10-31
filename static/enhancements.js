@@ -1,5 +1,5 @@
 import {isQuiet,channelNotifies,syncNotificationPreferences} from './notification-preferences.js';
-import {createAppSounds,SOUND_EFFECTS} from './app-sounds.js';
+import {createAppSounds,SOUND_EFFECTS,setSharedSounds} from './app-sounds.js';
 import { relativeTime, safeLink, stickerNames, youtubeId } from './media-utils.js';
 import { reserveImage, focusElement } from './dom-utils.js';
 import { requestWithDeadline } from './chat-state.js';
@@ -87,6 +87,7 @@ export function initEnhancements(context) {
   }
 
   const appSounds=createAppSounds(()=>state().deafened||state().profile?.presence_status==='dnd'||isQuiet(state().session?.user.id));
+  setSharedSounds(appSounds);
   const audio=effect=>appSounds.play(effect);
   // Preferências da caixa "Notificações" (app.js): escritas em orbita-notif-* e lidas aqui,
   // senão as duas caixas não mudam nada e a pessoa acha que o aviso foi desligado.

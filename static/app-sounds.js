@@ -1,4 +1,8 @@
 export const SOUND_EFFECTS=['fanfare','coin','laser','powerup','applause','pop'];
+// Motor compartilhado: o Astro usa os mesmos volumes e o mesmo silenciamento do app.
+let sharedSounds=null;
+export const setSharedSounds=instance=>{sharedSounds=instance;};
+export const getSharedSounds=()=>sharedSounds;
 export function createAppSounds(muted){
   let context,master,compressor,voices=0;const last=new Map();
   const value=(key,fallback)=>{const n=Number(localStorage.getItem('orbita-'+key)??fallback);return Number.isFinite(n)?Math.max(0,Math.min(1,n)):fallback;};
@@ -11,7 +15,7 @@ export function createAppSounds(muted){
     try{
       const audio=init();await audio.resume();if(audio.state!=='running'||voices>=4||!preview&&muted())return;
       voices++;const now=audio.currentTime;
-      const notes={notification:[784,1046],join:[392,523,659],leave:[523,392,294],fanfare:[523,659,784,1046],coin:[988,1318],laser:[1400,240],powerup:[330,440,660,880],pop:[420,840],applause:[180,240,320]}[effect]||[784,1046];
+      const notes={notification:[784,1046],join:[392,523,659],leave:[523,392,294],fanfare:[523,659,784,1046],coin:[988,1318],laser:[1400,240],powerup:[330,440,660,880],pop:[420,840],applause:[180,240,320],'astro-wake':[1046],'astro-answer':[659,880],'astro-stop':[440,330]}[effect]||[784,1046];
       notes.forEach((frequency,index)=>{
         const source=audio.createOscillator(),gain=audio.createGain(),start=now+index*0.075,duration=board?0.2:0.14;
         source.type=effect==='coin'?'triangle':'sine';source.frequency.setValueAtTime(frequency,start);if(effect==='laser'||effect==='pop')source.frequency.exponentialRampToValueAtTime(Math.max(60,frequency*0.35),start+duration);

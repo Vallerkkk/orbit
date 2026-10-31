@@ -92,4 +92,37 @@ class AstroTests(unittest.TestCase):
         with patch.object(astro,'groq_json',fail):self.assertEqual(self.audio().status_code,429)
         self.assertEqual(self.app.state.astro_calls[ROOM].uploading,set())
 
+    def test_wake_variants_and_false_positives(self):
+        c=astro.Call()
+        self.assertEqual(c.command('a','Ei astro, qual é o resumo?'),'qual é o resumo?')
+        self.assertEqual(c.command('b','Astro, resuma a conversa'),'resuma a conversa')
+        self.assertEqual(c.command('c','Astro resuma'),'resuma')
+        self.assertEqual(c.command('d','as tro, quantos somos?'),'quantos somos?')
+        self.assertEqual(c.command('h','eistro, resuma'),'resuma')
+        self.assertIsNone(c.command('e','o astro do filme é bonito'))
+        self.assertIsNone(c.command('f','astronomia é legal'))
+        self.assertIsNone(c.command('g','Astro é legal'))
+
+    def test_stop_command_does_not_trigger_the_model(self):
+        c=astro.Call()
+        self.assertEqual(c.parse('a','Astro, pare')[0],'stop')
+        self.assertEqual(c.parse('b','Astro, para aí')[0],'stop')
+        # "para que serve" é pergunta, não pedido para parar.
+        self.assertEqual(c.parse('c','Astro, para que serve o feed?')[0],'ask')
+
+    def test_hallucination_is_filtered_before_transcript(self):
+        async def hallucination(*args,**kwargs):return {'text':'Legendas pela comunidade Amara.org','segments':[]}
+        with patch.object(astro,'groq_json',hallucination):self.assertFalse(self.audio().json()['transcribed'])
+        self.assertEqual(self.client.get('/api/astro/'+ROOM).json()['events'],[])
+
+    def test_ask_by_text_uses_the_same_pipeline(self):
+        async def groq(app,path,**kwargs):return {'choices':[{'message':{'content':'Somos três na call.'}}]}
+        with patch.object(astro,'groq_json',groq):
+            response=self.client.post(f'/api/astro/{ROOM}/ask',json={'text':'quantos somos?'})
+        self.assertEqual((response.status_code,response.json()), (200,{'ok':True}))
+        events=self.client.get('/api/astro/'+ROOM).json()['events']
+        self.assertEqual([e['kind'] for e in events],['transcript','answer'])
+        self.assertTrue(events[0]['wake'])
+        self.assertEqual(self.client.post(f'/api/astro/{ROOM}/ask',json={'text':'x'}).status_code,400)
+
 if __name__=='__main__':unittest.main()
