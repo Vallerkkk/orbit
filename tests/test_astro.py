@@ -125,4 +125,66 @@ class AstroTests(unittest.TestCase):
         self.assertTrue(events[0]['wake'])
         self.assertEqual(self.client.post(f'/api/astro/{ROOM}/ask',json={'text':'x'}).status_code,400)
 
+    def test_music_requests_map_to_watch_commands(self):
+        cases={
+            'toque Suicideboys For the Last Time':'/tocar Suicideboys For the Last Time',
+            'toca agora Wonderwall':'/tocar agora Wonderwall',
+            'coloca a música Bohemian Rhapsody na fila':'/tocar Bohemian Rhapsody',
+            'adiciona Wonderwall na fila':'/adicionar Wonderwall',
+            'próxima música Wonderwall':'/proxima Wonderwall',
+            'pausa a música':'/pausar',
+            'continua':'/continuar',
+            'pula essa':'/pular',
+            'volta':'/voltar',
+            'que música está tocando?':'/agora',
+            'limpa a fila':'/limpar',
+            'embaralha a fila':'/embaralhar',
+            'repete':'/repetir',
+            'remove o item 2 da fila':'/remover 2',
+            'volume 40':'/volume 40',
+            'aumenta o volume para 30':'/volume 30',
+        }
+        for text,command in cases.items():self.assertEqual(astro.watch_request(text),command,text)
+        self.assertIsNone(astro.watch_request('toque essa música'))
+        self.assertIsNone(astro.watch_request('qual é a capital da França?'))
+
+    def test_direct_time_date_and_math_answers(self):
+        self.assertRegex(astro.direct_answer('que horas são?'),r'^São \d{2}:\d{2}, horário de Brasília\.$')
+        self.assertRegex(astro.direct_answer('que horas são agora?'),r'^São \d{2}:\d{2}, horário de Brasília\.$')
+        self.assertRegex(astro.direct_answer('que dia é hoje?'),r'^Hoje é .+, \d{1,2} de .+ de \d{4}\.$')
+        self.assertEqual(astro.direct_answer('quanto é 12 * 7 + 3?'),'O resultado é 87.')
+        self.assertEqual(astro.direct_answer('10 / 4'),'O resultado é 2,5.')
+        self.assertIsNone(astro.direct_answer('quanto é a multa?'))
+        self.assertIsNone(astro.direct_answer('qual é a capital da França?'))
+
+    def test_music_request_is_executed_by_the_asker_without_the_model(self):
+        calls=[]
+        async def groq(app,path,**kwargs):
+            calls.append(path)
+            if path=='audio/transcriptions':return {'text':'Ei Astro, toque Suicideboys For the Last Time'}
+            raise AssertionError('o modelo não deve ser chamado para um pedido de música')
+        with patch.object(astro,'groq_json',groq):response=self.audio()
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.json(),{'transcribed':True,'watch':'/tocar Suicideboys For the Last Time'})
+        self.assertEqual(calls,['audio/transcriptions'])
+        events=self.client.get('/api/astro/'+ROOM).json()['events']
+        self.assertEqual([e['kind'] for e in events],['transcript'])
+        self.assertTrue(events[0]['wake'])
+
+    def test_ask_with_music_returns_watch_command(self):
+        async def groq(*args,**kwargs):raise AssertionError('o modelo não deve ser chamado')
+        with patch.object(astro,'groq_json',groq):
+            response=self.client.post(f'/api/astro/{ROOM}/ask',json={'text':'toque Wonderwall'})
+        self.assertEqual(response.json(),{'ok':True,'watch':'/tocar Wonderwall'})
+        self.assertEqual(self.client.get('/api/astro/'+ROOM).json()['events'][0]['kind'],'transcript')
+
+    def test_ask_with_time_answers_without_the_model(self):
+        async def groq(*args,**kwargs):raise AssertionError('o modelo não deve ser chamado')
+        with patch.object(astro,'groq_json',groq):
+            response=self.client.post(f'/api/astro/{ROOM}/ask',json={'text':'que horas são?'})
+        self.assertEqual(response.json(),{'ok':True})
+        events=self.client.get('/api/astro/'+ROOM).json()['events']
+        self.assertEqual([e['kind'] for e in events],['transcript','answer'])
+        self.assertRegex(events[-1]['text'],r'^São \d{2}:\d{2}, horário de Brasília\.$')
+
 if __name__=='__main__':unittest.main()

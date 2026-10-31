@@ -2556,4 +2556,4 @@ if(/^#spotify=/.test(location.hash)){const ok=location.hash==='#spotify=conectad
 window.orbitaJoinVoice=id=>joinVoiceChannel(id);import('./call-v3.js').then(m=>m.installCallV3()).catch(()=>{});
 
 // Astro acompanha a call realmente conectada, independentemente do canal selecionado.
-initAstro({el,button,apiFetch,state:()=>({room,callChannel,session,deafened})});
+initAstro({el,button,apiFetch,watch:raw=>enhancements.watchCommand(raw,{noExternal:true}),state:()=>({room,callChannel,session,deafened})});

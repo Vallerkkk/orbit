@@ -152,12 +152,12 @@ export function initWatchParty(ctx){
   const busy=()=>{if(!snapshot?.video)return false;if(snapshot.playing)return true;const d=durations.get(snapshot.video);return !(d&&position()>=d-1.5);};
   // Fila sem interromper: só começa a tocar se nada estiver tocando.
   async function enqueue(v,mode='queue',known='',start=0){if(!busy()){const t=known||await titleFor(v);startVideo(v,t,start);return announce('tocou “'+t+'”.');}if(queue.length>=QUEUE_LIMIT)return hint('A fila está cheia ('+QUEUE_LIMIT+').');const t=known||await titleFor(v);setQueue(placeItems(queue,[{v,t,by:myName()}],mode).queue);return announce(mode==='next'?'colocou “'+t+'” como a próxima.':'adicionou “'+t+'” à fila.');}
-  async function run(raw){const r=parseWatchInput(raw);if(r.error)return hint(r.error);
+  async function run(raw,opts={}){const r=parseWatchInput(raw);if(r.error)return hint(r.error);
     if(room?.state!=='connected')return 'Entre em uma sala de voz deste servidor para controlar o Ouvir juntos.';
     if((r.cmd==='tocar'||r.cmd==='playlist')&&!$('watch-panel'))await show().catch(()=>{});
     const pos=position();
     switch(r.cmd){
-      case 'tocar':{if(r.search){let found;try{found=(await fetchJSON('/api/youtube/search?type=video&q='+encodeURIComponent(r.search))).videos?.[0];}catch{}if(!found?.id){open('https://www.youtube.com/results?search_query='+encodeURIComponent(r.search),'_blank','noopener');return hint('Não deu para buscar aqui. Abrimos a busca no YouTube: copie o link e cole com /tocar.');}const t=String(found.title||'Vídeo do YouTube').slice(0,90);if(r.mode!=='now')return enqueue(found.id,r.mode,t);startVideo(found.id,t);return announce('tocou “'+t+'”.');}
+      case 'tocar':{if(r.search){let found,problem='';try{found=(await fetchJSON('/api/youtube/search?type=video&q='+encodeURIComponent(r.search))).videos?.[0];}catch(e){problem=e?.message||'';}if(!found?.id){if(opts.noExternal)return hint(/YOUTUBE_API_KEY|configurado/i.test(problem)?'A busca no YouTube não está configurada neste servidor.':'Não consegui buscar no YouTube agora. Tente de novo em instantes.');open('https://www.youtube.com/results?search_query='+encodeURIComponent(r.search),'_blank','noopener');return hint('Não deu para buscar aqui. Abrimos a busca no YouTube: copie o link e cole com /tocar.');}const t=String(found.title||'Vídeo do YouTube').slice(0,90);if(r.mode!=='now')return enqueue(found.id,r.mode,t);startVideo(found.id,t);return announce('tocou “'+t+'”.');}
         const l=r.link;if(l.mix&&l.video){startVideo(l.video,'',l.start);return hint('Mixes automáticos não podem ser importados; tocando só o vídeo.');}
         if(l.list&&(!l.video||!r.only))return loadPlaylist(l,r.mode||'queue');
         if(r.mode!=='now')return enqueue(l.video,r.mode||'queue','',l.start);
