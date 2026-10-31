@@ -5,7 +5,7 @@ export function wav(pcm){
  label(0,'RIFF');v.setUint32(4,36+pcm.byteLength,true);label(8,'WAVE');label(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,16000,true);v.setUint32(28,32000,true);v.setUint16(32,2,true);v.setUint16(34,16,true);label(36,'data');v.setUint32(40,pcm.byteLength,true);
  const samples=new Int16Array(pcm);for(let i=0;i<samples.length;i++)v.setInt16(44+i*2,samples[i],true);return new Blob([buffer],{type:'audio/wav'});
 }
-const VOICE_KEY='orbita-astro-voice',NAME_KEY='orbita-astro-voice-name',RATE_KEY='orbita-astro-rate',VOLUME_KEY='orbita-astro-volume';
+const VOICE_KEY='orbita-astro-voice',NAME_KEY='orbita-astro-voice-name',SOURCE_KEY='orbita-astro-voice-source',SERVICE_KEY='orbita-astro-service-voice',RATE_KEY='orbita-astro-rate',VOLUME_KEY='orbita-astro-volume';
 const storedNumber=(key,fallback)=>{const raw=localStorage.getItem(key);if(raw===null)return fallback;const value=Number(raw);return Number.isFinite(value)?Math.max(0,Math.min(2,value)):fallback;};
 
 export function initAstro(ctx){
@@ -36,25 +36,71 @@ export function initAstro(ctx){
  ask.append(askInput,askSend);
  panel.append(header,status,notice,tabs,list,controls,voiceBox,ask);view.append(panel);
  let target=null,version=0,cursor=0,items=[],tab='transcript',enabled=true,configured=false,audio,source,node,track,loadingAudio=false,polling=false,queue=[],sending=false,controller=null,pauseUntil=0,nextAttempt=0,retryAt=0,lastProblem='',lastPoll=0,joinedAt=Date.now()/1000;
- let voiceEnabled=localStorage.getItem(VOICE_KEY)!=='off',voiceName=localStorage.getItem(NAME_KEY)||'',voiceRate=storedNumber(RATE_KEY,1),voiceVolume=storedNumber(VOLUME_KEY,.9);
- let speaking=false,speechQueue=[],watchdog=0,speakToken=0;
+ let voiceEnabled=localStorage.getItem(VOICE_KEY)!=='off',voiceSource=localStorage.getItem(SOURCE_KEY)==='device'?'device':'natural',voiceName=localStorage.getItem(NAME_KEY)||'',serviceVoice=localStorage.getItem(SERVICE_KEY)||'',voiceRate=storedNumber(RATE_KEY,1),voiceVolume=storedNumber(VOLUME_KEY,.9);
+ let speaking=false,speechQueue=[],watchdog=0,speakToken=0,speechAbort=null,speechAudio=null,speechUrl='',naturalReady=false,naturalDownUntil=0,serverVoices=[],voiceSignature='';
  const roomName=s=>s.room?.name||(s.callChannel?(s.callChannel.private?'direct-':'channel-')+s.callChannel.id:null);
  const current=(ticket)=>ticket===version&&!!target;
  function sound(effect){try{getSharedSounds()?.play(effect);}catch{}}
  function allVoices(){try{return globalThis.speechSynthesis?.getVoices()||[];}catch{return [];}}
  // As vozes carregam de forma assíncrona no Chrome: ordenar por qualidade evita cair na voz padrão do sistema.
  function pickVoice(){const list=allVoices().filter(v=>/^pt/i.test(v.lang));if(!list.length)return null;const rank=v=>/natural|neural/i.test(v.name)?0:/google/i.test(v.name)?1:/francisca|luciana|maria|thalita|yara|camila|joana|helena|beatriz/i.test(v.name)?2:3;const sorted=[...list].sort((a,b)=>rank(a)-rank(b));return sorted.find(v=>v.name===voiceName)||sorted[0];}
- function fillVoices(){const voices=allVoices(),pt=voices.filter(v=>/^pt/i.test(v.lang)),list=pt.length?pt:voices;voiceSelect.replaceChildren(new Option('Automática (recomendada)',''));for(const v of list)voiceSelect.append(new Option(v.name,v.name));voiceSelect.value=list.some(v=>v.name===voiceName)?voiceName:'';voiceNote.textContent=pt.length?'':`Nenhuma voz em português neste aparelho. Instale uma voz pt-BR nas configurações do sistema para o Astro falar melhor.`;}
+ function naturalVoiceId(){return serverVoices.find(v=>v.id===serviceVoice)?.id||serverVoices[0]?.id||'';}
+ function canUseNatural(){return voiceSource==='natural'&&naturalReady&&serverVoices.length>0&&Date.now()>=naturalDownUntil&&!!target;}
+ function fillVoices(){
+  const voices=allVoices(),pt=voices.filter(v=>/^pt/i.test(v.lang)),device=pt.length?pt:voices,groups=[];
+  const natural=document.createElement('optgroup');natural.label='Vozes naturais';
+  if(naturalReady&&serverVoices.length)for(const v of serverVoices)natural.append(new Option(`${v.name} — ${v.note}`,'n:'+v.id));
+  else{const placeholder=new Option(naturalReady?'Carregando vozes…':'Indisponível neste servidor','n:');placeholder.disabled=true;natural.append(placeholder);}
+  groups.push(natural);
+  const local=document.createElement('optgroup');local.label='Voz do aparelho';local.append(new Option('Automática','b:'));for(const v of device)local.append(new Option(v.name,'b:'+v.name));groups.push(local);
+  voiceSelect.replaceChildren(...groups);
+  const wanted=naturalReady?naturalVoiceId():'';voiceSelect.value=voiceSource==='natural'&&wanted?'n:'+wanted:'b:'+voiceName;
+  if(!voiceSelect.value)voiceSelect.value=wanted?'n:'+wanted:'b:';
+  voiceNote.textContent=naturalReady&&serverVoices.length?'Voz neural gerada no servidor. Se a conexão falhar, o Astro usa a voz do aparelho.':naturalReady?'Nenhuma voz natural disponível agora. O Astro usa a voz do aparelho.':(pt.length?'':'Nenhuma voz em português neste aparelho. Instale uma voz pt-BR nas configurações do sistema.');
+ }
  function renderVoiceState(){voiceToggle.textContent=voiceEnabled?'Voz ativada':'Voz desativada';voiceToggle.setAttribute('aria-pressed',String(voiceEnabled));stopButton.disabled=!speaking;}
  function clearWatchdog(){if(watchdog)clearTimeout(watchdog);watchdog=0;}
  function cleanForSpeech(text){return String(text||'').replace(/```[\s\S]*?```/g,' ').replace(/!\[[^\]]*\]\([^)]*\)/g,' ').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/[*_`#>~|]/g,'').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu,'').replace(/\s+/g,' ').trim();}
- function stopSpeech(cue){speakToken++;clearWatchdog();speechQueue=[];if(speaking||globalThis.speechSynthesis?.speaking)globalThis.speechSynthesis?.cancel();speaking=false;pauseUntil=Date.now()+500;if(cue)sound('astro-stop');renderVoiceState();}
- function speakNow(text){
-  const synth=globalThis.speechSynthesis;if(!synth){status.textContent='Este navegador não oferece síntese de voz. As respostas continuam disponíveis em texto.';speaking=false;return;}
-  const phrase=cleanForSpeech(text).slice(0,700);if(!phrase){speaking=false;return;}
-  const token=++speakToken,voice=pickVoice(),utterance=new SpeechSynthesisUtterance(phrase);
+ function stopSpeech(cue){speakToken++;clearWatchdog();speechQueue=[];speechAbort?.abort();speechAbort=null;if(speaking||globalThis.speechSynthesis?.speaking)globalThis.speechSynthesis?.cancel();releaseAudio();speaking=false;pauseUntil=Date.now()+500;if(cue)sound('astro-stop');renderVoiceState();}
+ function releaseAudio(){if(speechAudio){try{speechAudio.pause();}catch{}speechAudio=null;}if(speechUrl){URL.revokeObjectURL(speechUrl);speechUrl='';}}
+ function finishSpeech(token){if(token!==speakToken)return;speaking=false;clearWatchdog();releaseAudio();pauseUntil=Date.now()+800;renderVoiceState();pump();}
+ async function speakNatural(phrase,token){
+  const abort=new AbortController();speechAbort=abort;
+  const response=await apiFetch('/api/astro/'+encodeURIComponent(target)+'/speech',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:phrase,voice:naturalVoiceId(),rate:voiceRate}),signal:abort.signal});
+  if(token!==speakToken)return false;
+  const blob=await response.blob();if(token!==speakToken||!blob.size)return false;
+  const url=URL.createObjectURL(blob),player=new Audio(url);speechAudio=player;speechUrl=url;player.volume=voiceVolume;
+  const cleanup=()=>{if(speechAbort===abort)speechAbort=null;if(speechUrl===url){URL.revokeObjectURL(url);speechUrl='';}if(speechAudio===player)speechAudio=null;};
+  player.addEventListener('ended',()=>{cleanup();finishSpeech(token);});
+  player.addEventListener('error',()=>{cleanup();finishSpeech(token);});
+  const duration=await new Promise(resolve=>{const timer=setTimeout(()=>resolve(0),3000);player.addEventListener('loadedmetadata',()=>{clearTimeout(timer);resolve(player.duration||0);},{once:true});player.addEventListener('error',()=>{clearTimeout(timer);resolve(0);},{once:true});});
+  if(token!==speakToken){cleanup();return false;}
+  if(duration)pauseUntil=Date.now()+duration*1000+1200;
+  clearWatchdog();watchdog=setTimeout(()=>{releaseAudio();finishSpeech(token);},Math.max(8000,(duration||30)*1000+8000));
+  await player.play();
+  return true;
+ }
+ async function speakNow(text){
+  const phrase=cleanForSpeech(text).slice(0,600);if(!phrase){speaking=false;return;}
+  const token=++speakToken;
+  // O microfone fica pausado já durante a geração da voz na nuvem; o áudio em si ajusta o tempo depois.
+  const estimate=Math.min(120000,Math.max(5000,phrase.length*90/Math.max(.7,voiceRate)+4000));pauseUntil=Date.now()+estimate+900;
+  speaking=true;renderVoiceState();
+  if(canUseNatural()){
+   try{if(await speakNatural(phrase,token))return;if(token!==speakToken)return;}
+   catch(error){
+    if(token!==speakToken)return;
+    speechAbort=null;releaseAudio();
+    if(error.name!=='AbortError'&&error.name!=='NotAllowedError'){naturalDownUntil=Date.now()+60000;status.textContent='Voz natural indisponível: usando a voz do aparelho.';}
+   }
+  }
+  if(token!==speakToken)return;
+  speakDevice(phrase,token);
+ }
+ function speakDevice(phrase,token){
+  const synth=globalThis.speechSynthesis;if(!synth){status.textContent='Este navegador não oferece voz. As respostas continuam disponíveis em texto.';speaking=false;renderVoiceState();return;}
+  const voice=pickVoice(),utterance=new SpeechSynthesisUtterance(phrase);
   utterance.lang=voice?.lang||'pt-BR';if(voice)utterance.voice=voice;utterance.rate=voiceRate;utterance.volume=voiceVolume;
-  // Enquanto o Astro fala o microfone fica pausado; o limite é a duração estimada, não um minuto fixo.
   const estimate=Math.min(120000,Math.max(2000,phrase.length*90/Math.max(.7,voiceRate)));pauseUntil=Date.now()+estimate+900;
   const finish=()=>{if(token!==speakToken)return;speaking=false;clearWatchdog();pauseUntil=Date.now()+800;renderVoiceState();pump();};
   utterance.onend=finish;utterance.onerror=finish;
@@ -82,8 +128,8 @@ export function initAstro(ctx){
  rateInput.value=String(voiceRate);rateOutput.value=Math.round(voiceRate*100)+'%';
  volumeInput.value=String(voiceVolume);volumeOutput.value=Math.round(voiceVolume*100)+'%';
  rateInput.oninput=()=>{voiceRate=Number(rateInput.value);localStorage.setItem(RATE_KEY,String(voiceRate));rateOutput.value=Math.round(voiceRate*100)+'%';};
- volumeInput.oninput=()=>{voiceVolume=Number(volumeInput.value);localStorage.setItem(VOLUME_KEY,String(voiceVolume));volumeOutput.value=Math.round(voiceVolume*100)+'%';};
- voiceSelect.onchange=()=>{voiceName=voiceSelect.value;localStorage.setItem(NAME_KEY,voiceName);};
+ volumeInput.oninput=()=>{voiceVolume=Number(volumeInput.value);localStorage.setItem(VOLUME_KEY,String(voiceVolume));volumeOutput.value=Math.round(voiceVolume*100)+'%';if(speechAudio)speechAudio.volume=voiceVolume;};
+ voiceSelect.onchange=()=>{const value=voiceSelect.value;if(value.startsWith('n:')){voiceSource='natural';serviceVoice=value.slice(2);localStorage.setItem(SOURCE_KEY,'natural');localStorage.setItem(SERVICE_KEY,serviceVoice);}else{voiceSource='device';voiceName=value.slice(2);localStorage.setItem(SOURCE_KEY,'device');localStorage.setItem(NAME_KEY,voiceName);}};
  globalThis.speechSynthesis?.addEventListener?.('voiceschanged',fillVoices);
  globalThis.speechSynthesis?.getVoices?.();fillVoices();renderVoiceState();
  function select(value){tab=value;transcripts.setAttribute('aria-pressed',String(value==='transcript'));answers.setAttribute('aria-pressed',String(value==='answer'));render();}
@@ -96,7 +142,7 @@ export function initAstro(ctx){
   finally{askSend.disabled=false;}};
  async function poll(){if(polling||Date.now()<nextAttempt)return;polling=true;lastPoll=Date.now();const ticket=version,initial=cursor===0;
   try{const response=await apiFetch('/api/astro/'+encodeURIComponent(target)+'?after='+cursor,{signal:controller.signal}),data=await response.json();if(!current(ticket))return;
-   configured=data.configured;const old=cursor;if(data.cursor<cursor){items=[];cursor=0;return;}cursor=data.cursor;for(const e of data.events){if(items.some(row=>row.id===e.id))continue;items.push(e);if(e.at>=joinedAt&&e.id>old){if(e.kind==='answer')speak(e.text);else if(e.kind==='stop')stopSpeech(true);else if(e.kind==='transcript'&&e.wake)sound('astro-wake');}}render();lastProblem='';status.textContent=configured?(data.busy?'Astro pensando…':'Astro na call · ouvindo microfones abertos'):'O Astro ainda não foi ligado neste servidor. Avise um administrador.';
+   configured=data.configured;if(Array.isArray(data.voices)){const signature=JSON.stringify([!!data.tts,data.voices]);if(signature!==voiceSignature){voiceSignature=signature;serverVoices=data.voices.filter(v=>v&&v.id);naturalReady=!!data.tts;fillVoices();}}const old=cursor;if(data.cursor<cursor){items=[];cursor=0;return;}cursor=data.cursor;for(const e of data.events){if(items.some(row=>row.id===e.id))continue;items.push(e);if(e.at>=joinedAt&&e.id>old){if(e.kind==='answer')speak(e.text);else if(e.kind==='stop')stopSpeech(true);else if(e.kind==='transcript'&&e.wake)sound('astro-wake');}}render();lastProblem='';status.textContent=configured?(data.busy?'Astro pensando…':'Astro na call · ouvindo microfones abertos'):'O Astro ainda não foi ligado neste servidor. Avise um administrador.';
   }catch(error){if(current(ticket)&&error.name!=='AbortError'){lastProblem=error.message;status.textContent=lastProblem;nextAttempt=Date.now()+10000;}}
   finally{if(current(ticket))polling=false;}
  }

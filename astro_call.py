@@ -10,13 +10,14 @@ import os
 import re
 import time
 import wave
-from collections import deque
+from collections import OrderedDict, deque
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 import httpx
 from fastapi import Depends, HTTPException, Request
+from fastapi.responses import Response
 from livekit import api
 from upstream import client_for
 
@@ -49,6 +50,68 @@ def fold(text):
 def wake_match(text):
     folded = fold(text)
     return WAKE_ADDRESS.search(folded) or WAKE_BARE.search(folded)
+
+
+# ——— Voz: as mesmas vozes neurais do "Ler em voz alta" do Edge, sem chave paga ———
+TTS_VOICES = (
+    {'id': 'pt-BR-ThalitaMultilingualNeural', 'name': 'Thalita', 'note': 'feminina, jovem e natural'},
+    {'id': 'pt-BR-FranciscaNeural', 'name': 'Francisca', 'note': 'feminina, clássica e natural'},
+)
+_TTS_IDS = frozenset(voice['id'] for voice in TTS_VOICES)
+_TTS_CACHE = OrderedDict()
+_TTS_CACHE_LIMIT = 40
+_TTS_CACHE_BYTES = 6_000_000
+
+
+def tts_available():
+    try:
+        import edge_tts  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+def tts_rate(value):
+    try:
+        rate = float(value)
+    except (TypeError, ValueError):
+        rate = 1
+    rate = min(1.3, max(.7, rate))
+    return f'{int(round((rate - 1) * 100)):+d}%'
+
+
+async def synthesize_speech(text, voice, rate):
+    """Gera o MP3; qualquer falha externa vira 503 para o cliente usar a voz do aparelho."""
+    try:
+        import edge_tts
+    except ImportError:
+        raise HTTPException(503, 'A voz natural não está disponível neste servidor.')
+    audio = bytearray()
+    try:
+        async with asyncio.timeout(20):
+            stream = edge_tts.Communicate(text, voice, rate=rate).stream()
+            async for chunk in stream:
+                if chunk['type'] == 'audio':
+                    audio.extend(chunk['data'])
+    except Exception:
+        raise HTTPException(503, 'A voz natural está indisponível agora.')
+    if not audio:
+        raise HTTPException(503, 'A voz natural não devolveu áudio.')
+    return bytes(audio)
+
+
+async def natural_speech(text, voice, rate):
+    # Respostas repetidas ("Feito.", confirmações) saem do cache sem nova chamada externa.
+    key = (voice, rate, text)
+    cached = _TTS_CACHE.get(key)
+    if cached:
+        _TTS_CACHE.move_to_end(key)
+        return cached
+    audio = await synthesize_speech(text, voice, rate)
+    _TTS_CACHE[key] = audio
+    while len(_TTS_CACHE) > _TTS_CACHE_LIMIT or sum(map(len, _TTS_CACHE.values())) > _TTS_CACHE_BYTES:
+        _TTS_CACHE.popitem(last=False)
+    return audio
 
 
 # ——— Ouvir juntos: o Astro entende o pedido e o navegador de quem falou executa ———
@@ -215,6 +278,7 @@ class Call:
     uploading: set = field(default_factory=set)
     last_upload: dict = field(default_factory=dict)
     last_ask: dict = field(default_factory=dict)
+    last_speech: dict = field(default_factory=dict)
     sequence: int = 0
     touched: float = field(default_factory=time.time)
     busy: bool = False
@@ -228,6 +292,7 @@ class Call:
         self.pending = {k: v for k, v in self.pending.items() if v > now}
         self.last_upload = {k: v for k, v in self.last_upload.items() if v > now - 120}
         self.last_ask = {k: v for k, v in self.last_ask.items() if v > now - 10}
+        self.last_speech = {k: v for k, v in self.last_speech.items() if v > now - 10}
         self.tails = {k: v for k, v in self.tails.items() if v[1] > now - 20}
 
     def add(self, kind, name, text):
@@ -367,7 +432,8 @@ def install_astro(app, current_user, settings):
         await member(room, user)
         call = get_call(room)
         return {'configured': bool(os.getenv('GROQ_API_KEY')), 'events': [e for e in call.events if e['id'] > after],
-                'cursor': call.sequence, 'window_seconds': WINDOW, 'busy': call.busy}
+                'cursor': call.sequence, 'window_seconds': WINDOW, 'busy': call.busy,
+                'voices': list(TTS_VOICES), 'tts': tts_available()}
 
     @app.post('/api/astro/{room}/audio')
     async def audio(room: str, request: Request, chunk_id: UUID, identity=Depends(current_user)):
@@ -461,3 +527,25 @@ def install_astro(app, current_user, settings):
         else:
             await respond(call, speaker, question)
         return {'ok': True}
+
+    @app.post('/api/astro/{room}/speech')
+    async def speech(room: str, payload: dict, identity=Depends(current_user)):
+        user, _ = identity
+        await member(room, user)
+        voice = str(payload.get('voice', ''))
+        if voice not in _TTS_IDS:
+            raise HTTPException(400, 'Escolha uma das vozes disponíveis.')
+        text = ' '.join(str(payload.get('text', '')).split())
+        if len(text) < 2:
+            raise HTTPException(400, 'Escreva o texto que o Astro deve falar.')
+        if len(text) > 600:
+            raise HTTPException(400, 'Texto muito longo para a voz natural.')
+        call = get_call(room)
+        uid = user['id']
+        now = time.time()
+        if now - call.last_speech.get(uid, 0) < .7:
+            raise HTTPException(429, 'Aguarde um instante antes de gerar outra fala.')
+        call.last_speech[uid] = now
+        audio = await natural_speech(text, voice, tts_rate(payload.get('rate')))
+        return Response(audio, media_type='audio/mpeg',
+                        headers={'Cache-Control': 'private, max-age=3600'})

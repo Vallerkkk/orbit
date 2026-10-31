@@ -38,6 +38,7 @@ class AstroTests(unittest.TestCase):
         self.lk=patch.object(astro.api, 'LiveKitAPI', FakeLiveKit);self.lk.start()
         self.addCleanup(self.lk.stop)
         FakeLiveKit.allowed=FakeLiveKit.can_publish=True
+        astro._TTS_CACHE.clear()
 
     def audio(self, data=None):
         return self.client.post(f'/api/astro/{ROOM}/audio?chunk_id={CHUNK}', content=data or wav(), headers={'Content-Type':'audio/wav'})
@@ -186,5 +187,44 @@ class AstroTests(unittest.TestCase):
         events=self.client.get('/api/astro/'+ROOM).json()['events']
         self.assertEqual([e['kind'] for e in events],['transcript','answer'])
         self.assertRegex(events[-1]['text'],r'^São \d{2}:\d{2}, horário de Brasília\.$')
+
+    def test_natural_voice_endpoint_returns_mp3_and_reuses_cache(self):
+        calls=[]
+        async def fake(text,voice,rate):
+            calls.append((text,voice,rate));return b'ID3\x04\x00\x00\x00\x00\x00\x00fake'
+        payload={'text':'Olá a todos','voice':'pt-BR-ThalitaMultilingualNeural','rate':1.1}
+        with patch.object(astro,'synthesize_speech',fake):
+            first=self.client.post(f'/api/astro/{ROOM}/speech',json=payload)
+            self.app.state.astro_calls[ROOM].last_speech.clear()
+            second=self.client.post(f'/api/astro/{ROOM}/speech',json=payload)
+        self.assertEqual(first.status_code,200)
+        self.assertEqual(first.headers['content-type'],'audio/mpeg')
+        self.assertTrue(first.content.startswith(b'ID3'))
+        self.assertEqual(second.content,first.content)
+        self.assertEqual(calls,[('Olá a todos','pt-BR-ThalitaMultilingualNeural','+10%')])
+
+    def test_natural_voice_validates_text_voice_and_presence(self):
+        def speech(**payload):
+            return self.client.post(f'/api/astro/{ROOM}/speech',json=payload)
+        self.assertEqual(speech(text='oi',voice='voz-desconhecida').status_code,400)
+        self.assertEqual(speech(text='x',voice='pt-BR-FranciscaNeural').status_code,400)
+        self.assertEqual(speech(text='x'*601,voice='pt-BR-FranciscaNeural').status_code,400)
+        FakeLiveKit.allowed=False
+        self.assertEqual(speech(text='oi',voice='pt-BR-FranciscaNeural').status_code,403)
+
+    def test_natural_voice_failure_is_reported_for_device_fallback(self):
+        async def broken(*args,**kwargs):raise HTTPException(503,'A voz natural está indisponível agora.')
+        with patch.object(astro,'synthesize_speech',broken):
+            response=self.client.post(f'/api/astro/{ROOM}/speech',
+                json={'text':'Olá a todos','voice':'pt-BR-FranciscaNeural'})
+        self.assertEqual(response.status_code,503)
+        self.assertIn('indisponível',response.json()['detail'])
+
+    def test_events_announce_natural_voices(self):
+        data=self.client.get('/api/astro/'+ROOM).json()
+        self.assertEqual([v['id'] for v in data['voices']],
+            ['pt-BR-ThalitaMultilingualNeural','pt-BR-FranciscaNeural'])
+        self.assertIsInstance(data['tts'],bool)
+        self.assertEqual((astro.tts_rate(None),astro.tts_rate(.8),astro.tts_rate(2)),('+0%','-20%','+30%'))
 
 if __name__=='__main__':unittest.main()
