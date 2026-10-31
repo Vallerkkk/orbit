@@ -438,9 +438,11 @@ function renderMessages(scroll = false, position) {
   const nodes=[];list.classList.toggle('history-long',messages.size>200);list.setAttribute('aria-busy',String(loading||initialHistory));
   const welcome=list.querySelector('.welcome')||el('div','welcome');
   if(!welcome.childNodes.length){welcome.append(el('div','welcome-icon',selected.private?'◉':'#'),el('h1','',(selected.private?'Sua conversa com ':'Bem-vindo a #')+selected.name),el('p','',selected.private?'Mensagens e chamadas visíveis apenas para vocês dois.':'Um espaço para conversar, compartilhar e estar junto.'));}
-  if(initialHistory&&!messages.size){const skeleton=el('div','history-skeleton');skeleton.setAttribute('aria-label','Carregando mensagens');skeleton.setAttribute('role','status');for(let i=0;i<6;i++)skeleton.append(el('div','skeleton-message'));nodes.push(skeleton);}else{nodes.push(welcome);if(!messages.size){let action=welcome.querySelector('button');if(!action){action=button('Escrever a primeira mensagem',()=>$('message-input').focus());welcome.append(action);}}}
+  if(initialHistory&&!messages.size){const skeleton=el('div','history-skeleton');skeleton.setAttribute('aria-label','Carregando mensagens');skeleton.setAttribute('role','status');for(let i=0;i<6;i++)skeleton.append(el('div','skeleton-message'));nodes.push(skeleton);}else if(!pinsOnly){nodes.push(welcome);if(!messages.size){let action=welcome.querySelector('button');if(!action){action=button('Escrever a primeira mensagem',()=>$('message-input').focus());welcome.append(action);}}}
   if(historyError){const warning=el('div','history-error');warning.append(el('span','',historyError),button('Tentar novamente',()=>loadMessages(generation,true)));nodes.push(warning);}
   const all=[...messages.values(),...outbox.rows(session.user.id,selected)].filter(m=>!m.thread_root&&(!pinsOnly||m.pinned||m.local_state)).sort((a,b)=>a.created_at.localeCompare(b.created_at)||a.id.localeCompare(b.id));
+  if(selected?.private){const recent=all.filter(m=>m.content);const last=recent[recent.length-1];if(last)rememberDmPreview(selected.id,last.content,last.author_id,last.created_at);}
+  if(pinsOnly){const pinned=all.filter(m=>m.pinned).length,banner=el('div','pins-banner');banner.setAttribute('role','status');banner.append(el('span','',pinned?'Mostrando apenas as mensagens fixadas.':'Nenhuma mensagem fixada neste canal ainda.'),button('Mostrar todas as mensagens',()=>setPinsOnly(false),'text-button'));nodes.push(banner);}
   // Janela de renderização: só as últimas N linhas ficam no DOM; rolar ao topo (ou o botão) revela mais antes de buscar no servidor.
   const hiddenRows=Math.max(0,all.length-renderWindow),sorted=hiddenRows?all.slice(hiddenRows):all;
   if(hasMore||hiddenRows){const more=list.querySelector('.load-more')||button('Carregar mensagens anteriores',()=>{if(expandRenderWindow())return;renderWindow=Math.max(renderWindow,messages.size+100);loadMessages(generation);},'load-more');more.disabled=loading&&!hiddenRows;nodes.push(more);}
@@ -471,6 +473,7 @@ function completeMessage(record, data) {
   outbox.remove(record.id);
   if (session?.user.id !== record.user) return;
   if (data) conversationCache.patch(record.key, data);
+  if (data && record.target.private) { rememberDmPreview(record.target.id, data.content, data.author_id, data.created_at); renderSocial(); }
   if (!home && conversationKey(session.user.id, selected) === record.key) {
     if (data) messages.set(data.id, data);
     renderMessages(lastViewport?.atBottom); saveConversation();
@@ -994,6 +997,7 @@ async function boot(){
 let peopleById=new Map(),peopleByUsername=new Map();const profileMediaUrls=new Map();
 let profile, people = [], friendships = [], conversations = [], socialSubscription, presenceChannel;
 let publicVoicePresence=[],lastPresenceSignature='',online = new Set(), home = false, pinsOnly = false;
+const dmPreviews=new Map();
 let communityRoleList=[],memberRoles=[],communityMemberList=[],communityEmojiList=[];
 let communityEmojiUrls=new Map();
 let noise = localStorage.getItem('orbita-noise') !== 'false';
@@ -1059,6 +1063,7 @@ $('app-dialog').addEventListener('close',()=>{if($('app-dialog').open)return;dis
   dialog.addEventListener('pointerdown',event=>{outside=event.target===dialog;});
   dialog.addEventListener('click',event=>{const dismiss=event.target===dialog&&outside;outside=false;if(dismiss&&dialog.open&&dialog.dataset.keep!=='1')dialog.close();});}
 function showDialog(title, build) {
+  closeMobileMenu();
   if(!$('app-dialog').open)dialogReturnFocus=document.activeElement;delete $('app-dialog').dataset.keep;disposeDialog();$('dialog-title').textContent=title;const body=el('div','dialog-body');$('dialog-content').replaceChildren(body);build(body);if(!$('app-dialog').open)$('app-dialog').showModal();
 }
 // Bio ("Sobre você"): quebras de linha preservadas; no máx. 8 linhas e 1 linha em branco seguida.
@@ -1086,6 +1091,8 @@ async function loadSocial() {
   if(session?.user.id!==userId||revision!==socialRevision)return;[people,friendships,conversations]=results;peopleById=new Map(people.map(p=>[p.id,p]));notifyFriendRequests(userId);peopleByUsername=new Map(people.map(p=>[p.username?.toLowerCase(),p]));
   profile=person(session.user.id);await hydrateProfileMedia();if(session?.user.id!==userId||revision!==socialRevision)return;$('user-name').textContent=profile.display_name;setSelfHandle(profile.username);
   setAvatar($('user-avatar'),profile);
+  try{const {data:recent,error}=await db.from('direct_messages').select('conversation_id,content,author_id,created_at').order('created_at',{ascending:false}).limit(200);if(!error)for(const row of [...recent].reverse()){const existing=dmPreviews.get(row.conversation_id);if(!existing||(Date.parse(existing.at||0)||0)<(Date.parse(row.created_at||0)||0))rememberDmPreview(row.conversation_id,row.content,row.author_id,row.created_at);}}catch{}
+  if(session?.user.id!==userId||revision!==socialRevision)return;
   renderSocial();renderMembers();if(home)renderFriends();if(room)updateCallUI();
 }
 async function hydrateProfileMedia(){
@@ -1126,7 +1133,7 @@ async function initSocial() {
     .on('postgres_changes',{event:'*',schema:'public',table:'community_member_roles'},scheduleAccessRefresh)
     .on('postgres_changes',{event:'*',schema:'public',table:'community_roles'},scheduleAccessRefresh)
     .on('postgres_changes',{event:'*',schema:'public',table:'call_events'},payload=>dmCalls?.onEvent(payload.new,payload.eventType))
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'direct_messages'},payload=>{const m=payload.new;if(m?.author_id!==session?.user.id&&!(selected?.private&&selected.id===m?.conversation_id&&!document.hidden))dmUnread?.refresh();else if(selected?.private&&selected.id===m?.conversation_id)dmUnread?.markRead(m.conversation_id);})
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'direct_messages'},payload=>{const m=payload.new;if(m?.conversation_id){rememberDmPreview(m.conversation_id,m.content,m.author_id,m.created_at);renderSocial();}if(m?.author_id!==session?.user.id&&!(selected?.private&&selected.id===m?.conversation_id&&!document.hidden))dmUnread?.refresh();else if(selected?.private&&selected.id===m?.conversation_id)dmUnread?.markRead(m.conversation_id);})
     .on('postgres_changes',{event:'*',schema:'public',table:'reactions'},()=>{if(!home&&selected?.kind==='text')refreshMessages();})
     .subscribe(status=>{if(status==='SUBSCRIBED')dmCalls?.poll();});dmUnread?.refresh();dmCalls?.watch();
   if(presenceChannel) await db.removeChannel(presenceChannel);
@@ -1191,6 +1198,9 @@ function renderMembers() {
 }
 {let t=0;matchMedia('(min-width:1100px)').addEventListener('change',()=>{clearTimeout(t);t=setTimeout(()=>{if(session)syncMembersPanel();},50);});}
 function readPinnedDMs(){try{const list=JSON.parse(localStorage.getItem('orbita-pinned-dms:'+session?.user.id)||'[]');return Array.isArray(list)?list:[];}catch{return [];}}
+// Prévia da última mensagem por conversa: o schema não guarda esse texto, então
+// ele vem do histórico carregado e dos eventos em tempo real desta sessão.
+function rememberDmPreview(conversationId,text,authorId,at){if(!conversationId||!text)return;dmPreviews.set(conversationId,{text:String(text).replace(/\s+/g,' ').trim().slice(0,90),authorId,at:at||new Date().toISOString()});}
 function renderSocial() {
   $('dm-channels').replaceChildren();
   const pending=friendships.filter(f=>f.status==='pending'&&f.recipient_id===session.user.id).length;
@@ -1198,11 +1208,12 @@ function renderSocial() {
   const pinned=readPinnedDMs();
   const hiddenKey='orbita-hidden-dms:'+session.user.id;let hidden=[];try{hidden=JSON.parse(localStorage.getItem(hiddenKey)||'[]');}catch{}if(selected?.private)hidden=hidden.filter(id=>id!==selected.id);
   const ago=v=>{const t=Date.parse(v||'');if(!t)return '';const m=Math.max(0,Math.round((Date.now()-t)/60000));return m<1?'agora':m<60?m+' min':m<1440?Math.round(m/60)+' h':m<10080?Math.round(m/1440)+' d':new Date(t).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}).replace('.','');};
-  for(const c of [...conversations].filter(c=>!hidden.includes(c.id)).sort((a,b)=>Number(pinned.includes(b.id))-Number(pinned.includes(a.id)))){const p=person(otherUser(c));const isPinned=pinned.includes(c.id);
+  const previewOf=c=>dmPreviews.get(c.id);
+  for(const c of [...conversations].filter(c=>!hidden.includes(c.id)).sort((a,b)=>{const pinDiff=Number(pinned.includes(b.id))-Number(pinned.includes(a.id));if(pinDiff)return pinDiff;return (Date.parse(previewOf(b)?.at||b.last_message_at||b.created_at||0)||0)-(Date.parse(previewOf(a)?.at||a.last_message_at||a.created_at||0)||0);})){const p=person(otherUser(c));const isPinned=pinned.includes(c.id);
     const b=button('',()=>openConversation(c),'channel dm-item'+(selected?.private&&selected.id===c.id?' active':''));b.dataset.channelId=c.id;b.title=(p.display_name||p.username)+' · @'+p.username;
     const avWrap=el('span','dm-av-wrap'),av=el('span','avatar dm-av');setAvatar(av,p);const status=online.has(p.id)?(p.presence_status==='invisible'?'offline':p.presence_status||'online'):'offline';const dot=el('span','dm-presence');dot.dataset.status=status;dot.setAttribute('aria-label',{online:'Disponível',idle:'Ausente',dnd:'Não perturbe',offline:'Offline'}[status]||'Offline');avWrap.append(av,dot);
-    const text=el('span','dm-text'),name=el('span','channel-name dm-name',p.display_name||p.username);name.dir='auto';name.dataset.userId=p.id;const sub=el('span','dm-sub',p.custom_status||p.presence_activity||'@'+p.username);sub.dir='auto';text.append(name,sub);
-    const when=el('span','dm-time',ago(c.last_message_at||c.updated_at||c.created_at));b.append(avWrap,text,when);
+    const text=el('span','dm-text'),name=el('span','channel-name dm-name',p.display_name||p.username);name.dir='auto';name.dataset.userId=p.id;const preview=previewOf(c),sub=el('span','dm-sub',preview?(preview.authorId===session.user.id?'Você: ':'')+preview.text:(p.custom_status||p.presence_activity||'@'+p.username));sub.dir='auto';text.append(name,sub);
+    const when=el('span','dm-time',ago(preview?.at||c.last_message_at||c.updated_at||c.created_at));b.append(avWrap,text,when);
     const wrap=el('div','dm-pinned-row dm-row'+(isPinned?' pinned':'')),pin=button(isPinned?'★':'☆',()=>{const next=readPinnedDMs().filter(id=>id!==c.id);if(!isPinned)next.unshift(c.id);localStorage.setItem('orbita-pinned-dms:'+session.user.id,JSON.stringify(next.slice(0,30)));renderSocial();},'dm-pin');pin.setAttribute('aria-label',(isPinned?'Desafixar':'Fixar')+' conversa com '+p.display_name);pin.setAttribute('aria-pressed',String(isPinned));
     const close=button('×',()=>{const next=[...new Set([...hidden,c.id])];localStorage.setItem(hiddenKey,JSON.stringify(next.slice(-200)));if(selected?.private&&selected.id===c.id)showFriends();else renderSocial();},'dm-close');close.setAttribute('aria-label','Fechar conversa com '+(p.display_name||p.username));
     wrap.append(b,pin,close);$('dm-channels').append(wrap);}
@@ -1533,7 +1544,8 @@ $('create-channel').onclick=()=>showDialog('Novo canal',container=>{
 });
 $('dialog-close').onclick=()=>$('app-dialog').close();
 $('search-messages').oninput=()=>renderMessages();
-$('pins-toggle').onclick=()=>{pinsOnly=!pinsOnly;$('pins-toggle').setAttribute('aria-pressed',String(pinsOnly));renderMessages();};
+function setPinsOnly(next){pinsOnly=!!next;$('pins-toggle').setAttribute('aria-pressed',String(pinsOnly));$('pins-toggle').classList.toggle('active',pinsOnly);renderMessages();$('message-list').scrollTop=0;}
+$('pins-toggle').onclick=()=>setPinsOnly(!pinsOnly);
 $('back-to-call').onclick=()=>{if(callChannel)selectChannel(callChannel);};
 $('dock-leave').onclick=()=>leaveCall();
 let microphoneBeforeDeafen=false;
@@ -1690,7 +1702,7 @@ initSocial=async()=>{
 function navigation(direct=false){
   $('sidebar-scroll-content').classList.toggle('hidden',direct);$('dm-scroll-content').classList.toggle('hidden',!direct);
   $('friends-nav').classList.toggle('active',direct);$('server-banner-box').classList.toggle('hidden',direct);
-  $('sidebar-server-title').textContent=direct?'Mensagens Diretas':communities.find(c=>c.id===activeCommunity)?.name||'Órbita';
+  const serverTitle=direct?'Mensagens Diretas':communities.find(c=>c.id===activeCommunity)?.name||'Órbita';$('sidebar-server-title').textContent=serverTitle;$('sidebar-server-title').title=serverTitle;
   $('create-channel').hidden=!managesCommunity();closeMobileMenu();
 }
 function renderCommunityRail(){
@@ -1806,8 +1818,9 @@ document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLower
 $('btn-search-toggle').onclick=()=>$('search-messages').focus();
 // Coluna de membros v2: estado em renderMembers()/syncMembersPanel().
   $('mobile-menu-btn').onclick=()=>{const open=document.body.classList.toggle('mobile-menu-open');$('mobile-menu-btn').setAttribute('aria-expanded',String(open));};
+  $('mobile-menu-close').onclick=event=>{event.stopPropagation();closeMobileMenu();};
 document.addEventListener('click',event=>{if(!document.body.classList.contains('mobile-menu-open'))return;const target=event.target;if(!(target instanceof Element)||!target.closest('.sidebar,.rail,#mobile-menu-btn,.mobile-nav-btn'))closeMobileMenu();});
-for(const view of ['friends-view','voice-view']){const target=$(view).querySelector('.chat-title');const menu=button('☰',()=>{const open=document.body.classList.toggle('mobile-menu-open');menu.setAttribute('aria-expanded',String(open));},'mobile-nav-btn');menu.setAttribute('aria-label','Menu de canais');menu.setAttribute('aria-expanded','false');target.prepend(menu);}
+for(const view of ['friends-view','voice-view']){const target=$(view).querySelector('.chat-title');const menu=button('',()=>{const open=document.body.classList.toggle('mobile-menu-open');menu.setAttribute('aria-expanded',String(open));},'mobile-nav-btn');menu.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';menu.setAttribute('aria-label','Menu de canais');menu.setAttribute('aria-expanded','false');target.prepend(menu);}
 
 $('up-profile-btn').onclick=()=>{
   if (profile) showProfile(profile);
@@ -1837,7 +1850,7 @@ $('settings').onclick=()=>{
   const layout=el('div','theme-layout');layout.append(prev,themeGrid);themeLabel.append(layout);appearance.append(themeLabel);
   const densityLabel=el('label','field','Densidade'),density=el('select');for(const value of ['cozy','compact']){const option=el('option','',value==='cozy'?'Confortável':'Compacta');option.value=value;density.append(option);}density.value=localStorage.getItem('orbita-density')||'cozy';densityLabel.append(density);appearance.append(densityLabel);
   for(const [input,key]of[[density,'density']])input.onchange=()=>{localStorage.setItem('orbita-'+key,input.value);document.body.dataset[key]=input.value;};
-  container.append(spotify().settingsCard());container.append(appearance,button('🐞 Reportar bug',()=>bugReports().open()),button('Aceitar convite de criador',()=>showCreatorInvite()),button('Sobre esta versão',()=>openCloud()));if(isAdmin())container.append(button('Relatórios de bug (ADM)',()=>bugReports().admin()));
+  container.append(spotify().settingsCard());container.append(appearance,button('Reportar bug',()=>bugReports().open()),button('Aceitar convite de criador',()=>showCreatorInvite()),button('Sobre esta versão',()=>openCloud()));if(isAdmin())container.append(button('Relatórios de bug (ADM)',()=>bugReports().admin()));
   if(isAdmin())container.append(button('Administrar o site',()=>openManagement(),'primary'));
 };
 function showCreatorInvite(){showDialog('Convite de criador — Kalil',container=>{

@@ -11,6 +11,7 @@ export function initCallLayout(context) {
   const resize=new ResizeObserver(fit);resize.observe(stage);
   const header=view.querySelector('.chat-header'),nav=action('call-navigation','menu','Abrir canais e conversas',()=>{const open=document.body.classList.toggle('mobile-menu-open');nav.setAttribute('aria-expanded',String(open));},header);header.prepend(nav);nav.classList.add('mobile-nav-btn');nav.setAttribute('aria-expanded','false');
   const footer=document.createElement('div');footer.className='call-footer';controls.before(footer);footer.append(controls);
+  const footerSize=new ResizeObserver(()=>view.style.setProperty('--call-footer-h',footer.offsetHeight+'px'));footerSize.observe(footer);
   const left=document.createElement('div');left.className='call-footer-side';footer.prepend(left);
   action('call-invite','people','Convidar pessoas',context.invite,left);
   const right=document.createElement('div');right.className='call-footer-side';footer.append(right);

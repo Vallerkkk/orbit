@@ -142,7 +142,7 @@ body #app-view .user-panel{
 .chat-header .header-search-wrap #btn-search-toggle:hover{color:var(--t2)!important}
 .chat-header .chat-title{overflow:hidden!important}
 .chat-header .chat-title h2{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
-@media(max-width:1460px){
+@media(max-width:1180px){
   .chat-header .ch-desc{display:none!important}
 }
 .chat-header .chat-actions button,.chat-header .icon-btn{

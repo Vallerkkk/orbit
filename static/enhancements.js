@@ -417,7 +417,7 @@ export function initEnhancements(context) {
   const drawerFocusables=()=>[...document.querySelectorAll('.rail button,.sidebar button,.sidebar input,.sidebar a')].filter(node=>!node.disabled&&node.getClientRects().length);
   function drawerChanged(){const open=document.body.classList.contains('mobile-menu-open')&&matchMedia('(max-width:780px)').matches;document.querySelector('.main').inert=open;document.querySelectorAll('.mobile-nav-btn,#mobile-menu-btn').forEach(node=>node.setAttribute('aria-expanded',String(open)));}
   new MutationObserver(drawerChanged).observe(document.body,{attributes:true,attributeFilter:['class']});
-  document.addEventListener('click',event=>{const invoker=event.target.closest('.mobile-nav-btn,#mobile-menu-btn');if(invoker&&document.body.classList.contains('mobile-menu-open')){drawerInvoker=invoker;requestAnimationFrame(()=>drawerFocusables()[0]?.focus());}});
+  document.addEventListener('click',event=>{const invoker=event.target.closest('.mobile-nav-btn,#mobile-menu-btn');if(invoker&&document.body.classList.contains('mobile-menu-open')){drawerInvoker=invoker;requestAnimationFrame(()=>{const close=$('mobile-menu-close');focusElement(close?.getClientRects().length?close:drawerFocusables()[0],invoker);});}});
   document.addEventListener('keydown',event=>{
     if($('app-dialog').open)return;
     if(document.body.classList.contains('mobile-menu-open')&&matchMedia('(max-width:780px)').matches){
