@@ -33,7 +33,15 @@ WAKE_ADDRESS = re.compile(
 WAKE_BARE = re.compile(
     rf'^\s*{_NAME}\s*(?:[,:;!?–—-]\s*|(?=\b(?:resuma|resume|explica|repete|traduz|calcula'
     rf'|conta|diga|fala|ajuda|qual|quais|quando|onde|como|porque|por\s+que|quem|o\s+que'
-    rf'|quanto|quantos|pode|consegue|faz)\b))')
+    rf'|quanto|quantos|pode|consegue|faz|toca|toque|tocar|coloca|coloque|colocar|poe|bota|bote'
+    rf'|pausa|pause|pausar|continua|continue|retoma|pula|pular|passa|passar|avanca|volta|voltar'
+    rf'|limpa|limpar|esvazia|esvaziar|zera|remove|remover|tira|tirar|apaga|embaralha|mistura'
+    rf'|mostra|mostrar|lista|fila|playlist|proxima|proximo|aumenta|abaixa|volume|silencia|cala'
+    rf'|chega)\b'
+    rf'|para(?=\s+de\b)))')
+# Nome no fim ("próxima música, Cloe"): só vale quando o que vem antes é um comando conhecido.
+WAKE_TRAILING = re.compile(
+    rf'(?:^|[,\s])\s*(?:(?:ei|oi|escuta|fala|psiu)\s+)?{_NAME}\s*[.!?]*\s*$')
 _STOP_VERB = (r'(?:para(?:r)?|pare)(?:\s+de)?(?:\s+(?:falar|fala|responder))?'
               r'|cala(?:r)?(?:\s+(?:a\s+)?boca)?'
               r'|silencia(?:r)?|silencio'
@@ -143,26 +151,60 @@ _NEXT_VERB = re.compile(r'(?:proxima|proximo|como\s+proxima|como\s+proximo)\s+')
 _POST_FILLER = re.compile(r'(?:ai|por\s+favor|pf)\s*[,!.]?\s*')
 _MODE_NOW = re.compile(r'(?:agora\s+mesmo|agora|ja)\s+')
 _LEADING_NOUN = re.compile(r'(?:(?:a|o|uma|um)\s+)?(?:musica|video|playlist)\s+')
-_TRAILING_JUNK = re.compile(r'\s+(?:na|a|para\s+a|pra)\s+fila\s*$|\s+para\s+(?:tocar|ouvir)\s*$|\s+no\s+youtube\s*$')
+_TRAILING_JUNK = re.compile(r'\s+(?:na|a|para\s+a|pra)\s+(?:fila|lista|playlist)\s*$'
+                            r'|\s+para\s+(?:tocar|ouvir)\s*$|\s+no\s+youtube\s*$')
+# Polidez e o nome no fim da frase ("pausa a música, por favor, Cloe").
+_TRAILING_POLITE = re.compile(
+    r'[,\s]+(?:por\s+favor|por\s+gentileza|pf|cloe|chloe|kloe|ei|ai)\s*$')
 _DEICTIC = {'isso', 'essa', 'esse', 'essa musica', 'aquela', 'aquela musica', 'a mesma', 'essa ai'}
+# "fila", "lista de reprodução" e "playlist" são a mesma coisa para quem fala.
+_QUEUE_NOUN = (r'(?:fila(?:\s+de\s+reproducao)?'
+               r'|lista(?:\s+de\s+(?:reproducao|musicas|videos))?'
+               r'|playlist)')
 _WATCH_SIMPLE = [
     (re.compile(r'(?:pausa|pause|pausar)(?:\s+(?:a|o)?\s*(?:musica|video|reproducao|tudo|isso))?'), 'pausar'),
     (re.compile(r'(?:pare|para)\s+(?:a|o)\s+(?:musica|video)'), 'pausar'),
-    (re.compile(r'(?:continua|continue|continuar|despausa|despausar|retoma|retomar)(?:\s+(?:a|o)?\s*(?:musica|video|reproducao))?'), 'continuar'),
-    (re.compile(r'(?:pula|pular|passa|passar|skip|proxima|proximo)(?:\s+(?:essa|esse|isso|a\s+musica|o\s+video|para\s+a\s+proxima|de\s+musica))?'), 'pular'),
-    (re.compile(r'(?:volta|voltar|anterior)(?:\s+(?:a\s+musica|o\s+video|para\s+o\s+anterior))?'), 'voltar'),
-    (re.compile(r'(?:fila|mostra\s+(?:a\s+)?fila|mostrar\s+(?:a\s+)?fila|ver\s+(?:a\s+)?fila|o\s+que\s+tem\s+na\s+fila|o\s+que\s+ha\s+na\s+fila)'), 'fila'),
-    (re.compile(r'(?:limpa|limpar|esvazia|esvaziar)\s+(?:a\s+)?fila'), 'limpar'),
-    (re.compile(r'(?:embaralha|embaralhar|mistura|misturar)(?:\s+(?:a\s+)?fila)?'), 'embaralhar'),
-    (re.compile(r'(?:repetir|repete|liga\s+(?:o\s+)?repetir|desliga\s+(?:o\s+)?repetir)'), 'repetir'),
-    (re.compile(r'(?:que|qual)\s+musica\s+(?:esta\s+|ta\s+)?tocando'), 'agora'),
-    (re.compile(r'(?:o\s+que\s+)?(?:esta|ta)\s+tocando'), 'agora'),
-    (re.compile(r'agora'), 'agora'),
+    (re.compile(r'(?:continua|continue|continuar|despausa|despausar|retoma|retomar)'
+                r'(?:\s+(?:a|o)?\s*(?:musica|video|reproducao|tudo|isso))?'), 'continuar'),
+    # "próxima música" sozinho é pular; "próxima música X" continua virando /proxima X.
+    (re.compile(r'(?:pula|pular|passa|passar|avanca|avancar|skip)'
+                r'(?:\s+(?:essa|esse|isso|a\s+musica|o\s+video|a\s+faixa|de\s+musica'
+                r'|musica|faixa|video|para\s+a\s+proxima))?'), 'pular'),
+    (re.compile(r'(?:toca|toque|tocar|coloca|coloque|colocar|poe|bota|bote)\s+'
+                r'(?:(?:a|o)\s+)?(?:proxima|proximo)(?:\s+(?:musica|faixa|video))?'), 'pular'),
+    (re.compile(r'(?:proxima|proximo)(?:\s+(?:musica|faixa|video|de\s+musica|a\s+musica'
+                r'|o\s+video|para\s+a\s+proxima))?'), 'pular'),
+    (re.compile(r'(?:volta|voltar|anterior)'
+                r'(?:\s+(?:a\s+musica|a\s+faixa|o\s+video|para\s+o\s+anterior))?'), 'voltar'),
+    (re.compile(r'fila|(?:mostra|mostrar|ver)\s+(?:(?:a|o)\s+)?' + _QUEUE_NOUN +
+                r'|o\s+que\s+(?:tem|ha)\s+na\s+(?:' + _QUEUE_NOUN + r')'
+                r'|qual\s+(?:e\s+)?a\s+(?:' + _QUEUE_NOUN + r')'), 'fila'),
+    (re.compile(r'(?:limpa|limpar|esvazia|esvaziar|zera|zerar|apaga|apagar)\s+'
+                r'(?:toda\s+a\s+|toda\s+|a\s+|o\s+)?(?:' + _QUEUE_NOUN + r'|tudo)'), 'limpar'),
+    (re.compile(r'(?:embaralha|embaralhar|mistura|misturar|shuffle)'
+                r'(?:\s+(?:(?:a|o)\s+)?' + _QUEUE_NOUN + r')?'), 'embaralhar'),
+    (re.compile(r'(?:repetir|repete|liga\s+(?:o\s+)?repetir|desliga\s+(?:o\s+)?repetir)'
+                r'(?:\s+(?:(?:a|o)\s+)?(?:musica|faixa|video))?'), 'repetir'),
+    (re.compile(r'(?:que|qual)\s+(?:e\s+)?(?:a\s+)?musica\s+(?:que\s+)?(?:esta|ta)\s+tocando'
+                r'|(?:o\s+que\s+)?(?:esta|ta)\s+tocando|agora'), 'agora'),
+    (re.compile(r'(?:ajuda|comandos)\s+(?:do|de|no)\s+ouvir\s+juntos'), 'ajuda'),
 ]
 _VOLUME = re.compile(r'(?:volume|som)\s+(?:para|em|a|no)?\s*(\d{1,3})\s*%?'
                      r'|(?:aumenta|aumentar|abaixa|abaixar|coloca|colocar|deixa|deixar)\s+'
                      r'(?:o\s+)?(?:volume|som)\s+(?:em|para|a|no)?\s*(\d{1,3})\s*%?')
-_REMOVE = re.compile(r'(?:remove|remover|tira|tirar|apaga|apagar)\s+(?:o\s+)?(?:item\s+)?(\d{1,2})(?:\s+da\s+fila)?')
+_ORDINALS = {
+    'primeira': 1, 'primeiro': 1, 'segunda': 2, 'segundo': 2, 'terceira': 3, 'terceiro': 3,
+    'quarta': 4, 'quarto': 4, 'quinta': 5, 'quinto': 5, 'sexta': 6, 'sexto': 6,
+    'setima': 7, 'setimo': 7, 'oitava': 8, 'oitavo': 8, 'nona': 9, 'nono': 9,
+    'decima': 10, 'decimo': 10,
+}
+_REMOVE = re.compile(
+    r'(?:remove|remover|tira|tirar|apaga|apagar|exclui|excluir)\s+'
+    r'(?:(?:o|a)\s+)?(?:item\s+)?'
+    r'(\d{1,2}|primeir[ao]|segund[ao]|terceir[ao]|quart[ao]|quint[ao]'
+    r'|sext[ao]|setim[ao]|oitav[ao]|non[ao]|decim[ao])'
+    r'(?:\s+(?:musica|faixa|video))?'
+    r'(?:\s+(?:da|de)\s+(?:fila|lista|playlist))?')
 
 
 def _cut(original, folded, pattern):
@@ -174,6 +216,9 @@ def watch_request(text):
     """Devolve um comando do Ouvir juntos (ex.: '/tocar X') ou None."""
     original, folded = text.strip(), fold(text).strip()
     original, folded = original.rstrip('?!. ').strip(), folded.rstrip('?!. ').strip()
+    # "pausa a música, por favor, Cloe": a polidez e o nome no fim não mudam o comando.
+    while (tail := _TRAILING_POLITE.search(folded)):
+        original, folded = original[:tail.start()].rstrip(' ,'), folded[:tail.start()].rstrip(' ,')
     if not folded:
         return None
     while (pair := _cut(original, folded, _POLITE)):
@@ -186,7 +231,9 @@ def watch_request(text):
         return '/volume ' + str(min(100, int(match.group(1) or match.group(2))))
     match = _REMOVE.fullmatch(folded)
     if match:
-        return '/remover ' + str(int(match.group(1)))
+        raw = match.group(1)
+        number = int(raw) if raw.isdigit() else _ORDINALS[raw]
+        return '/remover ' + str(number)
     for verb, command in ((_QUEUE_VERB, 'adicionar'), (_NEXT_VERB, 'proxima'), (_MUSIC_VERB, 'tocar')):
         pair = _cut(original, folded, verb)
         if not pair:
@@ -281,12 +328,27 @@ def direct_answer(text):
     return f'O resultado é {result}.' if result is not None else None
 
 
+# Pedido que claramente quer mexer no player, mas não casou com nenhum comando: melhor
+# ensinar o comando do que deixar o modelo inventar que executou algo.
+_MUSIC_HINT = re.compile(
+    r'\b(?:toca|toque|tocar|pausa|pausar|pula|pular|passa|passar|volta|voltar'
+    r'|limpa|limpar|esvazia|esvaziar|remove|remover|embaralha|embaralhar'
+    r'|coloca|colocar|adiciona|adicionar|proxima|proximo)\b'
+    r'[^.!?]{0,60}\b(?:fila|playlist|lista|musica|video|faixa)\b')
+_MUSIC_GUIDE = ('Não entendi qual comando do Ouvir juntos você quis. '
+                'Tente “Ei Cloe, pular”, “Ei Cloe, limpar a fila” ou “Ei Cloe, o que está tocando”.')
+
+
 def route_request(text):
     action = watch_request(text)
     if action:
         return 'watch', action
     answer = direct_answer(text)
-    return ('answer', answer) if answer else None
+    if answer:
+        return 'answer', answer
+    if _MUSIC_HINT.search(fold(text)):
+        return 'answer', _MUSIC_GUIDE
+    return None
 
 @dataclass
 class Call:
@@ -349,6 +411,15 @@ class Call:
                 return ('stop' if STOP.match(fold(question)) else 'ask'), question
             self.pending[user] = now + 20
             return 'pending', None
+        # "próxima música, Cloe": o nome no fim só conta se o que vem antes for um
+        # comando do Ouvir juntos ou uma ordem de parar — evita acordar com "gosto da Cloe".
+        tail = WAKE_TRAILING.search(fold(text))
+        if tail:
+            before = text[:tail.start()].strip()
+            if before and (stop_command(before) or watch_request(before)):
+                self.tails.pop(user, None)
+                self.pending.pop(user, None)
+                return ('stop' if stop_command(before) else 'ask'), before
         if self.pending.pop(user, 0) > now:
             return ('stop' if STOP.match(fold(text)) else 'ask'), text.strip()
         return None, None

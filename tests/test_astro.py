@@ -168,16 +168,50 @@ class CloeTests(unittest.TestCase):
             'pula essa':'/pular',
             'volta':'/voltar',
             'que música está tocando?':'/agora',
+            'que música que está tocando':'/agora',
             'limpa a fila':'/limpar',
             'embaralha a fila':'/embaralhar',
             'repete':'/repetir',
             'remove o item 2 da fila':'/remover 2',
             'volume 40':'/volume 40',
             'aumenta o volume para 30':'/volume 30',
+            # "próxima música" sem objeto é pular (antes virava busca por "música").
+            'próxima música':'/pular',
+            'pula a música':'/pular',
+            'toca a próxima':'/pular',
+            # Fila, lista de reprodução e playlist são o mesmo lugar.
+            'limpar lista de reprodução':'/limpar',
+            'limpa a playlist':'/limpar',
+            'apaga a lista de reprodução':'/limpar',
+            'mostra a lista de reprodução':'/fila',
+            'o que tem na playlist':'/fila',
+            'remove a segunda da fila':'/remover 2',
+            'apaga a terceira música':'/remover 3',
+            'pausa a música, por favor, Cloe':'/pausar',
+            'próxima música, Cloe':'/pular',
         }
         for text,command in cases.items():self.assertEqual(astro.watch_request(text),command,text)
         self.assertIsNone(astro.watch_request('toque essa música'))
         self.assertIsNone(astro.watch_request('qual é a capital da França?'))
+
+    def test_name_at_the_end_and_without_comma_still_controls_the_player(self):
+        c=astro.Call()
+        self.assertEqual(c.command('a','próxima música Cloe'),'próxima música')
+        self.assertEqual(c.command('b','pausa a música, Cloe'),'pausa a música')
+        self.assertEqual(c.command('c','Cloe limpar lista de reprodução'),'limpar lista de reprodução')
+        self.assertEqual(c.command('d','Cloe pausa a música'),'pausa a música')
+        self.assertEqual(c.command('e','Cloe coloca Bohemian Rhapsody na fila'),'coloca Bohemian Rhapsody na fila')
+        self.assertEqual(c.parse('f','para de falar, Cloe')[0],'stop')
+        # O nome no fim só acorda a assistente quando antes dele há um comando.
+        self.assertIsNone(c.command('g','eu gosto muito da Cloe'))
+        self.assertIsNone(c.command('h','a Cloe é legal'))
+        self.assertIsNone(c.command('i','o filme da Cloe'))
+
+    def test_unrecognized_music_order_gets_a_command_hint_instead_of_invention(self):
+        self.assertEqual(astro.route_request('pausa aí a música')[0],'answer')
+        self.assertIn('Ei Cloe, pular',astro.route_request('pausa aí a música')[1])
+        # Pergunta comum sobre o recurso continua indo para o modelo.
+        self.assertIsNone(astro.route_request('como funciona a fila'))
 
     def test_direct_time_date_and_math_answers(self):
         self.assertRegex(astro.direct_answer('que horas são?'),r'^São \d{2}:\d{2}, horário de Brasília\.$')
