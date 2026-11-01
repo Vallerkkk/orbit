@@ -1,5 +1,5 @@
 export const SOUND_EFFECTS=['fanfare','coin','laser','powerup','applause','pop'];
-// Motor compartilhado: o Astro usa os mesmos volumes e o mesmo silenciamento do app.
+// Motor compartilhado: a Cloe usa os mesmos volumes e o mesmo silenciamento do app.
 let sharedSounds=null;
 export const setSharedSounds=instance=>{sharedSounds=instance;};
 export const getSharedSounds=()=>sharedSounds;

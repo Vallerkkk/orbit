@@ -18,7 +18,7 @@ const shots='/workspace/redesign-shots';fs.mkdirSync(shots,{recursive:true});
  assert.match(await bio.inputValue(),/Primeira linha\nSegunda/);
  assert.match(await page.locator('.bio-counter').first().textContent(),/^\d+\/160$/);
  await bio.scrollIntoViewIfNeeded();await page.screenshot({path:path.join(shots,'fix-bio-editor.png')});
- await bio.locator('xpath=ancestor::form').getByRole('button',{name:'Salvar alterações',exact:true}).click();
+ await page.locator('#app-dialog').getByRole('button',{name:'Salvar alterações',exact:true}).click();
  await page.waitForFunction(USER=>window.__qaData.profiles.find(p=>p.id===USER).bio.includes('\n'),USER);
  assert.equal(await page.evaluate(USER=>window.__qaData.profiles.find(p=>p.id===USER).bio,USER),'Primeira linha\nSegunda <b>linha</b>\n\nFim');
  await page.keyboard.press('Escape');await page.waitForTimeout(200);

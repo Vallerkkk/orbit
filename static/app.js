@@ -1468,30 +1468,26 @@ function openSettingsHub(section='perfil'){$('app-dialog').dataset.stStart=secti
 window.orbitaOpenSettings=openSettingsHub;
 $('settings').onclick=()=>showDialog('Configurações',container=>{
   const card = el('div', 'profile-edit-card');
-  const bannerPrev = el('div', 'rp-banner-preview');
-  if (profile.banner_src) bannerPrev.style.backgroundImage = `url("${profile.banner_src.replaceAll('"','%22')}")`;
-  else if (/^#[0-9a-f]{6}$/i.test(loadProfilePrefs().bannerColor||'')) bannerPrev.style.background = loadProfilePrefs().bannerColor;
-  else if (profile.avatar_color) bannerPrev.style.background = `linear-gradient(135deg, ${profile.avatar_color}, #2a1f3d)`;
-  card.append(bannerPrev);
-  const wrap = el('div', 'rp-avatar-wrap');
-  const av = el('div', 'rp-avatar');
-  setAvatar(av, profile);
-  wrap.append(av);
-  card.append(wrap);
   const form=el('form');
-  const handle=inputField(form,'@ (nome de usuário)',profile.username||'',24),name=inputField(form,'Nickname (nome de exibição)',profile.display_name||'',32),bio=bioField(form,'Sobre você',profile.bio,160),pronouns=inputField(form,'Pronomes',profile.pronouns,32),activity=inputField(form,'Atividade (ex.: Jogando Minecraft / Ouvindo música)',profile.presence_activity,80),color=inputField(form,'Cor do perfil',profile.avatar_color,7);color.type='color';
-  setupHandleFields(handle,name,profile);
-  const avatarFile=profileFileField(form,'Foto do perfil',profile.avatar_src),bannerFile=profileFileField(form,'Banner (pode ser GIF animado)',profile.banner_src);
-  // Cor da capa (antes em 'Personalizar nome e capa'): usada quando não há banner.
-  const coverColor=inputField(form,'Cor da capa (sem banner)',/^#[0-9a-f]{6}$/i.test(loadProfilePrefs().bannerColor||'')?loadProfilePrefs().bannerColor:'#ff4f9a',7);coverColor.type='color';coverColor.oninput=()=>{if(!profile.banner_src&&!bannerFile.files[0])bannerPrev.style.background=coverColor.value;};
+  const handle=inputField(form,'Seu @ na Órbita',profile.username||'',24),name=inputField(form,'Nome de exibição',profile.display_name||'',32),bio=bioField(form,'Sobre você',profile.bio,160),pronouns=inputField(form,'Pronomes',profile.pronouns,32),activity=inputField(form,'Atividade',profile.presence_activity,80),color=inputField(form,'Cor do avatar',profile.avatar_color,7);color.type='color';
+  handle.placeholder='ex.: seu_nome';name.placeholder='Como você quer ser chamado';activity.placeholder='Ex.: Ouvindo lo-fi, jogando, estudando…';
+  const {hHint,nHint}=setupHandleFields(handle,name,profile);
+  const studioMount=el('div','st-studio');let studioHub=null;const uidAtOpen=session.user.id;
+  const avatarFile=profileFileField(form,'Foto do perfil',profile.avatar_src,url=>studioHub?.previewImage('avatar',url)),bannerFile=profileFileField(form,'Capa do perfil (banner)',profile.banner_src,url=>studioHub?.previewImage('banner',url));
+  // Cor da capa: usada quando o perfil não tem banner nem tema.
+  const coverColor=inputField(form,'Cor da capa',/^#[0-9a-f]{6}$/i.test(loadProfilePrefs().bannerColor||'')?loadProfilePrefs().bannerColor:'#ff4f9a',7);coverColor.type='color';coverColor.oninput=()=>studioHub?.previewCover(coverColor.value);
+  // Identidade em linhas explícitas: @ + nome, bio inteira, pronomes + atividade.
+  {const cell=(...kids)=>{const d=el('div','ps-ident-cell');d.append(...kids);return d;},row=(...kids)=>{const d=el('div','ps-ident-row');d.append(...kids);return d;},label=n=>n.closest('label');
+    const bioRow=row(cell(label(bio)));bioRow.classList.add('ps-ident-row--full');
+    form.append(row(cell(label(handle),hHint),cell(label(name),nHint)),bioRow,row(cell(label(pronouns)),cell(label(activity))));}
   // Áudio avançado mora em Voz e vídeo.
   const audioOpen=el('button','soft-button settings-audio-link','Processamento de áudio avançado');audioOpen.type='button';audioOpen.onclick=()=>openAudioPanel();container.append(audioOpen);
-  // Estúdio do perfil (pré-visualização ao vivo + cosméticos) embutido na mesma seção.
-  const studioMount=el('div','st-studio');let studioHub=null;const uidAtOpen=session.user.id;
-  loadStudio().then(st=>{if(!studioMount.isConnected&&!card.isConnected)return;if(session?.user.id!==uidAtOpen)return;studioHub=st.openEditor({mount:studioMount,info:{bio:bio.value,pronouns:pronouns.value},focusFile:kind=>{const f=kind==='banner'?bannerFile:avatarFile;f.closest('label')?.scrollIntoView({block:'center',behavior:reducedMotion()?'auto':'smooth'});f.focus();}});}).catch(()=>studioMount.remove());
-  const live=()=>studioHub?.setInfo({bio:normalizeBio(bio.value),pronouns:pronouns.value,presence_activity:activity.value,avatar_color:color.value});bio.addEventListener('input',live);pronouns.addEventListener('input',live);activity.addEventListener('input',live);color.addEventListener('input',live);
-  const save=el('button','primary','Salvar alterações');save.type='submit';form.append(save);card.prepend(studioMount);card.append(form); container.append(card);
-  form.onsubmit=async event=>{event.preventDefault();save.disabled=true;const uid=session.user.id,prior={...profile},created=[];let saved=false;try{
+  // Estúdio do perfil: identidade + foto + cosméticos numa coluna, com prévia fixa à direita.
+  const live=()=>studioHub?.setInfo({bio:normalizeBio(bio.value),pronouns:pronouns.value,presence_activity:activity.value.trim(),avatar_color:color.value,display_name:name.value.trim(),username:handle.value.trim().toLowerCase()});
+  bio.addEventListener('input',live);pronouns.addEventListener('input',live);activity.addEventListener('input',live);color.addEventListener('input',live);name.addEventListener('input',live);handle.addEventListener('input',live);
+  studioMount.append(form);card.append(studioMount);container.append(card);
+  loadStudio().then(st=>{if(!studioMount.isConnected)return;if(session?.user.id!==uidAtOpen)return;studioHub=st.openEditor({mount:studioMount,form,files:{avatar:avatarFile,banner:bannerFile,color,coverColor},fields:[handle,name,bio,pronouns,activity,color,coverColor,avatarFile,bannerFile],info:{bio:bio.value,pronouns:pronouns.value,presence_activity:activity.value.trim(),avatar_color:color.value,cover_color:coverColor.value,display_name:name.value.trim(),username:handle.value.trim().toLowerCase()},focusFile:kind=>{const f=kind==='banner'?bannerFile:avatarFile;f.closest('label')?.scrollIntoView({block:'center',behavior:reducedMotion()?'auto':'smooth'});f.click();},onSave:()=>form.requestSubmit()});live();}).catch(()=>studioMount.remove());
+  form.onsubmit=async event=>{event.preventDefault();studioHub?.setBusy(true);const uid=session.user.id,prior={...profile},created=[];let saved=false;try{
     const avatarUrl=avatarFile.files[0]?await uploadProfileAsset(avatarFile.files[0],'avatar'):prior.avatar_url||'';if(avatarUrl!==prior.avatar_url)created.push(avatarUrl);
     const bannerUrl=bannerFile.files[0]?await uploadProfileAsset(bannerFile.files[0],'banner'):prior.banner_url||'';if(bannerUrl!==prior.banner_url)created.push(bannerUrl);
     if(session?.user.id!==uid)throw Error('Sua conta mudou; salve o perfil novamente.');
@@ -1501,7 +1497,7 @@ $('settings').onclick=()=>showDialog('Configurações',container=>{
     saveProfilePrefs({...loadProfilePrefs(),bannerColor:coverColor.value});
     if(studioHub)await studioHub.save();
     await loadSocial();if(form.isConnected)$('app-dialog').close();toast('Perfil atualizado.');
-  }catch(e){if(!saved&&created.length)await db.storage.from('orbita-files').remove(created.filter(Boolean));toast(e.code==='23505'?'Esse nome de usuário já está em uso.':errorText(e));}finally{save.disabled=false;}};
+  }catch(e){if(!saved&&created.length)await db.storage.from('orbita-files').remove(created.filter(Boolean));toast(e.code==='23505'?'Esse nome de usuário já está em uso.':errorText(e));}finally{studioHub?.setBusy(false);}};
 });
 function openAudioPanel(){showDialog('Configurações de Áudio',container=>{
   container.classList.add('audio-panel');const form=el('form','audio-panel-form');container.append(el('p','panel-subtitle','Ajuste como seu microfone soa para os outros.'),form);
@@ -1665,7 +1661,7 @@ function renderCustomEmojiPicker(){
   document.querySelectorAll('.community-emoji-option').forEach(node=>node.remove());
   for(const emoji of communityEmojiList){const token=':'+emoji.name+':',url=communityEmojiUrls.get(token);if(!url)continue;const b=button('',()=>{insertComposer(token);$('emoji-popover').classList.add('hidden');$('message-input').focus();},'emoji-button community-emoji-option'),img=el('img');img.src=url;img.alt=token;b.append(img);$('emoji-grid').append(b);}
 }
-function profileFileField(form,labelText,currentUrl){const label=el('label','field',labelText),input=el('input');input.type='file';input.accept='image/png,image/jpeg,image/webp,image/gif';const preview=el('img','profile-upload-preview');let objectUrl;preview.alt=labelText;if(currentUrl)preview.src=currentUrl;else preview.hidden=true;const dispose=()=>{if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=null;}};dialogDisposers.add(dispose);input.onchange=async()=>{dispose();let file=input.files[0];if(file&&file.type!=='image/gif'&&/^image\//.test(file.type)){const cropped=await cropImage(file,{kind:/banner/i.test(labelText)?'banner':'avatar',host:input.closest('dialog')||document.body});if(!cropped){input.value='';file=null;}else if(cropped!==file){try{const dt=new DataTransfer();dt.items.add(cropped);input.files=dt.files;file=cropped;}catch{}}}if(file){objectUrl=URL.createObjectURL(file);preview.src=objectUrl;preview.hidden=false;}else{preview.hidden=!currentUrl;if(currentUrl)preview.src=currentUrl;}};label.append(input,preview);form.append(label);return input;}
+function profileFileField(form,labelText,currentUrl,onPreview){const label=el('label','field',labelText),input=el('input');input.type='file';input.accept='image/png,image/jpeg,image/webp,image/gif';const preview=el('img','profile-upload-preview');let objectUrl;preview.alt=labelText;if(currentUrl)preview.src=currentUrl;else preview.hidden=true;const dispose=()=>{if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=null;}};dialogDisposers.add(dispose);input.onchange=async()=>{dispose();let file=input.files[0];if(file&&file.type!=='image/gif'&&/^image\//.test(file.type)){const cropped=await cropImage(file,{kind:/banner/i.test(labelText)?'banner':'avatar',host:input.closest('dialog')||document.body});if(!cropped){input.value='';file=null;}else if(cropped!==file){try{const dt=new DataTransfer();dt.items.add(cropped);input.files=dt.files;file=cropped;}catch{}}}if(file){objectUrl=URL.createObjectURL(file);preview.src=objectUrl;preview.hidden=false;onPreview?.(objectUrl);}else{preview.hidden=!currentUrl;if(currentUrl)preview.src=currentUrl;onPreview?.(currentUrl||'');}};label.append(input,preview);form.append(label);return input;}
 async function uploadProfileAsset(file,kind){file=await compressImage(file,kind);if(!/^image\/(png|jpeg|webp|gif)$/.test(file.type)||file.size>5*1024*1024)throw Error('Use uma imagem PNG, JPG, WebP ou GIF de até 5 MB.');const ext=file.type==='image/jpeg'?'jpg':file.type.split('/')[1],path=`profiles/${session.user.id}/${kind}-${crypto.randomUUID()}.${ext}`;const {error}=await db.storage.from('orbita-files').upload(path,file,{cacheControl:'3600',contentType:file.type,upsert:false});if(error)throw error;return path;}
 const attachmentUrls=new Map();
 async function resolveAttachmentUrl(attachment){
@@ -2464,7 +2460,7 @@ setInterval(()=>trackVisibleActivity().catch(()=>{}),300000);document.addEventLi
 // @ e nickname separados: checagem ao vivo do @ (debounce) e validação do nickname.
 const HANDLE_REASONS={invalid:'Use 3 a 24 letras minúsculas, números ou _.',taken:'Este @ já está em uso.',reserved:'Este @ é reservado.',rate_limit:'Você só pode trocar o @ uma vez a cada 24 horas.',auth:'Entre para escolher um @.'};
 function setupHandleFields(handle,name,profile){handle.pattern='[a-z0-9_]{3,24}';handle.minLength=3;handle.required=true;handle.autocomplete='off';handle.spellcheck=false;handle.setAttribute('autocapitalize','none');name.required=true;name.removeAttribute('pattern');
-  const hHint=el('p','muted handle-hint'),nHint=el('p','muted nick-hint');hHint.setAttribute('aria-live','polite');handle.closest('label').after(hHint);name.closest('label').after(nHint);handle.closest('label')?.classList.add('handle-field');
+  const hHint=el('p','muted handle-hint'),nHint=el('p','muted nick-hint');hHint.setAttribute('aria-live','polite');handle.closest('label')?.after(hHint);name.closest('label')?.after(nHint);handle.closest('label')?.classList.add('handle-field');
   let timer,seq=0;const set=(state,text)=>{hHint.dataset.state=state;hHint.textContent=text;handle.setCustomValidity(state==='bad'?text:'');};
   const check=()=>{clearTimeout(timer);const v=handle.value.trim().toLowerCase();if(handle.value!==v)handle.value=v;
     if(v===String(profile.username||'').toLowerCase())return set('ok','Este é o seu @ atual.');
@@ -2472,7 +2468,7 @@ function setupHandleFields(handle,name,profile){handle.pattern='[a-z0-9_]{3,24}'
     timer=setTimeout(async()=>{try{const {data,error}=await db.rpc('username_available',{candidate:v});if(my!==seq)return;if(error)throw error;
       if(data?.ok)set('ok','@'+v+' está disponível.');else set('bad',HANDLE_REASONS[data?.reason]||'Este @ não pode ser usado.');}catch{if(my===seq)set('wait','Não deu para verificar agora; validamos ao salvar.');}},400);};
   const nick=()=>{const p=nicknameProblem(name.value);name.setCustomValidity(p);nHint.dataset.state=p?'bad':'ok';nHint.textContent=p||`Aparece como ${name.value.trim()} · @${handle.value.trim().toLowerCase()}`;};
-  handle.addEventListener('input',()=>{check();nick();});name.addEventListener('input',nick);check();nick();}
+  handle.addEventListener('input',()=>{check();nick();});name.addEventListener('input',nick);check();nick();return {hHint,nHint};}
 function chooseOAuthNickname(next){
  if(!['google','discord'].includes(next.user.app_metadata?.provider)||!/^orbiter_[a-f0-9]{12}$/.test(profile?.username||''))return Promise.resolve();
  return new Promise(resolve=>{const user=next.user.id;showDialog('Escolha seu nickname',box=>{box.append(el('p','muted','Este será seu nome na Órbita e seu @ para adicionar amigos. Você pode mudar depois.'));const form=el('form'),name=inputField(form,'Seu nickname','',24);name.pattern='[A-Za-z0-9_]{3,24}';name.minLength=3;name.required=true;const save=el('button','primary','Continuar');save.type='submit';form.append(save);form.onsubmit=async event=>{event.preventDefault();save.disabled=true;try{await checked(db.from('profiles').update({display_name:name.value.trim(),username:name.value.trim().toLowerCase()}).eq('id',user));if(session?.user.id!==user)return;await loadSocial();$('app-dialog').close();}catch(error){toast(error.code==='23505'?'Esse nickname já está em uso. Escolha outro.':errorText(error));}finally{save.disabled=false;}};box.append(form);});$('app-dialog').dataset.keep='1';$('app-dialog').addEventListener('close',resolve,{once:true});});
@@ -2568,5 +2564,5 @@ if(/^#spotify=/.test(location.hash)){const ok=location.hash==='#spotify=conectad
 
 window.orbitaJoinVoice=id=>joinVoiceChannel(id);import('./call-v3.js').then(m=>m.installCallV3()).catch(()=>{});
 
-// Astro acompanha a call realmente conectada, independentemente do canal selecionado.
+// Cloe acompanha a call realmente conectada, independentemente do canal selecionado.
 initAstro({el,button,apiFetch,watch:raw=>enhancements.watchCommand(raw,{noExternal:true}),state:()=>({room,callChannel,session,deafened})});

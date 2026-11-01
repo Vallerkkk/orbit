@@ -59,7 +59,7 @@
 .social-feed .sf-ico{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .social-feed .sf-header{padding:12px 24px;gap:12px;align-items:center;flex-wrap:nowrap}
 .social-feed .sf-heading h1{font-size:var(--fs-title,20px);margin:0}
-.social-feed .sf-head-search{flex:0 1 280px;display:flex;align-items:center;gap:8px;padding:0 6px 0 12px;border:1px solid var(--sf-line);border-radius:12px;background:var(--sf-card);border-bottom:1px solid var(--sf-line)}
+.social-feed .sf-head-search{flex:1 1 320px;max-width:420px;display:flex;align-items:center;gap:8px;padding:0 6px 0 12px;border:1px solid var(--sf-line);border-radius:12px;background:var(--sf-card);border-bottom:1px solid var(--sf-line)}
 .social-feed .sf-head-search input{border:0;background:transparent;min-height:38px;padding:0}
 .social-feed .sf-head-search .sf-search-btn{min-height:30px;padding:4px 10px;font-size:12px;border-radius:8px}
 .social-feed .sf-head-btn,.social-feed .sf-icon-btn{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:6px 12px;border-radius:12px}
@@ -77,7 +77,8 @@
 .social-feed .sf-more-box .sf-button{justify-content:flex-start;display:flex;gap:8px;align-items:center;border:0;min-height:38px;text-align:left}
 /* Composer */
 .social-feed .sf-composer{margin:0 0 12px;padding:14px 16px;border:1px solid var(--sf-line);border-radius:16px;background:var(--sf-card)}
-.social-feed .sf-compose-top textarea{min-height:46px;font-size:var(--fs-body,15px)}
+.social-feed .sf-compose-top textarea{min-height:52px;font-size:var(--fs-body,15px);transition:min-height .18s ease}
+.social-feed .sf-composer:focus-within .sf-compose-top textarea{min-height:88px}
 .social-feed .sf-compose-bar{gap:8px;padding-top:8px;align-items:center}
 .social-feed .sf-compose-tools{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0}
 .social-feed .sf-chip-btn{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:4px 10px;border-radius:10px;font-size:12.5px;background:var(--sf-card2);border:1px solid transparent}
@@ -223,7 +224,7 @@
 .sf-changelog ul{margin:0;padding-left:38px;display:grid;gap:4px;font-size:13px;line-height:1.45}
 .sf-changelog .sf-ico{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .social-feed .sf-compose-tools{flex:none!important;min-width:auto!important}
-.social-feed .sf-audience{min-width:0;flex:0 1 auto}
+.social-feed .sf-audience{min-width:0;flex:0 0 auto}
 @media(max-width:520px){.social-feed .sf-compose-bar{gap:4px}.social-feed .sf-compose-tools{gap:0}.social-feed .sf-audience{max-width:96px!important;padding:0 18px 0 8px}.social-feed .sf-compose-right{gap:6px}.social-feed .sf-counter{font-size:10.5px}}
 @media(max-width:400px){.social-feed .sf-counter{display:none}}
 
@@ -286,4 +287,78 @@
 }
 .sf-card {
   border-radius: 12px;
+}
+
+/* ===== Feed v4: leitura, interações e compositor ===== */
+.social-feed .sf-time-wrap{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.social-feed .sf-follow-chip{margin-left:auto;flex:none;min-height:26px;padding:2px 10px;border-radius:999px;border:1px solid color-mix(in srgb,var(--ac) 50%,transparent);background:transparent;color:var(--ac);font-size:11.5px;font-weight:700;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.social-feed .sf-follow-chip:hover{background:color-mix(in srgb,var(--ac) 14%,transparent)}
+.social-feed .sf-follow-chip[aria-pressed=true]{color:var(--sf-muted);border-color:var(--sf-line);background:transparent;cursor:default}
+.social-feed .sf-badge{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 5px;margin-left:6px;border-radius:999px;background:var(--ac);color:var(--onac,#fff);font-size:10px;font-weight:800;line-height:1}
+.social-feed .sf-more-box .sf-oldest{justify-content:flex-start}
+.social-feed .sf-oldest[aria-pressed=true]{color:var(--ac)!important;background:color-mix(in srgb,var(--ac) 12%,transparent)!important}
+
+.social-feed .sf-react-wrap{position:relative;display:flex;justify-content:center}
+.social-feed .sf-quickbar{position:absolute;bottom:calc(100% + 6px);left:50%;z-index:15;display:flex;gap:2px;padding:4px;border:1px solid var(--bd,#2e3039);border-radius:999px;background:var(--s2,#1a1b22);box-shadow:0 14px 34px -14px #000;opacity:0;pointer-events:none;transform:translateX(-50%) translateY(4px);transition:opacity .15s,transform .15s}
+.social-feed .sf-react-wrap:hover .sf-quickbar,.social-feed .sf-react-wrap:focus-within .sf-quickbar{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+.social-feed .sf-quick{width:32px;height:32px;border:0;border-radius:50%;background:transparent;font-size:17px;line-height:1;cursor:pointer;transition:background .15s,transform .15s}
+.social-feed .sf-quick:hover{background:color-mix(in srgb,currentColor 12%,transparent);transform:scale(1.12)}
+@media(hover:none){.social-feed .sf-quickbar{display:none}}
+.social-feed .sf-double-heart{position:absolute;z-index:12;pointer-events:none;font-size:42px;transform:translate(-50%,-50%);filter:drop-shadow(0 6px 14px #0008);animation:sf-double .8s ease-out forwards}
+@keyframes sf-double{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}25%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-140%) scale(1)}}
+
+.social-feed .sf-skeleton{display:grid;gap:10px;padding:16px;border:1px solid var(--bd,#2e3039);border-radius:16px;background:linear-gradient(180deg,var(--s2,#1a1b22),color-mix(in srgb,var(--s2,#1a1b22) 70%,var(--s1,#121318)))}
+.social-feed .sk-head{display:flex;align-items:center;gap:10px}
+.social-feed .sk-av,.social-feed .sk-name,.social-feed .sk-line,.social-feed .sk-actions{background:linear-gradient(90deg,color-mix(in srgb,currentColor 7%,transparent),color-mix(in srgb,currentColor 14%,transparent),color-mix(in srgb,currentColor 7%,transparent));background-size:200% 100%;animation:sf-shimmer 1.4s linear infinite}
+.social-feed .sk-av{width:40px;height:40px;border-radius:50%;flex:none}
+.social-feed .sk-name{width:126px;height:12px;border-radius:6px}
+.social-feed .sk-line{height:11px;border-radius:6px}
+.social-feed .sk-line.short{width:64%}
+.social-feed .sk-actions{height:32px;margin-top:6px;border-radius:10px}
+@keyframes sf-shimmer{to{background-position:-200% 0}}
+
+.social-feed .sf-person .sf-button{background:transparent!important;color:var(--ac);border:1px solid color-mix(in srgb,var(--ac) 45%,transparent);box-shadow:none;font-weight:650}
+.social-feed .sf-person .sf-button:hover{background:color-mix(in srgb,var(--ac) 14%,transparent)!important}
+.social-feed .sf-person .sf-button[aria-pressed=true]{color:var(--sf-muted);border-color:var(--sf-line);background:transparent!important}
+
+@media(max-width:780px){.social-feed .sf-follow-chip{margin-left:0}}
+
+/* Compositor em duas linhas no celular: ferramentas + audiência, depois contador + Publicar */
+@media(max-width:520px){
+ .social-feed .sf-compose-bar{display:flex!important;flex-wrap:wrap!important;row-gap:8px}
+ .social-feed .sf-compose-tools{flex:1 1 auto!important;min-width:0!important}
+ .social-feed .sf-compose-right{flex:1 1 100%!important;margin-left:0!important;justify-content:flex-end;gap:10px}
+ .social-feed .sf-compose-right .sf-publish-label{position:static!important;width:auto!important;height:auto!important;clip:auto!important;overflow:visible!important;white-space:nowrap}
+ .social-feed .sf-compose-right .sf-publish{min-height:34px!important;padding:6px 16px!important;gap:7px}
+ .social-feed .sf-audience{max-width:110px!important}
+}
+@media(max-width:400px){
+ .social-feed .sf-chip-btn{width:30px!important;height:30px}
+ .social-feed .sf-audience{max-width:92px!important;padding:0 16px 0 8px!important}
+ .social-feed .sf-tabs .sf-tab,.social-feed .sf-more-tabs>summary{padding:6px 5px}
+ .social-feed .sf-tabs .sf-tab span{font-size:11.5px}
+}
+@media(max-width:340px){
+ .social-feed .sf-chip-btn{width:28px!important;height:28px}
+ .social-feed .sf-audience{max-width:84px!important}
+}
+@media(max-width:400px){
+ .social-feed .sf-post-head{gap:8px}
+ .social-feed .sf-post-head .sf-avatar{width:40px;height:40px}
+ .social-feed .sf-author .sf-name{flex:1 1 100%;max-width:100%}
+ .social-feed .sf-follow-chip{min-height:24px;padding:2px 7px;font-size:10.5px}
+}
+@media(max-width:340px){
+ .social-feed .sf-post-head{gap:5px}
+ .social-feed .sf-post-head .sf-avatar{width:32px;height:32px}
+ .social-feed .sf-follow-chip{padding:1px 6px;font-size:10px}
+ .social-feed .sf-heading h1{font-size:15px}
+ #app-view .social-feed .sf-act{min-width:30px!important;padding:0 2px!important;gap:0}
+ #app-view .social-feed .sf-act span{display:none!important}
+ #app-view .social-feed .sf-actions{margin:8px 0 0}
+}
+@media(prefers-reduced-motion:reduce){
+ .social-feed .sf-skeleton .sk-av,.social-feed .sf-skeleton .sk-name,.social-feed .sf-skeleton .sk-line,.social-feed .sf-skeleton .sk-actions{animation:none}
+ .social-feed .sf-double-heart{display:none}
+ .social-feed .sf-quick,.social-feed .sf-follow-chip,.social-feed .sf-compose-top textarea{transition:none}
 }

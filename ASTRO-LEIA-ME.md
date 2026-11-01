@@ -1,15 +1,16 @@
-# Astro na Órbita
+# Cloe na Órbita
 
-Esta atualização integra o Astro às calls existentes, usando Groq para transcrever e responder. Ele inicia automaticamente quando um participante entra, sem botão para adicionar um bot.
+Esta atualização integra a Cloe às calls existentes, usando Groq para transcrever e responder. Ela inicia automaticamente quando um participante entra, sem botão para adicionar um bot. O comando é **“Ei Cloe”**; o nome antigo **“Ei Astro”** continua aceito como apelido, mas a interface agora chama a assistente de Cloe.
 
 ## Usar
 
 1. Execute o app como antes. As configurações de Supabase e LiveKit existentes continuam necessárias.
 2. A chave fornecida já está no arquivo privado `.env.astro`, lido pelo servidor e ignorado pelo Git. Guarde esse arquivo; não o envie manualmente ao GitHub nem o copie para `static/`.
 3. No servidor hospedado, defina `GROQ_API_KEY` nas variáveis de ambiente com a mesma chave. O arquivo ignorado pelo Git não acompanha um deploy feito pelo repositório. Reinicie o serviço depois de definir a variável.
-4. Entre numa call. Abra **✦ Astro · Transcrição** para ver as abas **Transcrição** e **Respostas do Astro**.
-5. Diga, por exemplo: **“Ei Astro, o que combinamos sobre o lançamento?”**. Também pode falar “Ei Astro”, fazer uma breve pausa e perguntar em seguida (até 20 segundos depois).
-6. Se o navegador bloquear som, toque em **Testar voz**. A voz padrão é a **Thalita**, uma voz neural feminina gerada no servidor; no painel também é possível escolher **Francisca** ou a voz do aparelho. Se a conexão com o serviço de voz falhar, o Astro volta sozinho para a voz do aparelho.
+4. Entre numa call. Abra **✦ Cloe · Transcrição** para ver as abas **Transcrição** e **Respostas da Cloe**.
+5. Diga, por exemplo: **“Ei Cloe, o que combinamos sobre o lançamento?”**. Também pode falar “Ei Cloe”, fazer uma breve pausa e perguntar em seguida (até 20 segundos depois).
+6. Para interromper a fala, toque em **Parar fala** ou diga **“para de falar”** — “pare”, “parar de falar” e “pode parar” também funcionam, com ou sem o nome. Enquanto a Cloe fala, o microfone continua aberto só para ouvir essa ordem: o restante do áudio é descartado e não entra na transcrição. Fones de ouvido ou o cancelamento de eco ligado ajudam a voz da própria Cloe não voltar pelo microfone.
+7. Se o navegador bloquear som, toque em **Testar voz**. A voz padrão é a **Thalita**, uma voz neural feminina gerada no servidor; no painel também é possível escolher **Francisca** ou a voz do aparelho. Se a conexão com o serviço de voz falhar, a Cloe volta sozinha para a voz do aparelho.
 
 O envio do próprio microfone pode ser pausado com **Pausar meu áudio**. Microfones fechados, áudio de tela e câmera não são enviados. O painel avisa que o áudio é processado pela Groq. O mesmo funcionamento vale para calls privadas e canais de voz.
 
@@ -21,8 +22,8 @@ O envio do próprio microfone pode ser pausado com **Pausar meu áudio**. Microf
 - A resposta usa `openai/gpt-oss-20b` com as transcrições dos últimos 15 minutos daquela sala. O modelo analisa esse contexto quando chamado; não treina nem cria memória pessoal permanente.
 - A aba de transcrição mostra só as falas; as respostas aparecem na outra aba. O histórico desta versão também é limitado aos últimos 15 minutos.
 - A resposta chega em texto a todos os participantes com o app atualizado; cada dispositivo reproduz a fala localmente. Não há um participante de áudio autônomo no servidor, nem uma voz sendo publicada como trilha no LiveKit. Aparelhos podem ter vozes ou tempos ligeiramente diferentes.
-- A voz natural usa o mesmo motor neural do "Ler em voz alta" do Microsoft Edge, sem chave de API. O texto da resposta é enviado a esse serviço para gerar o MP3; ele não é gravado no projeto. Falas repetidas ficam em cache por alguns minutos. Essa voz depende da internet e pode levar de 1 a 4 segundos para começar; o microfone fica pausado durante a geração para o Astro não ouvir a si mesmo.
-- Durante a fala do Astro, o envio do microfone é suspenso brevemente para evitar que a IA responda ao próprio áudio. Isso também pode omitir falas sobrepostas à resposta.
+- A voz natural usa o mesmo motor neural do "Ler em voz alta" do Microsoft Edge, sem chave de API. O texto da resposta é enviado a esse serviço para gerar o MP3; ele não é gravado no projeto. Falas repetidas ficam em cache por alguns minutos. Essa voz depende da internet e pode levar de 1 a 4 segundos para começar; o microfone fica pausado durante a geração para a Cloe não ouvir a si mesma.
+- Durante a fala da Cloe, o envio do microfone é suspenso brevemente para evitar que a IA responda ao próprio áudio. Isso também pode omitir falas sobrepostas à resposta.
 - O servidor confere a presença real na sala no LiveKit antes de ler o histórico ou aceitar áudio. Só participantes autorizados a publicar podem enviar áudio.
 - Não há nova tabela ou migração de banco. O contexto fica na memória de um único processo e se perde ao reiniciar. Execute com **um worker e uma instância**; múltiplos processos exigem um armazenamento compartilhado antes de escalar.
 
@@ -30,7 +31,7 @@ O envio do próprio microfone pode ser pausado com **Pausar meu áudio**. Microf
 
 Todos os participantes precisam carregar esta versão para que os respectivos microfones sejam transcritos. O recurso depende de HTTPS (ou localhost), AudioWorklet, permissão de microfone, conexão e cota disponível na Groq. Uma aba suspensa pelo sistema, especialmente no celular em segundo plano, pode interromper a captura. Falas muito baixas, ruído ou cortes de trechos podem causar erros. Em rede lenta a fila é limitada e trechos podem ser descartados, com aviso no painel.
 
-O plano da Groq pode ter limites e custos. O descarte de silêncio reduz pedidos, mas não garante funcionamento gratuito e ilimitado. O Astro não faz pesquisa na web para responder perguntas; a busca do YouTube é usada somente para pedidos de música no Ouvir juntos. A voz neural gratuita depende de um serviço externo da Microsoft: se ele mudar ou ficar fora do ar, o Astro continua falando com a voz do aparelho.
+O plano da Groq pode ter limites e custos. O descarte de silêncio reduz pedidos, mas não garante funcionamento gratuito e ilimitado. A Cloe não faz pesquisa na web para responder perguntas; a busca do YouTube é usada somente para pedidos de música no Ouvir juntos. A voz neural gratuita depende de um serviço externo da Microsoft: se ele mudar ou ficar fora do ar, a Cloe continua falando com a voz do aparelho.
 
 Configure modelos alternativos no servidor usando `ASTRO_STT_MODEL` e `ASTRO_LLM_MODEL`.
 
@@ -42,7 +43,7 @@ Validação nesta integração: 125 testes Python (incluindo `tests/test_astro.p
 
 ## Origem dos arquivos
 
-O recurso chegou como cópia do projeto cujo ZIP estava truncado em `static/vendor/rnnoise-0.4.1/rnnoise.wasm`; os arquivos ausentes foram recompostos de um ZIP anterior. A integração aqui aproveitou somente os arquivos do Astro (`astro_call.py`, `static/astro-call.js`, `static/astro-recorder.js`, testes e este documento) e a fiação mínima em `app.py`, `static/app.js`, `static/private-call-menu.js`, `static/call-layout.css` e `.env.example`. O restante daquela cópia era mais antigo que o repositório e foi descartado, inclusive a tela de carregamento antiga e um botão de emoji duplicado. Alterações exclusivas da parte perdida do ZIP podem não existir.
+O recurso chegou como cópia do projeto cujo ZIP estava truncado em `static/vendor/rnnoise-0.4.1/rnnoise.wasm`; os arquivos ausentes foram recompostos de um ZIP anterior. A integração aqui aproveitou somente os arquivos da assistente (`astro_call.py`, `static/astro-call.js`, `static/astro-recorder.js`, testes e este documento) e a fiação mínima em `app.py`, `static/app.js`, `static/private-call-menu.js`, `static/call-layout.css` e `.env.example`. O restante daquela cópia era mais antigo que o repositório e foi descartado, inclusive a tela de carregamento antiga e um botão de emoji duplicado. Alterações exclusivas da parte perdida do ZIP podem não existir.
 
 Documentação consultada:
 - https://console.groq.com/docs/overview

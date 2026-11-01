@@ -2006,7 +2006,7 @@ body[data-color-mode=light] #auth-view .auth-card #auth-status:not(:empty){color
 #voice-view .astro-voice select,#voice-view .astro-ask input,#voice-view .astro-ask button{min-height:40px}
 #voice-view .astro-voice .field input[type=range]{height:24px}
 .astro-events .astro-empty{margin:auto;padding:24px 8px;max-width:30ch;text-align:center;font-size:12.5px;line-height:1.5;color:var(--text-mut)}
-/* Em telas baixas o conteúdo do Astro não cabe no painel: rola dentro dele em vez de vazar sobre o rodapé da call. */
+/* Em telas baixas o conteúdo da Cloe não cabe no painel: rola dentro dele em vez de vazar sobre o rodapé da call. */
 @media(max-width:700px),(max-height:820px){
   #voice-view .astro-panel{overflow-y:auto;overscroll-behavior:contain}
   #voice-view .astro-panel>header{position:sticky;top:-1px;z-index:2;background:inherit;padding-bottom:6px}

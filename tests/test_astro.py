@@ -45,16 +45,16 @@ class AstroTests(unittest.TestCase):
 
     def test_wake_split_question_and_user_isolation(self):
         c=astro.Call()
-        self.assertIsNone(c.command('a','Ei Astro'))
+        self.assertIsNone(c.command('a','Ei Cloe'))
         self.assertIsNone(c.command('b','qual foi o combinado?'))
         self.assertEqual(c.command('a','qual foi o combinado?'),'qual foi o combinado?')
         self.assertIsNone(c.command('a','ei'))
-        self.assertEqual(c.command('a','Astro, resuma'),'resuma')
+        self.assertEqual(c.command('a','Cloe, resuma'),'resuma')
         self.assertIsNone(c.command('a','astrologia é interessante'))
 
     def test_real_time_window_not_last_n_rows(self):
         c=astro.Call();c.add('transcript','a','antigo');c.events[0]['at']=time.time()-901
-        c.add('transcript','a','recente');c.add('answer','Astro','resposta')
+        c.add('transcript','a','recente');c.add('answer','Cloe','resposta')
         self.assertEqual(c.context(),'a: recente')
         self.assertEqual(len(c.events),2)
 
@@ -68,7 +68,7 @@ class AstroTests(unittest.TestCase):
         requests=[]
         async def groq(app,path,**kwargs):
             requests.append((path,kwargs))
-            if path=='audio/transcriptions': return {'text':'Ei Astro, o que foi combinado?'}
+            if path=='audio/transcriptions': return {'text':'Ei Cloe, o que foi combinado?'}
             return {'choices':[{'message':{'content':'Combinamos testar o app.'}}]}
         with patch.object(astro,'groq_json',groq):
             self.assertEqual(self.audio().status_code,200)
@@ -76,6 +76,7 @@ class AstroTests(unittest.TestCase):
         events=self.client.get('/api/astro/'+ROOM).json()['events']
         self.assertEqual([e['kind'] for e in events],['transcript','answer'])
         self.assertEqual(events[0]['name'],'João')
+        self.assertEqual(events[1]['name'],'Cloe')
         self.assertEqual(requests[0][1]['data']['language'],'pt')
         self.assertEqual(len(requests),2)
         self.assertEqual(self.client.get('/api/astro/direct-44444444-4444-4444-8444-444444444444').json()['events'],[])
@@ -85,7 +86,7 @@ class AstroTests(unittest.TestCase):
         self.assertEqual(self.audio(b'x'*400001).status_code,413)
 
     def test_silence_and_provider_error_recovery(self):
-        async def silence(*args,**kwargs):return {'text':'Ei Astro','segments':[{'no_speech_prob':.99}]}
+        async def silence(*args,**kwargs):return {'text':'Ei Cloe','segments':[{'no_speech_prob':.99}]}
         with patch.object(astro,'groq_json',silence):self.assertFalse(self.audio().json()['transcribed'])
         self.assertEqual(self.client.get('/api/astro/'+ROOM).json()['events'],[])
         self.app.state.astro_calls.clear()
@@ -95,21 +96,50 @@ class AstroTests(unittest.TestCase):
 
     def test_wake_variants_and_false_positives(self):
         c=astro.Call()
-        self.assertEqual(c.command('a','Ei astro, qual é o resumo?'),'qual é o resumo?')
-        self.assertEqual(c.command('b','Astro, resuma a conversa'),'resuma a conversa')
-        self.assertEqual(c.command('c','Astro resuma'),'resuma')
-        self.assertEqual(c.command('d','as tro, quantos somos?'),'quantos somos?')
-        self.assertEqual(c.command('h','eistro, resuma'),'resuma')
-        self.assertIsNone(c.command('e','o astro do filme é bonito'))
-        self.assertIsNone(c.command('f','astronomia é legal'))
-        self.assertIsNone(c.command('g','Astro é legal'))
+        self.assertEqual(c.command('a','Ei cloe, qual é o resumo?'),'qual é o resumo?')
+        self.assertEqual(c.command('b','Cloe, resuma a conversa'),'resuma a conversa')
+        self.assertEqual(c.command('c','Cloe resuma'),'resuma')
+        self.assertEqual(c.command('i','Chloe, quantos somos?'),'quantos somos?')
+        self.assertEqual(c.command('j','Klôe, resuma'),'resuma')
+        self.assertIsNone(c.command('e','a cloe do filme é bonita'))
+        self.assertIsNone(c.command('f','clonagem é legal'))
+        self.assertIsNone(c.command('g','Cloe é legal'))
+        # O nome antigo continua valendo como apelido para quem já usava assim.
+        self.assertEqual(c.command('k','Ei Astro, qual é o resumo?'),'qual é o resumo?')
+        self.assertEqual(c.command('l','as tro, quantos somos?'),'quantos somos?')
+        self.assertEqual(c.command('m','eistro, resuma'),'resuma')
+        self.assertIsNone(c.command('n','o astro do filme é bonito'))
+        self.assertIsNone(c.command('o','astronomia é legal'))
 
     def test_stop_command_does_not_trigger_the_model(self):
         c=astro.Call()
-        self.assertEqual(c.parse('a','Astro, pare')[0],'stop')
-        self.assertEqual(c.parse('b','Astro, para aí')[0],'stop')
+        self.assertEqual(c.parse('a','Cloe, pare')[0],'stop')
+        self.assertEqual(c.parse('b','Cloe, para aí')[0],'stop')
         # "para que serve" é pergunta, não pedido para parar.
-        self.assertEqual(c.parse('c','Astro, para que serve o feed?')[0],'ask')
+        self.assertEqual(c.parse('c','Cloe, para que serve o feed?')[0],'ask')
+        # A ordem de parar vale sem o nome, com as frases mais naturais.
+        self.assertEqual(c.parse('d','Para de falar')[0],'stop')
+        self.assertEqual(c.parse('e','parar de falar, por favor')[0],'stop')
+        self.assertEqual(c.parse('f','pode parar')[0],'stop')
+        self.assertEqual(c.parse('g','Cloe, pare de responder')[0],'stop')
+        self.assertEqual(c.parse('h','silencia')[0],'stop')
+
+    def test_audio_while_speaking_only_accepts_stop(self):
+        texts=iter(['qual é o resumo?','Cloe, para de falar.'])
+        first='55555555-5555-4555-8555-555555555555'
+        second='66666666-6666-4666-8666-666666666666'
+        async def groq(app,path,**kwargs):
+            if path=='audio/transcriptions': return {'text':next(texts)}
+            return {'choices':[{'message':{'content':'resposta'}}]}
+        with patch.object(astro,'groq_json',groq):
+            ignored=self.client.post(f'/api/astro/{ROOM}/audio?chunk_id={first}&stop_only=1',content=wav(),headers={'Content-Type':'audio/wav'})
+            time.sleep(1.05)
+            stopped=self.client.post(f'/api/astro/{ROOM}/audio?chunk_id={second}&stop_only=1',content=wav(),headers={'Content-Type':'audio/wav'})
+        self.assertEqual(ignored.json(),{'transcribed':False})
+        self.assertEqual(stopped.json(),{'transcribed':True,'stop':True})
+        # Nada da fala da Cloe entra na transcrição; só o evento de parada é criado.
+        events=self.client.get('/api/astro/'+ROOM).json()['events']
+        self.assertEqual([e['kind'] for e in events],['stop'])
 
     def test_hallucination_is_filtered_before_transcript(self):
         async def hallucination(*args,**kwargs):return {'text':'Legendas pela comunidade Amara.org','segments':[]}
