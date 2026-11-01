@@ -48,9 +48,20 @@ async def lifespan(application):
             application.state.upstream = None
 
 
-app = FastAPI(title='Órbita', docs_url=None, redoc_url=None, lifespan=lifespan)
+app = FastAPI(title='Órbita', docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
 app.add_middleware(GZipMiddleware, minimum_size=800)
 bearer = HTTPBearer(auto_error=False)
+
+# Lista fechada de origens: scripts só do próprio site, do CDN do Supabase/LiveKit e do player do YouTube.
+# Umami, se for ativado, precisa do domínio dele incluído em script-src.
+CSP = ("default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://www.youtube.com; "
+       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+       "font-src 'self' data: https://fonts.gstatic.com; "
+       "img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; "
+       "connect-src 'self' https: wss:; "
+       "frame-src 'self' blob: https://www.youtube.com https://www.youtube-nocookie.com https://open.spotify.com; "
+       "worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; "
+       "form-action 'self'; frame-ancestors 'none'")
 
 
 def settings():
@@ -66,9 +77,10 @@ async def headers(request, call_next):
     # YouTube requires the embedding site's origin (error 153 without Referer).
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     response.headers['X-Frame-Options'] = 'DENY'
-    response.headers['Content-Security-Policy'] = "frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
+    response.headers['Content-Security-Policy'] = CSP
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     response.headers['Permissions-Policy'] = 'camera=(self), microphone=(self), display-capture=(self)'
-    if request.url.path.startswith('/api/') or request.url.path in ('/', '/sw.js', '/healthz'):
+    if request.url.path.startswith('/api/') or request.url.path in ('/', '/sw.js', '/healthz', '/readyz'):
         response.headers['Cache-Control'] = 'no-store'
     elif re.fullmatch(r'/static/dist/[\w-]+-[A-Za-z0-9]{8,16}\.(?:js|css)', request.url.path) and response.status_code in (200,304):
         response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
@@ -165,8 +177,10 @@ def make_token(user, room_name, can_publish=True, stage=False, moderator=False):
     metadata = user.get('user_metadata')
     name = metadata.get('display_name') if isinstance(metadata, dict) else None
     name = name.strip()[:50] if isinstance(name, str) and name.strip() else 'Participante'
+    # Crachá curto: quem for expulso não consegue voltar com o token antigo. As chamadas longas
+    # seguem sem corte; a reconexão do cliente pede um token novo.
     token = (api.AccessToken(s['LIVEKIT_API_KEY'], s['LIVEKIT_API_SECRET'])
-        .with_identity(user['id']).with_name(name).with_ttl(timedelta(minutes=10))
+        .with_identity(user['id']).with_name(name).with_ttl(timedelta(minutes=2))
         .with_grants(api.VideoGrants(room_join=True, room=room_name,
             can_publish=can_publish, can_subscribe=True, can_publish_data=True)).to_jwt())
     return JSONResponse({'url': s['LIVEKIT_URL'], 'token': token, 'canPublish':can_publish, 'stage':stage, 'moderator':moderator})
@@ -175,6 +189,25 @@ def make_token(user, room_name, can_publish=True, stage=False, moderator=False):
 @app.api_route('/healthz', methods=['GET','HEAD'])
 async def healthz():
     return {'status':'ok', 'service':'orbita'}
+
+
+@app.get('/readyz')
+async def readyz():
+    """Pronto para atender: confirma também se o login do Supabase responde.
+    O Render usa /healthz (só processo); monitores externos devem usar /readyz."""
+    s = settings()
+    if not s['SUPABASE_URL'] or not s['SUPABASE_PUBLISHABLE_KEY']:
+        return JSONResponse({'status': 'degraded', 'supabase': 'not-configured'}, status_code=503)
+    try:
+        async with client_for(app) as client:
+            response = await client.get(s['SUPABASE_URL'] + '/auth/v1/health',
+                headers={'apikey': s['SUPABASE_PUBLISHABLE_KEY']}, timeout=5)
+        healthy = response.status_code < 500
+    except httpx.HTTPError:
+        healthy = False
+    if not healthy:
+        return JSONResponse({'status': 'degraded', 'supabase': 'unreachable'}, status_code=503)
+    return {'status': 'ok', 'supabase': 'ok'}
 
 
 @app.get('/sw.js')

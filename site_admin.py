@@ -4,6 +4,7 @@ Defesa em duas camadas: (1) o FastAPI valida o JWT (current_user) e relê o carg
 public.site_roles; (2) cada ação é uma função SECURITY DEFINER que repete a checagem com
 auth.uid() e grava a auditoria. Nada do cliente (flag, localStorage) é considerado.
 """
+import logging
 from typing import Literal, Optional
 from uuid import UUID
 
@@ -14,6 +15,7 @@ from pydantic import BaseModel, Field
 from upstream import client_for, read_json
 
 DENIED = 'Somente administradores do app podem usar este comando.'
+log = logging.getLogger('orbita.site_admin')
 
 
 class Confirmed(BaseModel):
@@ -62,15 +64,11 @@ def install_site_admin(app, current_user, settings, is_site_admin):
         except httpx.HTTPError:
             raise HTTPException(503, 'O serviço de dados está indisponível. Tente novamente.')
         if result.is_error:
-            message = 'Não foi possível concluir o comando.'
-            try:
-                details = result.json()
-                if isinstance(details, dict) and isinstance(details.get('message'), str):
-                    message = details['message'][:250]
-            except (ValueError, TypeError):
-                pass
+            # Detalhes do banco (nomes de tabelas/funções/políticas) só no log do servidor.
+            log.warning('PostgREST %s respondeu %s: %s', name, result.status_code, result.text[:500])
             if result.status_code == 404:
                 raise HTTPException(503, 'Os comandos de administração ainda não foram instalados no banco.')
+            message = DENIED if result.status_code in (401, 403) else 'Não foi possível concluir o comando. Tente novamente.'
             raise HTTPException(403 if result.status_code in (401, 403) else 400 if result.status_code < 500 else 503, message)
         return read_json(result, (dict, list, bool, str, int, float, type(None))) if result.content else None
 

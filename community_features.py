@@ -2,6 +2,7 @@
 import asyncio
 import base64
 import json
+import logging
 import os
 import time
 from collections import defaultdict, deque
@@ -14,6 +15,9 @@ from fastapi import Depends, HTTPException
 from livekit import api
 from pydantic import BaseModel, Field
 from upstream import client_for, read_json
+
+
+log = logging.getLogger('orbita.community')
 
 
 PUSH_HOSTS = ('fcm.googleapis.com', 'push.services.mozilla.com', 'push.apple.com', 'notify.windows.com')
@@ -59,14 +63,11 @@ def install_features(app, current_user, settings):
         except httpx.HTTPError:
             raise HTTPException(503, 'O serviço de dados está indisponível. Tente novamente.')
         if result.is_error:
-            message = 'Sem permissão para esta ação.'
-            try:
-                details = result.json()
-                if isinstance(details, dict) and isinstance(details.get('message'), str):
-                    message = details['message'][:250]
-            except (ValueError, TypeError):
-                pass
-            raise HTTPException(403 if result.status_code in (400, 401, 403) else 503, message)
+            # O texto do banco pode citar tabelas, colunas e políticas internas: fica no log.
+            log.warning('PostgREST %s %s respondeu %s: %s', method, path, result.status_code, result.text[:500])
+            denied = result.status_code in (400, 401, 403)
+            raise HTTPException(403 if denied else 503,
+                                'Sem permissão para esta ação.' if denied else 'O serviço de dados não concluiu a ação. Tente novamente.')
         return read_json(result, (dict, list, bool, str, int, float, type(None))) if result.content else None
 
     def livekit():

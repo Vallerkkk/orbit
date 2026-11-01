@@ -2,11 +2,18 @@
 
 ## Publicar a interface
 
-Use Node 24: `npm ci` e `npm run build`. Commitar os fontes, o lockfile e os arquivos apontados por `static/dist/manifest.json`, além de `static/dist/index.html`. O Render Python entrega esses arquivos já compilados; não precisa instalar Node no servidor. `python scripts/check_build.py` verifica a integridade dos artefatos. Arquivos JS/CSS com hash recebem cache imutável por um ano; HTML, versão e APIs são revalidados ou não armazenados. Não apague arquivos com hash de uma versão publicada enquanto clientes antigos puderem solicitá-los.
+Use Node 24: `npm ci` e `npm run build`. Commitar os fontes, o lockfile e os arquivos apontados por `static/dist/manifest.json`, além de `static/dist/index.html`. O build do Render executa esse mesmo `npm ci && npm run build` antes de reiniciar o Python; o processo em execução só serve os arquivos compilados e não depende de Node. `python scripts/check_build.py` verifica a integridade dos artefatos. Arquivos JS/CSS com hash recebem cache imutável por um ano; HTML, versão e APIs são revalidados ou não armazenados. Não apague arquivos com hash de uma versão publicada enquanto clientes antigos puderem solicitá-los.
 
 O build usa esbuild com divisão de código e Lightning CSS. Feed, estilos do feed, temas extras, busca, aparência do perfil, administração e SDK de telemetria carregam sob demanda. Uma preferência de tema salva é carregada na entrada para respeitar a escolha da pessoa. LiveKit continua sendo importado ao entrar na chamada.
 
 `app.js` continua coordenando a sessão e o chat; ele não foi inteiramente reescrito. Busca, administração, feed, aparência, paletas, atualização e compartilhamento têm módulos próprios. Essa divisão gradual preserva os controles de áudio, chamadas e políticas existentes.
+
+## Publicação e disponibilidade
+
+- `render.yaml` define `autoDeploy: true` e `healthCheckPath: /healthz`: um push na branch publicada já dispara o deploy, e o Render troca o tráfego só depois que `/healthz` responde 200.
+- Gate de CI: para impedir publicação com teste quebrado, marque o workflow **Qualidade da Órbita** como obrigatório para `main` (GitHub → Settings → Branches → Branch protection) e escolha **After CI Checks Pass** em Auto-Deploy no painel do Render. Sem essas duas configurações, o deploy continua saindo direto no push.
+- `/healthz` responde apenas que o processo Python está vivo (é o que o Render usa). `/readyz` confere também o login do Supabase e devolve 503 quando ele não responde; monitores externos devem usar `/readyz`.
+- O token do LiveKit vale 2 minutos a partir da emissão. Quem entra na chamada depois desse prazo já recebeu um token novo; uma pessoa removida não consegue reconectar com o token antigo. Reconexões automáticas pedem outro token à API.
 
 ## Uma fonte de verdade para o banco
 
@@ -20,7 +27,7 @@ Execute `python scripts/database.py --write` após alterar uma migração para g
 
 ## Verificações automáticas
 
-O workflow `quality.yml` roda em pushes e pull requests de repositórios públicos: 56 testes Python, testes unitários JS, grupos de navegação, chamadas, mídia e qualidade no Chromium, verificação dos artefatos e testes do desktop. Nenhuma credencial Supabase/LiveKit é usada: as contas e mídias de navegador são simuladas. A verificação de acesso SQL foi executada separadamente, com transação revertida, no projeto conectado. Testes históricos de layouts dos ZIPs Jesus 7/8 continuam como referência; a suíte mantida cobre o layout atual.
+O workflow `quality.yml` roda em todo push e pull request, inclusive em repositório privado: testes Python, testes unitários JS, grupos de navegação, chamadas, mídia e qualidade no Chromium, verificação dos artefatos e testes do desktop. Nenhuma credencial Supabase/LiveKit é usada: as contas e mídias de navegador são simuladas. A verificação de acesso SQL foi executada separadamente, com transação revertida, no projeto conectado. Testes históricos de layouts dos ZIPs Jesus 7/8 continuam como referência; a suíte mantida cobre o layout atual.
 
 Para rodar localmente: iniciar `python -m uvicorn app:app --port 8766` e executar `npm run test:browser`. `CHROME_PATH` permite usar um Chrome instalado; sem a variável, instalar o navegador de teste com `npx playwright install chromium`. `accessibility_browser.cjs` usa axe-core e mede as 12 paletas nos modos claro e escuro. Isso ajuda a prevenir regressões e não substitui testes com pessoas ou leitores de tela.
 
@@ -35,7 +42,29 @@ Não inserir tokens secretos de gerenciamento no frontend. Deixar essas variáve
 
 ## Monitoramento externo
 
-Quando houver conta UptimeRobot, criar monitor HTTP(s) GET para `https://orbita-8nwu.onrender.com/healthz`, intervalo de 5 minutos e resposta esperada HTTP 200. O endpoint já existe; o monitor ainda não foi criado porque não há conta conectada. Monitoramento detecta falhas, mas não garante disponibilidade nem remove as cotas ou as regras de suspensão do Render Free. Consulte https://render.com/docs/free.
+Quando houver conta UptimeRobot, criar monitor HTTP(s) GET para `https://orbita-8nwu.onrender.com/readyz`, intervalo de 5 minutos e resposta esperada HTTP 200. `/readyz` devolve 503 se o Supabase não responder, então o alerta cobre também a indisponibilidade do banco. O monitor ainda não foi criado porque não há conta conectada. Monitoramento detecta falhas, mas não garante disponibilidade nem remove as cotas ou as regras de suspensão do Render Free. Consulte https://render.com/docs/free.
+
+## Backup e restauração (Supabase)
+
+O plano gratuito do Supabase não deve ser tratado como backup de longo prazo. Antes de aplicar migrações e pelo menos uma vez por mês:
+
+1. Exporte o banco pela conexão direta do projeto (Supabase → Project Settings → Database → Connection string → URI):
+   `pg_dump "postgresql://postgres:SENHA@db.PROJETO.supabase.co:5432/postgres" --schema=public --no-owner --no-privileges > backup-AAAA-MM-DD.sql`
+2. Baixe os arquivos do Storage (Supabase → Storage) para uma pasta no seu computador ou nuvem pessoal. O dump do banco não inclui os arquivos enviados.
+3. Guarde os dois fora do repositório e do Render; eles contêm dados pessoais e nunca devem ser commitados.
+4. Para restaurar, crie um projeto Supabase novo, execute `supabase.sql` (esquema) e depois o dump `public`; reenvie os arquivos do Storage.
+
+O dump não transporta usuários do Supabase Auth (senhas e tokens). Em uma restauração real, as pessoas precisam entrar novamente ou ser recriadas pelo painel; mantenha a lista de e-mails dos membros em local seguro.
+
+## Nuvem de IA (Cloe) e cotas
+
+A Cloe usa Groq. As cotas diárias por pessoa ficam em memória e são ajustáveis no Render (valores em 0 desligam a cota):
+
+- `CLOE_DAILY_STT_SECONDS` (padrão 7200): segundos de áudio transcrito por dia.
+- `CLOE_DAILY_ASKS` (padrão 200): perguntas respondidas pelo modelo por dia.
+- `CLOE_DAILY_TTS_CHARS` (padrão 100000): caracteres de voz neural por dia.
+
+Como o contador é de um único processo, reiniciar o serviço zera o dia e não há compartilhamento entre instâncias. O limite do YouTube também é por conta (20 buscas novas e 60 chamadas à API por 10 minutos), mas protege uma cota compartilhada; veja `README.md`.
 
 ## PWA, mídia e atualização
 

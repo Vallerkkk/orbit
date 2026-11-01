@@ -6,7 +6,8 @@ let browser;
 (async()=>{
  browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||undefined});const report=[];
  for(const mobile of [false,true]){
-  const context=await browser.newContext({viewport:{width:mobile?390:1440,height:mobile?844:1000},isMobile:mobile,hasTouch:mobile,reducedMotion:'reduce'});
+  // bypassCSP: o axe é injetado inline no teste; o app em produção continua sob o CSP real.
+  const context=await browser.newContext({viewport:{width:mobile?390:1440,height:mobile?844:1000},isMobile:mobile,hasTouch:mobile,reducedMotion:'reduce',bypassCSP:true});
   await context.route('**/*',r=>{const u=r.request().url();if(u.includes('supabase-js'))return r.fulfill({contentType:'application/javascript',body:stub});if(u.endsWith('/api/config'))return r.fulfill({json:{configured:true,supabaseUrl:'https://qa.supabase.co',supabaseKey:'public',callsConfigured:false,storageConfigured:true}});return r.continue();});
   const page=await context.newPage();await page.goto(process.env.ORBITA_TEST_URL||'http://127.0.0.1:8766/',{waitUntil:'networkidle'});await page.locator('#message-list .message').first().waitFor();await page.addScriptTag({path:require.resolve('axe-core/axe.min.js')});
   async function audit(label){const result=await page.evaluate(()=>axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa']}}));const violations=result.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary})).slice(0,8)}));assert.deepEqual(violations,[],label+' '+JSON.stringify(violations));}

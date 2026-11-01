@@ -1,8 +1,8 @@
 {
-  "version": "fcd7ca963c7aa173",
-  "entry": "/static/dist/app-SVSYLJNP.js",
+  "version": "0d8a07ddf239919f",
+  "entry": "/static/dist/app-IK7R6FPT.js",
   "files": [
-    "/static/dist/app-SVSYLJNP.js",
+    "/static/dist/app-IK7R6FPT.js",
     "/static/dist/call-layout-0cc49be914a83149.css",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js",
@@ -29,7 +29,7 @@
     "/static/dist/chunk-new-members-6BVC2FBU.js",
     "/static/dist/chunk-prod-BILYJVBG.js",
     "/static/dist/chunk-profile-appearance-GDA3C5VT.js",
-    "/static/dist/chunk-profile-studio-S6DVZ3WY.js",
+    "/static/dist/chunk-profile-studio-GXWNFD4T.js",
     "/static/dist/chunk-social-feed-BMRQ53KA.js",
     "/static/dist/chunk-social-tools-MKCY6MD5.js",
     "/static/dist/chunk-telemetry-L3E3VUOP.js",
@@ -45,16 +45,17 @@
     "/static/dist/interface-873e50655c276577.css",
     "/static/dist/loader-2d3fc658d3944c83.css",
     "/static/dist/modern-dfbf9772c6bc459c.css",
+    "/static/dist/modern-layout-af09c5efcc71e688.css",
     "/static/dist/orbita-v2-d1fbff82aee54fee.css",
     "/static/dist/polish-6f749e518969d62f.css",
     "/static/dist/profile-studio-aa2b37c86cd3c986.css",
     "/static/dist/refino-57c8642015d02336.css",
     "/static/dist/social-feed-3968bce45c84364b.css",
     "/static/dist/store-v2-475c9b3b166dd566.css",
-    "/static/dist/style-0c9594aa8ad553c0.css"
+    "/static/dist/style-75724222f9cc7a6c.css"
   ],
   "css": {
-    "/static/style.css": "/static/dist/style-0c9594aa8ad553c0.css",
+    "/static/style.css": "/static/dist/style-75724222f9cc7a6c.css",
     "/static/enhancements.css": "/static/dist/enhancements-bae842f815459588.css",
     "/static/interface.css": "/static/dist/interface-873e50655c276577.css",
     "/static/fluency.css": "/static/dist/fluency-e8bd643cf9fd04e1.css",
@@ -64,6 +65,7 @@
     "/static/identity.css": "/static/dist/identity-88e796ffa63422d2.css",
     "/static/polish.css": "/static/dist/polish-6f749e518969d62f.css",
     "/static/modern.css": "/static/dist/modern-dfbf9772c6bc459c.css",
+    "/static/modern-layout.css": "/static/dist/modern-layout-af09c5efcc71e688.css",
     "/static/orbita-v2.css": "/static/dist/orbita-v2-d1fbff82aee54fee.css",
     "/static/profile-studio.css": "/static/dist/profile-studio-aa2b37c86cd3c986.css",
     "/static/store-v2.css": "/static/dist/store-v2-475c9b3b166dd566.css",
@@ -73,7 +75,7 @@
     "/static/loader.css": "/static/dist/loader-2d3fc658d3944c83.css"
   },
   "integrity": {
-    "/static/dist/app-SVSYLJNP.js": "9809cf38a55ca851159b292acd0621ba018f18f7ce42e67382dbb0875863ae17",
+    "/static/dist/app-IK7R6FPT.js": "0b3a97a1bd1153b7103ca0364f4169d93b405bf827f32aa5e2885058adc9c74a",
     "/static/dist/call-layout-0cc49be914a83149.css": "0cc49be914a83149b7fa6b367f886b3f061e23ba9d871fa7020a9016553dcaf4",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js": "20cfee0fc731efe53611da92202bd240b2f9d28e6b3115691ed50fc718851ee0",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js": "db2508c2c9152fbe631806e53dd148bd67a8b3695a0094caa6145d906b978027",
@@ -100,7 +102,7 @@
     "/static/dist/chunk-new-members-6BVC2FBU.js": "1f8e7d40d7d9a3f897471eea73e4e7a81dde3ca87210dc15be467dcc048c01bd",
     "/static/dist/chunk-prod-BILYJVBG.js": "392e7c812c1ce2bb32af37ededef482035b91913c868d087465a8667a23b8a0a",
     "/static/dist/chunk-profile-appearance-GDA3C5VT.js": "2d06a66f69743c4f16a7500d3a4540863d8546e011fb908ffea5a0c934680e48",
-    "/static/dist/chunk-profile-studio-S6DVZ3WY.js": "4810e20d2c4ac4aef34ecb66e4924f4601a56a77fc9417a3fc19d508b94e1804",
+    "/static/dist/chunk-profile-studio-GXWNFD4T.js": "47f8a8e9787cbce4ac26dbdb541c687ce25b798ad049fbc1cb4d792cbc75bcfb",
     "/static/dist/chunk-social-feed-BMRQ53KA.js": "964e3fabad6e3e78fec1c8d827ccc4e4c68f713384e86948e2685910336ba95f",
     "/static/dist/chunk-social-tools-MKCY6MD5.js": "38cf188b7f572b4051786c06432d673f3a8d367718fdab94e20d9e1a676cd7ce",
     "/static/dist/chunk-telemetry-L3E3VUOP.js": "3132e8830e5589029e82064b1fc2e9c325e2bcaaaf0f50eb9a7cc31f52ddba8c",
@@ -116,12 +118,13 @@
     "/static/dist/interface-873e50655c276577.css": "873e50655c2765774b8ac2608bc75db554235c95bfca9420fdecf5021c2419b7",
     "/static/dist/loader-2d3fc658d3944c83.css": "2d3fc658d3944c83e65c2d510fb1542eadcd0ddfe0aac85fc56c4346e7e78370",
     "/static/dist/modern-dfbf9772c6bc459c.css": "dfbf9772c6bc459cf02777db2a4552b159ad6db43b2be1f7969b7d686c52a25a",
+    "/static/dist/modern-layout-af09c5efcc71e688.css": "af09c5efcc71e688cd87a9b02565f96326e0d0febad3da580c6d5abb84f61264",
     "/static/dist/orbita-v2-d1fbff82aee54fee.css": "d1fbff82aee54feeaaba442d69998ffe33e11854d400a334fe727b5202650d11",
     "/static/dist/polish-6f749e518969d62f.css": "6f749e518969d62f3f30d66037bdce6e76dcd2d574739a2605a82410870e3d63",
     "/static/dist/profile-studio-aa2b37c86cd3c986.css": "aa2b37c86cd3c98651fbfde3e08a23fedd8221aa325300a2454c30c42789bf53",
     "/static/dist/refino-57c8642015d02336.css": "57c8642015d02336f6bafba65ff824f65545ae976a6e4e3402e9606d6cbbecf8",
     "/static/dist/social-feed-3968bce45c84364b.css": "3968bce45c84364b85714648491bca2f0a75980d9bd146895a0d2d16a54c6602",
     "/static/dist/store-v2-475c9b3b166dd566.css": "475c9b3b166dd56686d48b67690480ea50234e9a2204de66642ab74d604a0f92",
-    "/static/dist/style-0c9594aa8ad553c0.css": "0c9594aa8ad553c0bb350e7cb17365035c4cb434967b9d562f5d0d1be9ee4061"
+    "/static/dist/style-75724222f9cc7a6c.css": "75724222f9cc7a6cf67c9bea0c8b976c1a86f4abaeea051a0af1678e73039ea8"
   }
 }

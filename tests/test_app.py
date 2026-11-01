@@ -100,6 +100,21 @@ class AppTests(unittest.TestCase):
         self.assertEqual(worker.headers['service-worker-allowed'],'/')
         self.assertIn('no-store',worker.headers['cache-control'])
 
+    def test_security_headers_and_no_openapi(self):
+        home=self.client.get('/')
+        self.assertIn("default-src 'self'", home.headers['content-security-policy'])
+        self.assertIn('max-age=31536000', home.headers['strict-transport-security'])
+        self.assertEqual(home.headers['x-frame-options'], 'DENY')
+        self.assertEqual(self.client.get('/openapi.json').status_code, 404)
+        self.assertEqual(self.client.get('/docs').status_code, 404)
+
+    def test_readyz_reports_degraded_without_supabase_config(self):
+        with patch.dict(os.environ, {'SUPABASE_URL':'', 'SUPABASE_PUBLISHABLE_KEY':''}):
+            result=self.client.get('/readyz')
+        self.assertEqual(result.status_code, 503)
+        self.assertEqual(result.json()['status'],'degraded')
+        self.assertIn('no-store', result.headers['cache-control'])
+
     def test_home_and_static_assets_are_served(self):
         home=self.client.get('/')
         self.assertEqual(home.status_code,200)

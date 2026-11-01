@@ -237,6 +237,7 @@ function renderChannels() {
 
 const conversationCache = new ConversationCache(), outbox = new MessageOutbox();
 let channelAbort, reconnectTimer, reconnectAttempt = 0, realtimeState = 'idle', latestQueued = false, historyError = '', initialHistory = false;
+let historyReady = 0; // geração cuja primeira página já foi pedida; evita buscar o mesmo canal duas vezes
 let restoring,restoreFrame,lastViewport, positionTimer, renderFrame, dialogReturnFocus, cacheValidationIds, cacheValidating=false,followLatestUntil=0;
 const PAGE_SIZE = 50;
 
@@ -336,7 +337,7 @@ function subscribeMessages(channel, version) {
     enhancements.messageDeleted(payload.old.id, channel).catch(() => {});
   }).subscribe(status => {
     if (!current()) return;
-    if (status === 'SUBSCRIBED') { clearTimeout(reconnectTimer); reconnectAttempt = 0; setRealtimeState('connected'); loadMessages(version, true); }
+    if (status === 'SUBSCRIBED') { clearTimeout(reconnectTimer); reconnectAttempt = 0; setRealtimeState('connected'); refreshHistory(version); }
     else if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status)) {
       setRealtimeState('reconnecting');
       // O SDK tenta reconectar; só substituímos uma assinatura que permaneça parada.
@@ -346,12 +347,20 @@ function subscribeMessages(channel, version) {
   });
 }
 window.addEventListener('offline', () => { clearTimeout(reconnectTimer); if (!home && selected?.kind === 'text') setRealtimeState('offline'); });
-window.addEventListener('online', () => { if (session && !home && selected?.kind === 'text') { reconnectAttempt = 0; subscribeMessages(selected, generation); loadMessages(generation, true); } });
+window.addEventListener('online', () => { if (session && !home && selected?.kind === 'text') { reconnectAttempt = 0; historyReady = 0; subscribeMessages(selected, generation); } });
+
+// Uma atualização por vez: o SUBSCRIBED chega logo após abrir o canal, quando a primeira
+// página já está a caminho; refazer a busca ali era o segundo pedido idêntico.
+function refreshHistory(version) {
+  if (version !== generation || loading || historyReady === version) return;
+  loadMessages(version, true);
+}
 
 async function loadMessages(version, first = false) {
   if (version !== generation || home || selected?.kind !== 'text' || !session) return;
   if (loading) { if (first) latestQueued = true; return; }
   if (!first && !hasMore) return;
+  if (first) historyReady = version;
   const target = {...selected}, signal = channelAbort?.signal, position = capturePosition(), before = oldest;
   loading = true; historyError = ''; renderMessages(false, position);
   try {
@@ -372,7 +381,7 @@ async function loadMessages(version, first = false) {
     initialHistory = false; renderMessages(false, position); saveConversation();
     if (first){enhancements.historyLoaded().catch(() => {});if(cacheValidationIds?.size&&!cacheValidating){const cutoff=data.at(-1)?.created_at;const older=[...cacheValidationIds].filter(id=>messages.has(id)&&cutoff&&messages.get(id).created_at<cutoff);cacheValidationIds=new Set(older);if(older.length)validateCachedMessages(version,target);}}
   } catch (error) {
-    if (version === generation && error.name !== 'AbortError') { initialHistory = false; historyError = 'Não foi possível carregar as mensagens. ' + errorText(error); renderMessages(false, position); }
+    if (version === generation && error.name !== 'AbortError') { initialHistory = false; historyError = 'Não foi possível carregar as mensagens. ' + errorText(error); if (first) historyReady = 0; renderMessages(false, position); }
   } finally {
     if (version === generation) { loading = false; $('message-list').setAttribute('aria-busy', 'false'); renderMessages(false, capturePosition()); if (latestQueued) { latestQueued = false; loadMessages(version, true); } }
   }
@@ -916,7 +925,7 @@ function scheduleCallRejoin(){clearTimeout(callRejoinTimer);if(!callRejoinTarget
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleCallRejoin();});window.addEventListener('online',scheduleCallRejoin);
 function callMediaSession(){if(!('mediaSession'in navigator))return;try{if(room&&callChannel){navigator.mediaSession.metadata=new MediaMetadata({title:callChannel.name||'Chamada',artist:'Órbita · chamada de voz',artwork:[{src:'/static/icons/icon-192.png',sizes:'192x192',type:'image/png'}]});navigator.mediaSession.playbackState='playing';try{navigator.mediaSession.setActionHandler('hangup',()=>leaveCall());}catch{}}else if(navigator.mediaSession.metadata?.artist==='Órbita · chamada de voz'){navigator.mediaSession.metadata=null;navigator.mediaSession.playbackState='none';}}catch{}}
 window.addEventListener('pagehide', event => { if(event.persisted&&room)return;shuttingDown = true;cancelCallJoin();if(presenceChannel)presenceChannel.untrack();leaveCall().catch(()=>{}); });
-window.addEventListener('pageshow', event => { shuttingDown = false;if(event.persisted&&session){publishVoicePresence(true).catch(()=>{});if(!home&&selected?.kind==='text'){subscribeMessages(selected,generation);loadMessages(generation,true);}} });
+window.addEventListener('pageshow', event => { shuttingDown = false;if(event.persisted&&session){publishVoicePresence(true).catch(()=>{});if(!home&&selected?.kind==='text'){historyReady=0;subscribeMessages(selected,generation);}} });
 
 let entryHideTimer;
 function setEntryBusy(busy){

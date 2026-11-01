@@ -39,9 +39,10 @@ class CloeTests(unittest.TestCase):
         self.addCleanup(self.lk.stop)
         FakeLiveKit.allowed=FakeLiveKit.can_publish=True
         astro._TTS_CACHE.clear()
+        astro.reset_daily_usage()
 
-    def audio(self, data=None):
-        return self.client.post(f'/api/astro/{ROOM}/audio?chunk_id={CHUNK}', content=data or wav(), headers={'Content-Type':'audio/wav'})
+    def audio(self, data=None, chunk=CHUNK):
+        return self.client.post(f'/api/astro/{ROOM}/audio?chunk_id={chunk}', content=data or wav(), headers={'Content-Type':'audio/wav'})
 
     def test_wake_split_question_and_user_isolation(self):
         c=astro.Call()
@@ -84,6 +85,42 @@ class CloeTests(unittest.TestCase):
     def test_invalid_audio_rejected_before_provider(self):
         self.assertEqual(self.audio(b'not a wav').status_code,400)
         self.assertEqual(self.audio(b'x'*400001).status_code,413)
+
+    def test_daily_quota_reservations(self):
+        astro.reset_daily_usage()
+        astro.reserve_daily(UID, 'stt', 60, 60, 'áudio transcrito')
+        with self.assertRaises(HTTPException) as blocked:
+            astro.reserve_daily(UID, 'stt', 1, 60, 'áudio transcrito')
+        self.assertEqual(blocked.exception.status_code, 429)
+        # Limite 0 desliga a cota (usado para rodar sem teto).
+        astro.reserve_daily(UID, 'tts', 10**6, 0, 'voz da Cloe')
+        astro.reset_daily_usage()
+
+    def test_audio_seconds_count_against_daily_quota(self):
+        async def groq(app, path, **kwargs):
+            if path == 'audio/transcriptions': return {'text': 'Ei Cloe, tudo bem?'}
+            return {'choices':[{'message':{'content':'Tudo certo.'}}]}
+        with patch.object(astro, 'DAILY_STT_SECONDS', 1), patch.object(astro, 'groq_json', groq):
+            self.assertEqual(self.audio(chunk='44444444-4444-4444-8444-444444444401').status_code, 200)
+            call = self.app.state.astro_calls[ROOM]
+            call.last_upload[UID] = 0
+            call.last_answer = 0
+            blocked = self.audio(chunk='44444444-4444-4444-8444-444444444402')
+        self.assertEqual(blocked.status_code, 429)
+        self.assertIn('Limite diário', blocked.json()['detail'])
+
+    def test_ask_quota_blocks_answer_but_not_transcription(self):
+        async def groq(app, path, **kwargs):
+            if path == 'audio/transcriptions': return {'text': 'Ei Cloe, tudo bem?'}
+            return {'choices':[{'message':{'content':'Tudo certo.'}}]}
+        with patch.object(astro, 'DAILY_ASKS', 1), patch.object(astro, 'groq_json', groq):
+            self.assertEqual(self.audio(chunk='55555555-5555-4555-8555-555555555501').status_code, 200)
+            call = self.app.state.astro_calls[ROOM]
+            call.last_upload[UID] = 0
+            call.last_answer = 0
+            blocked = self.audio(chunk='55555555-5555-4555-8555-555555555502')
+        self.assertEqual(blocked.status_code, 429)
+        self.assertIn('Limite diário', blocked.json()['detail'])
 
     def test_silence_and_provider_error_recovery(self):
         async def silence(*args,**kwargs):return {'text':'Ei Cloe','segments':[{'no_speech_prob':.99}]}

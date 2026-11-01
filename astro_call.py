@@ -57,6 +57,45 @@ HALLUCINATION = re.compile(
     r'|ate\s+o\s+proximo\s+video|thanks\s+for\s+watching|subtitles?\s+by|transcricao\s+por|www\.)')
 
 
+# Limites diários por pessoa. O Render free roda um processo só, então o contador em memória
+# basta para impedir uso contínuo; reiniciar o serviço zera o dia. Ajuste por variável de ambiente.
+def _int_env(name, default):
+    try:
+        return max(0, int(os.getenv(name, '') or default))
+    except ValueError:
+        return default
+
+
+DAILY_STT_SECONDS = _int_env('CLOE_DAILY_STT_SECONDS', 7200)
+DAILY_ASKS = _int_env('CLOE_DAILY_ASKS', 200)
+DAILY_TTS_CHARS = _int_env('CLOE_DAILY_TTS_CHARS', 100000)
+_daily_usage = {}
+
+
+def _usage_for(uid):
+    today = datetime.now(timezone.utc).date()
+    key = (uid, today)
+    if key not in _daily_usage:
+        for old in [k for k in _daily_usage if k[0] == uid and k[1] != today]:
+            _daily_usage.pop(old, None)
+        _daily_usage[key] = {'stt': 0.0, 'asks': 0, 'tts': 0}
+    return _daily_usage[key]
+
+
+def reserve_daily(uid, field, amount, limit, label):
+    """Reserva o uso antes da chamada paga. Limite 0 desliga a cota (para testes)."""
+    if limit <= 0:
+        return
+    usage = _usage_for(uid)
+    if usage[field] + amount > limit:
+        raise HTTPException(429, f'Limite diário de {label} da Cloe atingido. Tente novamente amanhã.')
+    usage[field] += amount
+
+
+def reset_daily_usage():
+    _daily_usage.clear()
+
+
 def fold(text):
     # Mantém o mesmo comprimento para que os índices do casamento valham no texto original.
     return text.lower().translate(_ACCENTS)
@@ -444,6 +483,7 @@ def validate_wav(data):
                 raise ValueError()
     except (wave.Error, EOFError, ValueError):
         raise HTTPException(400, 'Envie WAV mono PCM16 a 16 kHz, entre 0,25 e 12 segundos.')
+    return duration
 
 
 async def groq_json(app, path, **kwargs):
@@ -480,10 +520,11 @@ def install_astro(app, current_user, settings):
         calls[name].touched = now
         return calls[name]
 
-    async def respond(call, speaker, question):
+    async def respond(call, speaker, question, uid):
         if call.busy or time.time() - call.last_answer <= 3:
             call.add('answer', 'Cloe', 'Estou ocupada com outra resposta. Chame a Cloe daqui a pouco.')
             return
+        reserve_daily(uid, 'asks', 1, DAILY_ASKS, 'perguntas')
         call.busy = True
         try:
             response = await groq_json(app, 'chat/completions', json={
@@ -557,7 +598,8 @@ def install_astro(app, current_user, settings):
                 data.extend(block)
                 if len(data) > 400000:
                     raise HTTPException(413, 'Trecho de áudio muito grande.')
-            validate_wav(bytes(data))
+            seconds = validate_wav(bytes(data))
+            reserve_daily(uid, 'stt', seconds, DAILY_STT_SECONDS, 'áudio transcrito')
             # Só depois de um corpo válido: um trecho rejeitado pelo servidor não deve
             # custar um segundo de silêncio à pessoa, e o "uploading" já fecha a
             # concorrência enquanto este request estiver na Groq.
@@ -601,7 +643,7 @@ def install_astro(app, current_user, settings):
                 if route:
                     call.add('answer', 'Cloe', route[1])
                 else:
-                    await respond(call, speaker, question)
+                    await respond(call, speaker, question, uid)
             return {'transcribed': True}
         finally:
             call.uploading.discard(uid)
@@ -630,7 +672,7 @@ def install_astro(app, current_user, settings):
         if route:
             call.add('answer', 'Cloe', route[1])
         else:
-            await respond(call, speaker, question)
+            await respond(call, speaker, question, uid)
         return {'ok': True}
 
     @app.post('/api/astro/{room}/speech')
@@ -651,6 +693,7 @@ def install_astro(app, current_user, settings):
         if now - call.last_speech.get(uid, 0) < .7:
             raise HTTPException(429, 'Aguarde um instante antes de gerar outra fala.')
         call.last_speech[uid] = now
+        reserve_daily(uid, 'tts', len(text), DAILY_TTS_CHARS, 'voz da Cloe')
         audio = await natural_speech(text, voice, tts_rate(payload.get('rate')))
         return Response(audio, media_type='audio/mpeg',
                         headers={'Cache-Control': 'private, max-age=3600'})

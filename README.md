@@ -63,7 +63,7 @@ A política Referrer-Policy envia somente a origem em solicitações externas HT
 
 Ícone do YouTube no rail: início/Em alta, busca (vídeos, canais, playlists), página do vídeo com comentários e relacionados, canal, playlist, mini player flutuante que continua tocando enquanto você navega, Histórico e Assistir depois (tabela `youtube_library` com RLS) e "Enviar no Órbita" para canais/DMs. Links do YouTube no chat viram um card leve (thumbnail primeiro; o iframe só carrega no clique).
 
-Todas as chamadas passam pelo proxy `/api/youtube/*` (cache TTL em memória); a `YOUTUBE_API_KEY` nunca chega ao navegador. Sem a chave, a interface mostra um aviso em pt-BR.
+Todas as chamadas passam pelo proxy `/api/youtube/*` (cache TTL em memória); a `YOUTUBE_API_KEY` nunca chega ao navegador. Sem a chave, a interface mostra um aviso em pt-BR. Como a cota do YouTube é compartilhada por toda a comunidade, cada conta tem limite próprio: 20 buscas novas e 60 outras chamadas por 10 minutos (resultados em cache não consomem busca).
 
 **Conta Google (opcional):** é apenas uma conexão do YouTube presa ao usuário logado do Órbita — não usa o provedor Google do Supabase Auth e não altera sessão, e-mail, @, nome, avatar ou perfil. O refresh token fica só no servidor, cifrado (AES-GCM) com `YOUTUBE_TOKEN_KEY`, em `orbita_private.youtube_tokens`, acessível apenas por RPCs do próprio dono. "Sair da conta Google" revoga o token e apaga a linha. Com a conta conectada: Inscrições, Minhas playlists e Vídeos curtidos.
 
@@ -117,7 +117,7 @@ Entradas em chamada têm uma operação cancelável vinculada à conta. Trocar d
 
 A configuração inicial, as solicitações da aplicação e a autorização da chamada têm limite de espera de 30 segundos e retornam controles utilizáveis para tentar novamente. Leituras canceladas não iniciam consultas. Inicializações antigas deixam de atualizar canais e assinaturas de outra conta. A confirmação da caixa de saída ignora mensagens que já estavam carregadas antes do envio, mesmo quando têm texto e horário semelhantes.
 
-O service worker guarda somente recursos estáticos da interface e ícones, com até 80 recursos além da tela offline e seus ícones. Substitui versões antigas do mesmo caminho e ignora instaladores, intervalos de arquivos, APIs e solicitações sem cache. Falhas de quota não interrompem respostas da rede. Metadados opcionais inválidos de perfil não quebram a emissão de tokens; uma conversa privada incompleta falha com resposta recuperável e sem liberar acesso.
+O service worker guarda somente recursos estáticos da interface, ícones e a última tela inicial aberta com sucesso, com até 80 recursos além da tela offline e seus ícones. Assim o app instalado abre mesmo sem rede; dados continuam vindo apenas da API autenticada. Substitui versões antigas do mesmo caminho e ignora instaladores, intervalos de arquivos, APIs e solicitações sem cache. Falhas de quota não interrompem respostas da rede. Metadados opcionais inválidos de perfil não quebram a emissão de tokens; uma conversa privada incompleta falha com resposta recuperável e sem liberar acesso.
 
 Regressões: `tests/call_session_browser.cjs` cobre tokens atrasados, troca de conta durante a liberação do áudio, nova tentativa após erro e retorno pelo histórico no PC e celular. `tests/service-worker.test.mjs`, `tests/chat-state.test.mjs` e `tests/test_reliability.py` verificam limites do cache, cancelamento, confirmação de envios e respostas incompletas do provedor. Nenhuma migração, dependência ou serviço pago foi adicionado.
 
@@ -183,7 +183,7 @@ O build de produção da interface precisa ser executado durante o deploy. O `re
 
 Se o deploy não atualizar a aparência, confirme nos logs do Render que `npm ci` e `npm run build` terminaram com sucesso e faça um **Manual Deploy → Clear build cache & deploy**. Não é necessário enviar `.env` nem a pasta `.venv/` para o repositório.
 
-Para reproduzir localmente, na pasta `jesus/` execute:
+Para reproduzir localmente, na raiz do repositório execute:
 
 ```bash
 npm ci

@@ -1,6 +1,9 @@
 importScripts('/static/share-worker.js');
-const CACHE = 'orbita-shell-20261031-v117';
+const CACHE = 'orbita-shell-20261031-v118';
 const SHELL = ['/static/offline.html', '/static/icons/icon-192.png', '/static/icons/icon-512.png'];
+// Chave sintética para a página inicial já carregada: permite abrir o app instalado sem rede.
+// O HTML é público e igual para todos; dados continuam vindo apenas da API autenticada.
+const NAV_KEY = '/__orbita_navigation';
 const MAX_ASSETS = 80;
 let cacheWrites = Promise.resolve();
 function remember(request, response) {
@@ -10,7 +13,7 @@ function remember(request, response) {
     const keys=await cache.keys();
     await Promise.all(keys.filter(key=>new URL(key.url).pathname===url.pathname&&key.url!==url.href).map(key=>cache.delete(key)));
     await cache.put(request,response);
-    const assets=(await cache.keys()).filter(key=>!SHELL.includes(new URL(key.url).pathname));
+    const assets=(await cache.keys()).filter(key=>{const path=new URL(key.url).pathname;return !SHELL.includes(path)&&path!==NAV_KEY;});
     await Promise.all(assets.slice(0,Math.max(0,assets.length-MAX_ASSETS)).map(key=>cache.delete(key)));
   });
   return cacheWrites.catch(()=>{}); // Quota failures must never break navigation.
@@ -22,7 +25,20 @@ self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   if(event.request.method==='POST'&&url.origin===self.location.origin&&url.pathname==='/share-target'){event.respondWith(receiveShare(event.request));return;}
   if (event.request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
-  if (event.request.mode === 'navigate') { event.respondWith(fetch(event.request).catch(() => caches.match('/static/offline.html'))); return; }
+  if (event.request.mode === 'navigate') {
+    event.respondWith((async () => {
+      try {
+        const response = await fetch(event.request);
+        // A inicial é estática e serve de casca offline; links profundos continuam só na rede.
+        if (response.status === 200 && url.pathname === '/')
+          event.waitUntil(caches.open(CACHE).then(cache => cache.put(NAV_KEY, response.clone())).catch(() => {}));
+        return response;
+      } catch {
+        return (await caches.match(NAV_KEY)) || (await caches.match('/static/offline.html')) || Response.error();
+      }
+    })());
+    return;
+  }
   // Never cache private data, signed URLs, uploads or third-party requests.
   const asset=/^\/static\/dist\/[\w-]+\.(?:js|css)$/.test(url.pathname)||/^\/static\/[^/]+\.(?:js|css)$/.test(url.pathname)||/^\/static\/(?:icons|assets|stickers)\/[^/]+\.(?:png|svg|webp|ico)$/.test(url.pathname)||SHELL.includes(url.pathname);
   if(!asset||event.request.headers.has('range')||event.request.cache==='no-store')return;

@@ -13,19 +13,25 @@ export function initProfileStudio(ctx){
   const {el,button,toast,errorText}=ctx;
   const html=(tag,cls,markup)=>{const n=el(tag,cls);n.innerHTML=markup;return n;};
   const badgeCache=new Map();
-  let overlay;
+  let overlay, inerted=[], detachCurrent;
+  const restoreInert=()=>{for(const node of inerted)node.inert=false;inerted=[];};
   function sheet(title,sub,cls=''){
-    overlay?.remove();const opener=document.activeElement;const back=el('div','ps-overlay '+cls),box=el('section','ps-sheet');box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');box.setAttribute('aria-label',title);
+    if(overlay){detachCurrent?.();overlay.remove();overlay=null;}
+    restoreInert();
+    const opener=document.activeElement;const back=el('div','ps-overlay '+cls),box=el('section','ps-sheet');box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');box.setAttribute('aria-label',title);
     const head=el('header','ps-head'),h=el('h2','',title);if(sub)h.append(el('span','ps-sub',sub));const close=button('×',()=>shut(),'ps-close');close.setAttribute('aria-label','Fechar');head.append(h,close);
     const body=el('div','ps-body');box.append(head,body);back.append(box);document.body.append(back);overlay=back;
+    // A página atrás fica inerte: só a folha recebe foco e cliques (o Tab já está preso nela).
+    inerted=[...document.body.children].filter(node=>node!==back&&!node.inert);
+    for(const node of inerted)node.inert=true;
     const key=e=>{if(e.key==='Escape'){e.stopPropagation();shut();return;}if(e.key!=='Tab')return;
       // Foco preso na folha: sem isso o Tab escapa para a página atrás do diálogo.
       const focusable=[...box.querySelectorAll('a[href],button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex="-1"])')].filter(n=>n.getClientRects().length>0);
       if(!focusable.length)return;const first=focusable[0],last=focusable[focusable.length-1];
       if(e.shiftKey&&(document.activeElement===first||!box.contains(document.activeElement))){e.preventDefault();last.focus();}
       else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}};
-    const shut=()=>{back.remove();document.removeEventListener('keydown',key,true);if(overlay===back)overlay=null;back.dispatchEvent(new Event('ps-close'));if(opener&&opener.isConnected&&opener.focus)opener.focus({preventScroll:true});};
-    document.addEventListener('keydown',key,true);back.addEventListener('click',e=>{if(e.target===back)shut();});setTimeout(()=>{box.tabIndex=-1;box.focus({preventScroll:true});},0);
+    const shut=()=>{back.remove();document.removeEventListener('keydown',key,true);if(overlay===back){overlay=null;detachCurrent=null;restoreInert();}back.dispatchEvent(new Event('ps-close'));if(opener&&opener.isConnected&&opener.focus)opener.focus({preventScroll:true});};
+    document.addEventListener('keydown',key,true);detachCurrent=()=>{document.removeEventListener('keydown',key,true);restoreInert();};back.addEventListener('click',e=>{if(e.target===back)shut();});setTimeout(()=>{box.tabIndex=-1;box.focus({preventScroll:true});},0);
     return {back,box,head,body,shut};
   }
   const me=()=>ctx.state();

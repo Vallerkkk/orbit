@@ -33,6 +33,7 @@ CALLBACK_PATH = '/api/youtube/oauth/callback'
 STATE_COOKIE, PENDING_COOKIE, COOKIE_PATH = 'orbita_yt_state', 'orbita_yt_pending', '/api/youtube/oauth'
 TTL = {'trending': 1800, 'search': 21600, 'videos': 3600, 'comments': 1800, 'channel': 3600, 'playlist': 3600, 'mine': 900}
 SEARCH_RATE = (20, 600)  # 20 buscas novas por 10 minutos por conta
+RATE = (60, 600)  # demais chamadas à API por conta, também por 10 minutos
 NOT_CONFIGURED = 'O YouTube ainda não foi configurado neste servidor (falta a YOUTUBE_API_KEY).'
 VIDEO_ID = re.compile(r'^[A-Za-z0-9_-]{11}$')
 CHANNEL_ID = re.compile(r'^UC[A-Za-z0-9_-]{22}$')
@@ -231,12 +232,15 @@ def install_youtube(app, current_user, settings):
             raise HTTPException(503 if response.status_code >= 500 else 400, 'O YouTube recusou o pedido.')
         return cache.set(key, read_json(response, dict), TTL[ttl_kind])
 
-    def limit(uid):
-        now, bucket = time.monotonic(), hits[uid]
-        while bucket and now - bucket[0] > SEARCH_RATE[1]:
+    def limit(uid, kind='api'):
+        # A cota do YouTube é compartilhada por toda a comunidade: o limite por conta impede
+        # que uma pessoa sozinha a esgote. Busca é mais cara (100 unidades) e tem regra própria.
+        count, window = SEARCH_RATE if kind == 'search' else RATE
+        now, bucket = time.monotonic(), hits[(uid, kind)]
+        while bucket and now - bucket[0] > window:
             bucket.popleft()
-        if len(bucket) >= SEARCH_RATE[0]:
-            raise HTTPException(429, 'Muitas buscas seguidas. Espere um pouco.')
+        if len(bucket) >= count:
+            raise HTTPException(429, 'Muitas consultas ao YouTube seguidas. Espere um pouco.')
         bucket.append(now)
 
     async def details(ids, bearer=None):
@@ -254,6 +258,7 @@ def install_youtube(app, current_user, settings):
 
     @app.get('/api/youtube/trending')
     async def yt_trending(category: str = Query('', max_length=20), page: str = Query('', max_length=100), identity=Depends(current_user)):
+        limit(identity[0]['id'])
         params = {'part': 'snippet,contentDetails,statistics', 'chart': 'mostPopular', 'regionCode': 'BR', 'hl': 'pt-BR', 'maxResults': 24}
         if CATEGORIES.get(category):
             params['videoCategoryId'] = CATEGORIES[category]
@@ -272,7 +277,7 @@ def install_youtube(app, current_user, settings):
         key = ('search', '', tuple(sorted(params.items())))
         if cache.get(key) is None:
             api_key()
-            limit(identity[0]['id'])
+            limit(identity[0]['id'], 'search')
         data = await call('search', params, 'search')
         items = data.get('items') or []
         vids = await details([(i.get('id') or {}).get('videoId', '') for i in items if (i.get('id') or {}).get('kind') == 'youtube#video'])
@@ -282,11 +287,13 @@ def install_youtube(app, current_user, settings):
 
     @app.get('/api/youtube/videos')
     async def yt_videos(id: str = Query(..., max_length=600), identity=Depends(current_user)):
+        limit(identity[0]['id'])
         return {'items': await details(id.split(','))}
 
     @app.get('/api/youtube/comments')
     async def yt_comments(id: str = Query(..., pattern=r'^[A-Za-z0-9_-]{11}$'), order: str = Query('relevance', pattern='^(relevance|time)$'),
                           page: str = Query('', max_length=100), identity=Depends(current_user)):
+        limit(identity[0]['id'])
         params = {'part': 'snippet', 'videoId': id, 'maxResults': 20, 'order': order, 'textFormat': 'plainText'}
         if page:
             params['pageToken'] = page
@@ -308,6 +315,7 @@ def install_youtube(app, current_user, settings):
 
     @app.get('/api/youtube/channel')
     async def yt_channel(id: str = Query(..., pattern=r'^UC[A-Za-z0-9_-]{22}$'), page: str = Query('', max_length=100), identity=Depends(current_user)):
+        limit(identity[0]['id'])
         data = await call('channels', {'part': 'snippet,statistics,contentDetails', 'id': id, 'hl': 'pt-BR'}, 'channel')
         info = next((c for c in map(channel, data.get('items') or []) if c), None)
         if not info:
@@ -317,6 +325,7 @@ def install_youtube(app, current_user, settings):
 
     @app.get('/api/youtube/playlist')
     async def yt_playlist(id: str = Query(..., pattern=r'^[A-Za-z0-9_-]{10,64}$'), page: str = Query('', max_length=100), identity=Depends(current_user)):
+        limit(identity[0]['id'])
         data = await call('playlists', {'part': 'snippet,contentDetails', 'id': id}, 'playlist')
         info = next((p for p in map(playlist, data.get('items') or []) if p), None)
         if not info:
@@ -462,12 +471,14 @@ def install_youtube(app, current_user, settings):
 
     @app.get('/api/youtube/mine/playlists')
     async def mine_playlists(identity=Depends(current_user)):
+        limit(identity[0]['id'])
         acct, uid = await account(identity), identity[0]['id']
         data = await call('playlists', {'part': 'snippet,contentDetails', 'mine': 'true', 'maxResults': 50}, 'mine', acct['at'], uid)
         return {'items': [p for p in map(playlist, data.get('items') or []) if p]}
 
     @app.get('/api/youtube/mine/liked')
     async def mine_liked(page: str = Query('', max_length=100), identity=Depends(current_user)):
+        limit(identity[0]['id'])
         acct, uid = await account(identity), identity[0]['id']
         params = {'part': 'snippet,contentDetails,statistics', 'myRating': 'like', 'maxResults': 24}
         if page:
@@ -477,6 +488,7 @@ def install_youtube(app, current_user, settings):
 
     @app.get('/api/youtube/mine/subscriptions')
     async def mine_subscriptions(identity=Depends(current_user)):
+        limit(identity[0]['id'])
         acct, uid = await account(identity), identity[0]['id']
         subs = await call('subscriptions', {'part': 'snippet', 'mine': 'true', 'maxResults': 50, 'order': 'relevance'}, 'mine', acct['at'], uid)
         ids = [((i.get('snippet') or {}).get('resourceId') or {}).get('channelId', '') for i in subs.get('items') or []]

@@ -20,7 +20,7 @@ Correções em `static/app.js`:
 
 ## Como rodar
 
-1. Abra a pasta `jesus`.
+1. Abra a pasta principal do projeto (a que contém `app.py`).
 2. Execute `iniciar_orbita.bat`.
 3. O app abre em `http://127.0.0.1:8000`.
 

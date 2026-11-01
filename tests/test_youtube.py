@@ -107,6 +107,14 @@ class Routes(unittest.TestCase):
     def test_requires_login(self):
         self.assertEqual(self.client.get('/api/youtube/trending').status_code, 401)
 
+    def test_limiter_blocks_burst_but_not_cached_search(self):
+        with patch.object(youtube, 'RATE', (1, 600)), self.remote():
+            first = self.client.get('/api/youtube/videos', params={'id': 'LimiterAAAA'}, headers=AUTH)
+            second = self.client.get('/api/youtube/videos', params={'id': 'LimiterAAAA'}, headers=AUTH)
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 429)
+        self.assertIn('Muitas consultas', second.json()['detail'])
+
     def test_oauth_flow_is_separate_from_orbita_account(self):
         with self.remote():
             start = self.client.post('/api/youtube/oauth/start', headers=AUTH)

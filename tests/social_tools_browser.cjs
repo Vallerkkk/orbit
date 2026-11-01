@@ -27,7 +27,8 @@ let browser;
 (async()=>{
  browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||undefined});const report=[];
  for(const mobile of [false,true]){
-  const context=await browser.newContext({viewport:{width:mobile?390:1440,height:mobile?844:1000},isMobile:mobile,hasTouch:mobile});
+  // bypassCSP: o axe é injetado inline no teste; o app em produção continua sob o CSP real.
+  const context=await browser.newContext({viewport:{width:mobile?390:1440,height:mobile?844:1000},isMobile:mobile,hasTouch:mobile,bypassCSP:true});
   await context.route('**/*',route=>{const url=route.request().url();if(url.includes('supabase-js'))return route.fulfill({contentType:'application/javascript',body:fixture});if(url.endsWith('/api/config'))return route.fulfill({json:{configured:true,supabaseUrl:'https://qa.supabase.co',supabaseKey:'public',callsConfigured:false,storageConfigured:true}});if(url.includes('/auth/v1/settings'))return route.fulfill({json:{external:{google:false,discord:false}}});return route.continue();});
   const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));page.on('dialog',dialog=>dialog.accept());await page.goto(process.env.ORBITA_TEST_URL||'http://127.0.0.1:8766/',{waitUntil:'networkidle'});await page.locator('#message-list .message').first().waitFor();
   await page.locator('#message-input').fill('Rascunho que sobrevive ao reinício');await page.reload({waitUntil:'networkidle'});await page.locator('#message-list .message').first().waitFor();assert.equal(await page.locator('#message-input').inputValue(),'Rascunho que sobrevive ao reinício');

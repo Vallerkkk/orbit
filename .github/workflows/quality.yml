@@ -7,7 +7,6 @@ concurrency:
   cancel-in-progress: true
 jobs:
   python:
-    if: ${{ github.event.repository.private == false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -20,7 +19,6 @@ jobs:
       - run: python scripts/database.py
       - run: python scripts/check_build.py
   browser:
-    if: ${{ github.event.repository.private == false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
@@ -66,7 +64,6 @@ jobs:
           path: work/browser-temp/
           retention-days: 3
   desktop:
-    if: ${{ github.event.repository.private == false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

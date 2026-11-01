@@ -3,6 +3,9 @@ services:
     name: orbita-app
     runtime: python
     plan: free
+    # Push na branch publicada dispara o deploy; o Render espera /healthz responder antes de trocar o tráfego.
+    autoDeploy: true
+    healthCheckPath: /healthz
     buildCommand: pip install -r requirements.txt && npm ci && npm run build
     startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
     envVars:

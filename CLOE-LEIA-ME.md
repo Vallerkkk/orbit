@@ -36,6 +36,16 @@ O plano da Groq pode ter limites e custos. O descarte de silêncio reduz pedidos
 
 Configure modelos alternativos no servidor usando `CLOE_STT_MODEL` e `CLOE_LLM_MODEL`.
 
+### Limites diários por pessoa
+
+Para o uso de uma conta não consumir a cota paga de todo mundo, o servidor guarda um contador por pessoa e por dia:
+
+- `CLOE_DAILY_STT_SECONDS` (padrão 7200): segundos de áudio transcrito.
+- `CLOE_DAILY_ASKS` (padrão 200): perguntas respondidas pelo modelo.
+- `CLOE_DAILY_TTS_CHARS` (padrão 100000): caracteres de voz neural.
+
+Ao passar do limite, a Cloe responde HTTP 429 com aviso em português e volta no dia seguinte. Defina `0` para desligar uma cota. O contador é em memória: reiniciar o serviço zera o dia e não vale entre instâncias — o Render Free roda um processo só.
+
 ## Validação
 
 Testes automatizados cobrem a janela temporal, isolamento de salas e participantes, ativação dividida em trechos, autorização de presença/publicação, WAV inválido, silêncio, duplicação de pedidos e recuperação de erros. O áudio PCM e o limite dos trechos têm testes de unidade em JavaScript. O pacote inclui o build atualizado.
