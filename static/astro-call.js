@@ -8,7 +8,7 @@ export function wav(pcm){
 const VOICE_KEY='orbita-astro-voice',NAME_KEY='orbita-astro-voice-name',SOURCE_KEY='orbita-astro-voice-source',SERVICE_KEY='orbita-astro-service-voice',RATE_KEY='orbita-astro-rate',VOLUME_KEY='orbita-astro-volume';
 const storedNumber=(key,fallback)=>{const raw=localStorage.getItem(key);if(raw===null)return fallback;const value=Number(raw);return Number.isFinite(value)?Math.max(0,Math.min(2,value)):fallback;};
 
-export function initAstro(ctx){
+export function initCloe(ctx){
  const {el,button,apiFetch}=ctx,view=document.getElementById('voice-view');
  // Só o ícone: os botões do cabeçalho têm largura de ícone e o texto transbordava por cima do título da sala.
  const toggle=button('',()=>setOpen(panel.hidden),'soft-button astro-toggle');
@@ -153,8 +153,8 @@ export function initAstro(ctx){
   finally{if(current(ticket))sending=false;}
  }
  async function capture(nextTrack){if(loadingAudio||track===nextTrack)return;stopAudio();loadingAudio=true;track=nextTrack;const ticket=version;
-  try{const ac=new AudioContext();audio=ac;await ac.audioWorklet.addModule('/static/astro-recorder.js');if(!current(ticket)||audio!==ac){ac.close().catch(()=>{});return;}
-   source=ac.createMediaStreamSource(new MediaStream([nextTrack]));node=new AudioWorkletNode(ac,'astro-recorder');source.connect(node);node.connect(ac.destination);await ac.resume();if(!current(ticket)||audio!==ac)return;
+  try{const ac=new AudioContext();audio=ac;await ac.audioWorklet.addModule('/static/astro-recorder.js?v=cloe-20261031');if(!current(ticket)||audio!==ac){ac.close().catch(()=>{});return;}
+   source=ac.createMediaStreamSource(new MediaStream([nextTrack]));node=new AudioWorkletNode(ac,"cloe-recorder");source.connect(node);node.connect(ac.destination);await ac.resume();if(!current(ticket)||audio!==ac)return;
    // Mesmo com a Cloe falando, o trecho sobe: o servidor só o usa para achar "para de falar".
    node.port.onmessage=event=>{if(!current(ticket)||!enabled||Date.now()<nextAttempt)return;const stopOnly=speaking||Date.now()<pauseUntil,chunk={id:crypto.randomUUID(),body:wav(event.data),stopOnly};if(queue.length>=3){if(!stopOnly){status.textContent='Conexão lenta: alguns trechos não puderam ser enviados.';return;}queue.shift();}queue.push(chunk);drain();};
   }catch(error){if(current(ticket)){status.textContent='Não foi possível capturar áudio: '+error.message;stopAudio();nextAttempt=Date.now()+10000;}}

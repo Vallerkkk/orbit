@@ -1,4 +1,4 @@
-// Astro: o botão e o painel de transcrição aparecem na view de voz sem quebrar o app.
+// Cloe: o botão e o painel de transcrição aparecem na view de voz sem quebrar o app.
 const {chromium}=require(process.env.ORBITA_PLAYWRIGHT||'playwright');
 const {stub,VOICE}=require('./fixtures/supabase_fixture.cjs');
 const fs=require('fs'),path=require('path'),assert=require('node:assert/strict');

@@ -1,8 +1,8 @@
 {
-  "version": "fb861ebdff746e55",
-  "entry": "/static/dist/app-X5MV6PI2.js",
+  "version": "4031aef00dec6633",
+  "entry": "/static/dist/app-JUSRVYAX.js",
   "files": [
-    "/static/dist/app-X5MV6PI2.js",
+    "/static/dist/app-JUSRVYAX.js",
     "/static/dist/call-layout-0cc49be914a83149.css",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js",
@@ -73,7 +73,7 @@
     "/static/loader.css": "/static/dist/loader-2d3fc658d3944c83.css"
   },
   "integrity": {
-    "/static/dist/app-X5MV6PI2.js": "92da92eb9705101f4d13c11ded7e2e98a7f23dedc5717a78f7448c71d65fb26a",
+    "/static/dist/app-JUSRVYAX.js": "ddf4293d4252029475bb477f7e8a0e4238a92c6f0f203a191e6eed49e4e6c5e6",
     "/static/dist/call-layout-0cc49be914a83149.css": "0cc49be914a83149b7fa6b367f886b3f061e23ba9d871fa7020a9016553dcaf4",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js": "20cfee0fc731efe53611da92202bd240b2f9d28e6b3115691ed50fc718851ee0",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js": "db2508c2c9152fbe631806e53dd148bd67a8b3695a0094caa6145d906b978027",

@@ -1,6 +1,6 @@
 # Cloe na Órbita
 
-Esta atualização integra a Cloe às calls existentes, usando Groq para transcrever e responder. Ela inicia automaticamente quando um participante entra, sem botão para adicionar um bot. O comando é **“Ei Cloe”**; o nome antigo **“Ei Astro”** continua aceito como apelido, mas a interface agora chama a assistente de Cloe.
+Esta atualização integra a Cloe às calls existentes, usando Groq para transcrever e responder. Ela inicia automaticamente quando um participante entra, sem botão para adicionar um bot. O comando é **“Ei Cloe”** — a interface, as respostas e a voz usam somente esse nome.
 
 ## Usar
 
@@ -33,7 +33,7 @@ Todos os participantes precisam carregar esta versão para que os respectivos mi
 
 O plano da Groq pode ter limites e custos. O descarte de silêncio reduz pedidos, mas não garante funcionamento gratuito e ilimitado. A Cloe não faz pesquisa na web para responder perguntas; a busca do YouTube é usada somente para pedidos de música no Ouvir juntos. A voz neural gratuita depende de um serviço externo da Microsoft: se ele mudar ou ficar fora do ar, a Cloe continua falando com a voz do aparelho.
 
-Configure modelos alternativos no servidor usando `ASTRO_STT_MODEL` e `ASTRO_LLM_MODEL`.
+Configure modelos alternativos no servidor usando `CLOE_STT_MODEL` e `CLOE_LLM_MODEL`.
 
 ## Validação
 

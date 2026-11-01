@@ -1,4 +1,4 @@
-import {initAstro} from './astro-call.js';
+import {initCloe} from './astro-call.js';
 import {screenSupport,screenCaptureOptions,screenErrorText} from './screen-share.js';
 import {initScreenWatch} from './screen-watch.js';
 import {initMusicChannel} from './music-channel.js';
@@ -2565,4 +2565,4 @@ if(/^#spotify=/.test(location.hash)){const ok=location.hash==='#spotify=conectad
 window.orbitaJoinVoice=id=>joinVoiceChannel(id);import('./call-v3.js').then(m=>m.installCallV3()).catch(()=>{});
 
 // Cloe acompanha a call realmente conectada, independentemente do canal selecionado.
-initAstro({el,button,apiFetch,watch:raw=>enhancements.watchCommand(raw,{noExternal:true}),state:()=>({room,callChannel,session,deafened})});
+initCloe({el,button,apiFetch,watch:raw=>enhancements.watchCommand(raw,{noExternal:true}),state:()=>({room,callChannel,session,deafened})});

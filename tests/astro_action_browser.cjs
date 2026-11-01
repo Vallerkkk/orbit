@@ -1,4 +1,4 @@
-// Astro: pedido por texto vira comando real no Ouvir juntos (busca + sessão sincronizada).
+// Cloe: pedido por texto vira comando real no Ouvir juntos (busca + sessão sincronizada).
 const {chromium}=require(process.env.ORBITA_PLAYWRIGHT||'playwright');
 const {stub,VOICE}=require('./fixtures/supabase_fixture.cjs');
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');

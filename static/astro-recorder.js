@@ -1,5 +1,5 @@
 // AudioWorklet: PCM16/16 kHz, utterance boundaries and silence rejection.
-class AstroRecorder extends AudioWorkletProcessor {
+class CloeRecorder extends AudioWorkletProcessor {
   constructor(){super();this.enabled=false;this.quick=false;this.reset();this.port.onmessage=e=>{this.enabled=!!e.data.enabled;this.quick=!!e.data.quick;if(!this.enabled)this.reset();};}
   reset(){this.samples=[];this.phase=0;this.sum=0;this.count=0;this.quiet=0;this.voiced=0;}
   flush(){if(this.voiced>=(this.quick?1600:3200)&&this.samples.length>=4000){const pcm=Int16Array.from(this.samples);this.port.postMessage(pcm.buffer,[pcm.buffer]);}this.reset();}
@@ -11,4 +11,4 @@ class AstroRecorder extends AudioWorkletProcessor {
     }return true;
   }
 }
-registerProcessor('astro-recorder',AstroRecorder);
+registerProcessor('cloe-recorder',CloeRecorder);

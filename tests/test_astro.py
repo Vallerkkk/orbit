@@ -29,7 +29,7 @@ class FakeLiveKit:
         if not self.allowed: raise RuntimeError('not in room')
         return SimpleNamespace(name='João', permission=SimpleNamespace(can_publish=self.can_publish))
 
-class AstroTests(unittest.TestCase):
+class CloeTests(unittest.TestCase):
     def setUp(self):
         self.app = FastAPI()
         async def user(): return ({'id':UID}, {})
@@ -104,12 +104,11 @@ class AstroTests(unittest.TestCase):
         self.assertIsNone(c.command('e','a cloe do filme é bonita'))
         self.assertIsNone(c.command('f','clonagem é legal'))
         self.assertIsNone(c.command('g','Cloe é legal'))
-        # O nome antigo continua valendo como apelido para quem já usava assim.
-        self.assertEqual(c.command('k','Ei Astro, qual é o resumo?'),'qual é o resumo?')
-        self.assertEqual(c.command('l','as tro, quantos somos?'),'quantos somos?')
-        self.assertEqual(c.command('m','eistro, resuma'),'resuma')
+        # Só "Cloe" acorda a assistente; o nome antigo não é mais um comando.
+        self.assertIsNone(c.command('k','Ei Astro, qual é o resumo?'))
+        self.assertIsNone(c.command('l','as tro, quantos somos?'))
+        self.assertIsNone(c.command('m','eistro, resuma'))
         self.assertIsNone(c.command('n','o astro do filme é bonito'))
-        self.assertIsNone(c.command('o','astronomia é legal'))
 
     def test_stop_command_does_not_trigger_the_model(self):
         c=astro.Call()
@@ -123,6 +122,7 @@ class AstroTests(unittest.TestCase):
         self.assertEqual(c.parse('f','pode parar')[0],'stop')
         self.assertEqual(c.parse('g','Cloe, pare de responder')[0],'stop')
         self.assertEqual(c.parse('h','silencia')[0],'stop')
+        self.assertFalse(astro.stop_command('Ei Astro, pare'))
 
     def test_audio_while_speaking_only_accepts_stop(self):
         texts=iter(['qual é o resumo?','Cloe, para de falar.'])
@@ -192,7 +192,7 @@ class AstroTests(unittest.TestCase):
         calls=[]
         async def groq(app,path,**kwargs):
             calls.append(path)
-            if path=='audio/transcriptions':return {'text':'Ei Astro, toque Suicideboys For the Last Time'}
+            if path=='audio/transcriptions':return {'text':'Ei Cloe, toque Suicideboys For the Last Time'}
             raise AssertionError('o modelo não deve ser chamado para um pedido de música')
         with patch.object(astro,'groq_json',groq):response=self.audio()
         self.assertEqual(response.status_code,200)

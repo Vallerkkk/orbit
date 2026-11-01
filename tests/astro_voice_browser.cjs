@@ -1,4 +1,4 @@
-// Astro: a voz natural feminina é escolhida no painel e pedida ao servidor.
+// Cloe: a voz natural feminina é escolhida no painel e pedida ao servidor.
 const {chromium}=require(process.env.ORBITA_PLAYWRIGHT||'playwright');
 const {stub,VOICE}=require('./fixtures/supabase_fixture.cjs');
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
