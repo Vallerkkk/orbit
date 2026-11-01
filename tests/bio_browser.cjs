@@ -2,7 +2,7 @@
 const {chromium}=require(process.env.ORBITA_PLAYWRIGHT||'playwright');
 const {stub,USER}=require('./fixtures/supabase_fixture.cjs');
 const fs=require('fs'),path=require('path'),assert=require('node:assert/strict');
-const shots='/workspace/redesign-shots';fs.mkdirSync(shots,{recursive:true});
+const shots=path.resolve(__dirname,'../work/browser-shots');fs.mkdirSync(shots,{recursive:true});
 (async()=>{
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||undefined});
  const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});

@@ -13,7 +13,7 @@ while(msgs.length<N){const author=people[k++%people.length];const burst=1+(k*7)%
  msgs.push({id,channel_id:TEXT,author_id:author.id,content:j===0?`Mensagem ${i} com um texto mais longo para ocupar duas linhas no chat e parecer conversa de verdade, com **negrito** e um link https://example.com/${i}`:'continuação '+i,created_at:new Date(Math.min(t,Date.now()-1000)).toISOString(),pinned:false,reply_to:null,thread_root:null,edited_at:null,profiles:author,attachments:attachment,attachment_id:attachment?.id||null,reactions:[],poll_votes:[]});}}
 data.messages=msgs;data.attachments=atts;
 const stub=baseStub.replace(m[1],()=>JSON.stringify(data));
-const shots='/workspace/redesign-shots';fs.mkdirSync(shots,{recursive:true});
+const shots=path.resolve(__dirname,'../work/browser-shots');fs.mkdirSync(shots,{recursive:true});
 (async()=>{
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||undefined});const report=[];
  for(const mobile of (process.env.CHAT_MOBILE==='0'?[false]:[false,true])){

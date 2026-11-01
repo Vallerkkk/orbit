@@ -1,9 +1,9 @@
 // YouTube no Órbita com backend mockado: trilho, Início, busca, página do vídeo, mini player sobre o chat,
-// cartão leve no chat, conta Google conectada (Inscrições) e mobile. Gera screenshots em /workspace/redesign-shots.
+// cartão leve no chat, conta Google conectada (Inscrições) e mobile. Gera screenshots em work/browser-shots.
 const {chromium}=require(process.env.ORBITA_PLAYWRIGHT||'playwright');
 const {stub}=require('./fixtures/supabase_fixture.cjs');
 const fs=require('fs'),path=require('path'),assert=require('node:assert/strict');
-const shots='/workspace/redesign-shots';fs.mkdirSync(shots,{recursive:true});
+const shots=path.resolve(__dirname,'../work/browser-shots');fs.mkdirSync(shots,{recursive:true});
 const base=process.env.ORBITA_TEST_URL||'http://127.0.0.1:8766/';
 const COLORS=['#7a4fb0','#2f7f8f','#b0823a','#3a5fb0','#4f8f3a','#b03a55','#5a4fb0','#2f8f6a','#b06a3a','#8f3a8f'];
 const titles=['Construí um sintetizador modular com sucata de rádio antigo','Lo-fi para programar até de madrugada — mix de 3 horas','Speedrun de “Cavernas de Âmbar” em 41 minutos','Por que as cidades flutuantes de Vênus fazem sentido','Receita: pão de fermentação natural em 24h, sem drama','Ao vivo: Festival Maré Alta — palco principal','Teclados mecânicos baratos testados por 6 meses','Resumo da semana: rede elétrica solar chega ao interior','Montei um jardim vertical na varanda do apê','Guitarra em 30 dias: dia 12 — pestana sem dor','O mistério do farol que acende sozinho','Testei o patinete mais estranho da feira de tecnologia'];
