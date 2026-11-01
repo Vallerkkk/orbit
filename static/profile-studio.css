@@ -117,7 +117,7 @@
 .ps-btn{border:0;border-radius:10px;padding:8px 14px;font-weight:700;cursor:pointer;background:var(--v2-accent,var(--ac));color:#fff}.ps-btn.ghost{background:#ffffff12}.ps-btn:disabled{opacity:.5;cursor:not-allowed}
 .ps-font-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
 .ps-font{border:1px solid #ffffff14;border-radius:12px;background:#ffffff06;color:#fff;padding:14px;text-align:left;cursor:pointer}.ps-font.selected{border-color:var(--v2-accent,var(--ac));background:#8b6cff22}.ps-font span{display:block;font-size:1.35rem;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ps-font small{color:var(--t3)}
-.ps-chip-row{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.ps-chip{border:1px solid #ffffff22;border-radius:999px;background:#ffffff08;color:#fff;padding:6px 12px;cursor:pointer}.ps-chip[aria-pressed=true]{background:var(--v2-accent,var(--ac));border-color:transparent}
+.ps-chip-row{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.ps-chip{border:1px solid #ffffff22;border-radius:999px;background:#ffffff08;color:#fff;padding:6px 12px;cursor:pointer}.ps-chip[aria-pressed=true]{background:var(--v2-accent,var(--ac));border-color:transparent;color:var(--onac,#fff)}
 .ps-lock{opacity:.75}.ps-lock::after{content:'🔒 ADM';position:absolute;top:8px;left:8px;z-index:2;font-size:.7rem;font-weight:800;background:#000a;padding:2px 7px;border-radius:6px}
 
 /* Modal "Suas insígnias" */
@@ -126,7 +126,7 @@
 .ps-badges h4{margin:18px 0 10px;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--t3)}
 .ps-badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:10px}
 .ps-badge-grid button{position:relative;aspect-ratio:1;border-radius:14px;border:1px solid #ffffff12;background:#ffffff06;display:grid;place-items:center;cursor:pointer;padding:6px}
-.ps-badge-grid button.selected{border-color:var(--v2-accent,var(--ac));background:#8b6cff22}.ps-badge-grid button.pinned::before{content:'📌';position:absolute;top:2px;right:4px;font-size:.7rem}
+.ps-badge-grid button.selected{border-color:var(--v2-accent,var(--ac));background:#8b6cff22}.ps-badge-grid .ps-pin{position:absolute;top:3px;right:3px;width:15px;height:15px;border-radius:50%;background:#000a;display:grid;place-items:center;color:var(--v2-accent,var(--ac));pointer-events:none}.ps-badge-grid .ps-pin svg{width:9px;height:9px}
 .ps-badge-grid button.locked{filter:grayscale(1)}.ps-badge-grid button.new::after{content:'';position:absolute;top:6px;left:6px;width:8px;height:8px;border-radius:50%;background:var(--ac);box-shadow:0 0 0 2px var(--v2-bg-2,var(--s1))}
 .ps-badge-grid .lv{position:absolute;bottom:3px;right:5px;font-size:.62rem;font-weight:800;color:#fff;background:#0008;border-radius:5px;padding:0 4px}
 .ps-badge-big{display:grid;place-items:center;margin:8px auto 14px;width:170px;height:170px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--rc) 35%,transparent),transparent 65%)}
@@ -135,6 +135,31 @@
 .ps-badge-sub{text-align:center;color:#c8c2dc;margin:6px 0 10px}.ps-badge-tags{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:18px}
 .ps-progress{background:#ffffff0a;border-radius:12px;padding:12px 14px;margin-bottom:16px}.ps-progress b{display:block;margin-bottom:8px}.ps-bar{height:8px;border-radius:99px;background:#ffffff14;overflow:hidden}.ps-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--rc),#fff);border-radius:inherit}.ps-progress small{display:block;margin-top:6px;color:var(--t3)}
 .ps-levels{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.ps-level{position:relative;border-radius:12px;padding:8px 4px;text-align:center;background:#ffffff08;border:1px solid color-mix(in srgb,var(--lc) 55%,transparent)}.ps-level .badge-art{margin:0 auto}.ps-level strong{display:block;font-size:.72rem;color:var(--lc)}.ps-level small{font-size:.66rem;color:var(--t3)}.ps-level.locked{filter:grayscale(.9);opacity:.6}.ps-level.locked::after{content:'🔒';position:absolute;top:4px;right:6px;font-size:.7rem}.ps-level.current{box-shadow:0 0 0 2px var(--lc)}
+.ps-badge-tools{display:grid;gap:8px;margin:10px 0 4px}
+.ps-badge-search{width:100%;box-sizing:border-box;background:#0005;border:1px solid #ffffff1a;border-radius:10px;color:#fff;padding:9px 12px;font:inherit;font-size:.9rem}
+.ps-badge-search::placeholder{color:var(--t3)}
+.ps-badge-cats{display:flex;flex-wrap:wrap;gap:6px;padding-bottom:2px}
+.ps-badge-cats .ps-chip{flex:none;padding:5px 11px;font-size:.78rem;white-space:nowrap}
+.ps-badge-sort{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--t3)}
+.ps-badge-sort select{flex:1;background:#0005;border:1px solid #ffffff1a;border-radius:8px;color:#fff;padding:7px 8px;font:inherit;font-size:.82rem}
+.ps-badge-hint{margin:8px 0 0;color:var(--t3);font-size:.82rem}
+.ps-vitrine-edit{grid-template-columns:repeat(auto-fit,minmax(82px,1fr));margin:10px 0 2px}
+.ps-vitrine-slot.editing{cursor:grab;border-style:dashed}
+.ps-vitrine-slot.dragging{opacity:.45}
+.ps-vitrine-slot.over{border-color:var(--v2-accent,var(--ac));background:#8b6cff22}
+.ps-vitrine-slot.fixed{border-style:solid;opacity:.92}
+.ps-vitrine-acts{display:flex;gap:3px;justify-content:center;margin-top:2px}
+.ps-vitrine-slot button{position:relative}
+.ps-vitrine-slot .lv{position:absolute;bottom:5px;right:6px;font-size:.62rem;font-weight:800;color:#fff;background:#0008;border-radius:5px;padding:0 4px}
+.ps-badges .ps-btn{color:var(--onac,#fff)!important}
+.ps-vitrine-move{width:22px;height:20px;padding:0;border:1px solid #ffffff1a;border-radius:6px;background:#0004;color:#fff;font-size:.7rem;cursor:pointer;display:grid;place-items:center}
+.ps-vitrine-move:disabled{opacity:.3;cursor:default}
+.ps-badge-sections h4:first-child{margin-top:14px}
+.ps-badge-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.ps-badge-arrow{width:34px;height:34px;border-radius:50%;border:1px solid #ffffff22;background:#0006;color:#fff;font-size:1.15rem;cursor:pointer;display:grid;place-items:center}
+.ps-badge-arrow:disabled{opacity:.35;cursor:default}
+.ps-badge-pos{font-size:.75rem;color:var(--t3);background:#0005;padding:3px 10px;border-radius:999px}
+.ps-badge-back{display:none}
 .ps-badge-row{display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin:4px 0}.ps-badge-row button{background:#0003;border:1px solid #ffffff14;border-radius:8px;padding:3px;cursor:pointer;display:grid}.ps-badge-row .badge-art{width:22px;height:22px}
 .ps-owner-mark{display:inline-flex;align-items:center;gap:5px;font-size:.7rem;font-weight:900;padding:2px 8px;border-radius:999px;background:linear-gradient(90deg,#ffcf5e,#ff7ab6);color:#1a0e1f}
 
@@ -167,7 +192,14 @@
 .ps-card h5{margin:12px 0 4px;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#c8c2dc}
 .ps-ed-foot{display:flex;gap:10px;justify-content:flex-end;align-items:center;padding:12px 20px;border-top:1px solid #ffffff10}.ps-ed-foot span{flex:1;color:var(--t3);font-size:.85rem}
 .ps-mural-item{border:1px solid #ffffff12;border-radius:12px;padding:10px;margin-bottom:8px;background:#ffffff05;font-size:.86rem}.ps-mural-item small{display:block;color:var(--t3);margin-top:4px}
-@media (max-width:860px){.ps-overlay{padding:0}.ps-sheet{height:100%;border-radius:0}.ps-badges{grid-template-columns:1fr;height:auto}.ps-badges-left{border:0}.ps-editor{grid-template-columns:1fr;height:auto}.ps-ed-left,.ps-ed-right{border:0}.ps-ed-center{order:-1;padding:14px}.ps-body{padding:14px}}
+@media (max-width:860px){.ps-overlay{padding:0}.ps-sheet{height:100%;border-radius:0}.ps-badges{grid-template-columns:1fr;height:auto}.ps-badges-left{border:0}
+  /* No celular o detalhe vira folha sobreposta: sem isso ele ficava embaixo da lista inteira. */
+  .ps-badges-right{position:fixed;inset:0;z-index:5;height:100dvh;padding:16px 16px 28px;background-color:var(--v2-bg-2,var(--s1,#161320));transform:translateY(101%);transition:transform .22s ease;visibility:hidden;overscroll-behavior:contain}
+  .ps-badges.detail-open .ps-badges-right{transform:none;visibility:visible}
+  .ps-badge-cats{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .ps-badge-cats::-webkit-scrollbar{display:none}
+  .ps-badge-back{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;margin:0 0 10px;padding:8px 14px;border-radius:999px;border:1px solid #ffffff22;background:#0005;color:#fff;font-weight:700;cursor:pointer}
+  .ps-editor{grid-template-columns:1fr;height:auto}.ps-ed-left,.ps-ed-right{border:0}.ps-ed-center{order:-1;padding:14px}.ps-body{padding:14px}}
 @media (prefers-reduced-motion:reduce){.pk-fx::before,.pk-fx::after,.pk-frame::after,.pk-border::before,.badge-art,.ne-shine,.ne-rainbow,.ne-fire,.ne-staff,.ne-neon,.ne-glitch{animation:none!important}}
 .ps-badge-row .lv{display:none}.ps-badge-row button{position:relative}
 .rich-profile.pv2.ps-themed{background:linear-gradient(180deg,var(--pt1) 0%,var(--pt2) 100%)!important;--pv-panel:var(--pt1)}

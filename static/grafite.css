@@ -596,8 +596,7 @@ body.realtime-ok #btn-free-setup{display:none}
 .ps-overlay .ps-badge-grid button{border-radius:12px!important;background:var(--s2)!important;border:1px solid var(--bd)!important;transition:border-color .15s,background .15s}
 .ps-overlay .ps-badge-grid button:hover{border-color:var(--bdh)!important;background:var(--s3)!important}
 .ps-overlay .ps-badge-grid button.selected{border-color:var(--ac)!important;background:var(--acs)!important}
-.ps-overlay .ps-badge-grid button.locked.new::after{display:none}
-.ps-overlay .ps-badge-grid button.locked{opacity:.55}
+.ps-overlay .ps-badge-grid button.locked{opacity:.72}
 .ps-overlay .ps-note-label{font-size:.72rem!important;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)!important;font-weight:700}
 @media (max-width:640px){.ps-overlay{padding:0!important}.ps-overlay .ps-sheet{border-radius:0!important;border:0!important;width:100vw!important;height:100dvh!important;max-height:none!important}.ps-overlay .ps-body{padding:14px!important}.ps-overlay .ps-item-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.ps-overlay .ps-badge-grid{grid-template-columns:repeat(auto-fill,minmax(56px,1fr))!important}}
 

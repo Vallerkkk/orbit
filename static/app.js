@@ -1246,47 +1246,6 @@ function startGroupCall(){
   });
 }
 
-
-
-function readBadges(){try{const list=JSON.parse(localStorage.getItem('orbita-badges')||'[]');return Array.isArray(list)?list.filter(x=>typeof x==='string'):[];}catch{return [];}}
-function awardBadge(name){
-  let badges = readBadges();
-  if(!badges.includes(name)){
-    badges.push(name);
-    localStorage.setItem('orbita-badges', JSON.stringify(badges));
-    toast('Insígnia desbloqueada: ' + name);
-  }
-}
-
-function openBadgeManager(){
-  showDialog('Insígnias', container => {
-    container.append(el('p','muted','Suas insígnias aparecem no perfil.'));
-    const list = el('div');
-    const available = [
-      {name:'Pioneiro', desc:'Primeiros usuários'},
-      {name:'Ativo', desc:'Participa de chamadas'},
-      {name:'Criador', desc:'Criou uma comunidade'},
-      {name:'Apoiador', desc:'Ajuda outros'},
-      {name:'Veterano', desc:'Tempo de casa'}
-    ];
-    const owned = readBadges();
-    for(const item of available){
-      const row = el('label','check-field');
-      const chk = el('input'); chk.type='checkbox'; chk.checked=owned.includes(item.name);
-      chk.onchange = () => {
-        let next = readBadges();
-        next = chk.checked ? [...new Set([...next,item.name])] : next.filter(x=>x!==item.name);
-        localStorage.setItem('orbita-badges', JSON.stringify(next));
-        toast(chk.checked ? item.name+' adicionada' : item.name+' removida');
-      };
-      row.append(chk, document.createTextNode(' '+item.name+' — '+item.desc));
-      list.append(row);
-    }
-    container.append(list);
-    container.append(button('Fechar', () => $('app-dialog').close(), 'soft-button'));
-  });
-}
-
 function showFriends() {
   feed?.hide();youtube?.hide();
   navigationEpoch++;saveComposerDraft();saveConversation();stopConversation();home=true;generation++;
