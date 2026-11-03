@@ -1,8 +1,8 @@
 {
-  "version": "e13003c6fccd8e95",
-  "entry": "/static/dist/app-GXOH443G.js",
+  "version": "de58ead573910a64",
+  "entry": "/static/dist/app-ZRWXYXHQ.js",
   "files": [
-    "/static/dist/app-GXOH443G.js",
+    "/static/dist/app-ZRWXYXHQ.js",
     "/static/dist/call-layout-51b4200ce3f8be31.css",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js",
@@ -34,7 +34,7 @@
     "/static/dist/chunk-social-tools-MKCY6MD5.js",
     "/static/dist/chunk-telemetry-L3E3VUOP.js",
     "/static/dist/chunk-voice-chat-IMNF5UER.js",
-    "/static/dist/chunk-watch-party-EVX2NHV4.js",
+    "/static/dist/chunk-watch-party-F2QPLNXS.js",
     "/static/dist/chunk-youtube-W4BENIZJ.js",
     "/static/dist/community-ux-f1d2cee68ca44291.css",
     "/static/dist/cosmos-634b58d97740ec30.css",
@@ -75,7 +75,7 @@
     "/static/loader.css": "/static/dist/loader-2d3fc658d3944c83.css"
   },
   "integrity": {
-    "/static/dist/app-GXOH443G.js": "33a88864cd91ac907f7d17a0fc5b2668468b48e4fa701e451624f98a1f9c1991",
+    "/static/dist/app-ZRWXYXHQ.js": "33683179d11117001c627eee8efab365470a9cb9fe7d12b63229552c7c18f1ca",
     "/static/dist/call-layout-51b4200ce3f8be31.css": "51b4200ce3f8be314486f6d3ee486f288cfc26b5177a9a25dc6c7f6580982cf5",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js": "20cfee0fc731efe53611da92202bd240b2f9d28e6b3115691ed50fc718851ee0",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js": "db2508c2c9152fbe631806e53dd148bd67a8b3695a0094caa6145d906b978027",
@@ -107,7 +107,7 @@
     "/static/dist/chunk-social-tools-MKCY6MD5.js": "38cf188b7f572b4051786c06432d673f3a8d367718fdab94e20d9e1a676cd7ce",
     "/static/dist/chunk-telemetry-L3E3VUOP.js": "3132e8830e5589029e82064b1fc2e9c325e2bcaaaf0f50eb9a7cc31f52ddba8c",
     "/static/dist/chunk-voice-chat-IMNF5UER.js": "0c7e7538955dcc96ed1f5b46293930360dbefd2511e1d47bce73af7d95d0b4aa",
-    "/static/dist/chunk-watch-party-EVX2NHV4.js": "0e2c60949e6f799590ac4609ec3564e46d9bf267f56bfecfad4bff14c0b42cab",
+    "/static/dist/chunk-watch-party-F2QPLNXS.js": "2264bb918cdfdffd835da516fcece89e9999740493dd61051359b60d00a36358",
     "/static/dist/chunk-youtube-W4BENIZJ.js": "a1ab148e3ed9427facf3b6dd2d14f2bed7b5bdf5a9a20a1981b662a542bfde3d",
     "/static/dist/community-ux-f1d2cee68ca44291.css": "f1d2cee68ca44291d6840a4c9869d718e48b64f9de9e12b578689eb124b89b01",
     "/static/dist/cosmos-634b58d97740ec30.css": "634b58d97740ec30f6cdf4da9684a34e506c8a24e85fa932c7854dd02106b484",

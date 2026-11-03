@@ -67,7 +67,7 @@ A Cloe usa Groq. As cotas diárias por pessoa ficam em memória e são ajustáve
 
 Desempenho e concorrência também são ajustáveis sem mexer no código:
 
-- `CLOE_CONTEXT_CHARS` (padrão 8000): tamanho da transcrição enviada ao modelo; menor responde mais rápido.
+- `CLOE_CONTEXT_CHARS` (padrão 8000): tamanho do histórico de perguntas enviado ao modelo; menor responde mais rápido.
 - `CLOE_MAX_ANSWER_TOKENS` (padrão 500): teto da resposta falada; respostas longas demoram mais.
 - `CLOE_REASONING_EFFORT` (padrão `low`): esforço de raciocínio do `gpt-oss`; `low` prioriza velocidade.
 - `CLOE_ANSWER_QUEUE` (padrão 3): perguntas simultâneas aguardando resposta na mesma call.
@@ -75,9 +75,15 @@ Desempenho e concorrência também são ajustáveis sem mexer no código:
 
 A voz natural (Thalita ou Francisca) é a única reproduzida quando escolhida. Se o serviço da Microsoft falhar, a Cloe não substitui a voz: o painel avisa e a resposta fica em texto até a voz voltar.
 
+### Escuta sob demanda
+
+A Cloe não transcreve a conversa. O microfone só é capturado quando alguém toca em **Falar com a Cloe**; nesse momento o navegador grava um único trecho curto e o envia como pergunta. O servidor trata esse trecho como dirigido a ela mesmo sem “Ei Cloe” (parâmetro `direct=1`) e guarda apenas as perguntas feitas à Cloe, que formam o contexto de 15 minutos do modelo. Falas fora do botão não são transcritas nem armazenadas.
+
+Como consequência, não há mais detecção contínua do nome nem interrupção por voz (“para de falar”); a fala é interrompida pelo botão **Parar fala** ou por um novo toque em **Falar com a Cloe**. A Cloe também não resume a call inteira: ela conhece somente o que foi perguntado a ela. O trecho é enviado após pausa de fala ou após 8 segundos, com limite de 12 segundos de espera no botão antes de avisar que não ouviu nada.
+
 ### Administração pela Cloe
 
-A administração só existe para a conta definida em `CLOE_OWNER_ID` (UUID do Supabase). Sem essa variável, o modo fica desligado e a Cloe avisa. Outros usuários — inclusive outros administradores do site — recebem recusa. Cada pedido vira uma proposta e só executa após a frase `CLOE_CONFIRM_PHRASE` (padrão `Eu Kalil Confirmo`) ser falada no microfone pelo dono autenticado na call. A frase é redigida da transcrição e do contexto do modelo e nunca é revelada; confirmação por texto é recusada. `CLOE_OWNER_ACTION_SECONDS` (padrão 90) expira a proposta e `CLOE_OWNER_ATTEMPTS` (padrão 3) limita as tentativas erradas.
+A administração só existe para a conta definida em `CLOE_OWNER_ID` (UUID do Supabase). Sem essa variável, o modo fica desligado e a Cloe avisa. Outros usuários — inclusive outros administradores do site — recebem recusa. Cada pedido vira uma proposta e só executa após a frase `CLOE_CONFIRM_PHRASE` (padrão `Eu Kalil Confirmo`) ser falada no microfone pelo dono autenticado na call — toque em **Falar com a Cloe** e diga a frase. A frase é removida do histórico do modelo e nunca é revelada; confirmação por texto é recusada. `CLOE_OWNER_ACTION_SECONDS` (padrão 90) expira a proposta e `CLOE_OWNER_ATTEMPTS` (padrão 3) limita as tentativas erradas.
 
 Moderação (banir, remover, suspender, apagar mensagem, encerrar call, expulsar) passa pelas funções SQL auditadas já existentes e exige que o dono seja administrador/criador do site. Canais, cargos e dados do servidor são gravados com a sessão do próprio dono no PostgREST, então as políticas RLS valem; essas alterações ficam no log do servidor. Excluir canais, servidores ou cargos e transferir posse continuam bloqueados.
 

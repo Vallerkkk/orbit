@@ -86,6 +86,74 @@ class CloeTests(unittest.TestCase):
         self.assertEqual(len(requests),2)
         self.assertEqual(self.client.get('/api/astro/direct-44444444-4444-4444-8444-444444444444').json()['events'],[])
 
+    def test_direct_audio_accepts_question_without_wake(self):
+        requests=[]
+        async def groq(app,path,**kwargs):
+            requests.append((path,kwargs))
+            if path=='audio/transcriptions': return {'text':'qual é a capital da França?'}
+            return {'choices':[{'message':{'content':'É Paris.'}}]}
+        with patch.object(astro,'groq_json',groq):
+            response=self.client.post(
+                f'/api/astro/{ROOM}/audio?chunk_id=77777777-7777-4777-8777-777777777701&direct=1',
+                content=wav(),headers={'Content-Type':'audio/wav'})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.json()['answer']['text'],'É Paris.')
+        events=self.client.get('/api/astro/'+ROOM).json()['events']
+        self.assertEqual([e['kind'] for e in events],['transcript','answer'])
+        self.assertNotIn('wake',events[0])
+        self.assertIn('Pergunta de João: qual é a capital da França?',
+                      requests[-1][1]['json']['messages'][1]['content'])
+
+    def test_direct_audio_strips_the_optional_wake_word(self):
+        content={}
+        async def groq(app,path,**kwargs):
+            if path=='audio/transcriptions': return {'text':'Ei Cloe, quanto é dois mais dois?'}
+            content['text']=kwargs['json']['messages'][1]['content']
+            return {'choices':[{'message':{'content':'Quatro.'}}]}
+        with patch.object(astro,'groq_json',groq):
+            self.client.post(
+                f'/api/astro/{ROOM}/audio?chunk_id=77777777-7777-4777-8777-777777777702&direct=1',
+                content=wav(),headers={'Content-Type':'audio/wav'})
+        self.assertNotIn('Ei Cloe',content['text'])
+        self.assertIn('Pergunta de João: quanto é dois mais dois?',content['text'])
+
+    def test_speech_not_addressed_to_cloe_is_not_saved(self):
+        calls=[]
+        async def groq(app,path,**kwargs):
+            calls.append(path)
+            return {'text':'bom dia, pessoal'}
+        with patch.object(astro,'groq_json',groq):
+            response=self.audio(chunk='77777777-7777-4777-8777-777777777703')
+        self.assertEqual(response.json(),{'transcribed':True})
+        self.assertEqual(calls,['audio/transcriptions'])
+        self.assertEqual(self.client.get('/api/astro/'+ROOM).json()['events'],[])
+
+    def test_direct_owner_confirmation_executes(self):
+        executed=[];proposal=self.owner_plan()
+        async def plan_for(self,text,room,headers,user_id=None):
+            return proposal
+        async def execute(self,plan,headers,room):
+            executed.append(plan.kind);return plan.result
+        texts=iter(['apaga a última mensagem do canal geral','Eu Kalil Confirmo'])
+        async def groq(app,path,**kwargs):
+            if path=='audio/transcriptions': return {'text':next(texts)}
+            return {'choices':[{'message':{'content':'não deveria responder'}}]}
+        with patch.dict(os.environ,{'CLOE_OWNER_ID':UID,'CLOE_CONFIRM_PHRASE':'Eu Kalil Confirmo'}), \
+                patch.object(astro.OwnerAdmin,'plan_for',plan_for), \
+                patch.object(astro.OwnerAdmin,'execute',execute), \
+                patch.object(astro,'groq_json',groq):
+            first=self.client.post(
+                f'/api/astro/{ROOM}/audio?chunk_id=77777777-7777-4777-8777-777777777704&direct=1',
+                content=wav(),headers={'Content-Type':'audio/wav'}).json()
+            self.assertIn('frase de confirmação',first['answer']['text'])
+            self.assertEqual(executed,[])
+            self.app.state.astro_calls[ROOM].last_upload[UID]=0
+            second=self.client.post(
+                f'/api/astro/{ROOM}/audio?chunk_id=77777777-7777-4777-8777-777777777705&direct=1',
+                content=wav(),headers={'Content-Type':'audio/wav'}).json()
+        self.assertEqual(second['answer']['text'],'Pronto. Apaguei a mensagem.')
+        self.assertEqual(executed,['delete_message'])
+
     def test_invalid_audio_rejected_before_provider(self):
         self.assertEqual(self.audio(b'not a wav').status_code,400)
         self.assertEqual(self.audio(b'x'*400001).status_code,413)

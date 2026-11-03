@@ -29,14 +29,14 @@ export function initCloe(ctx){
  toggle.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 14v-3M7 18.5v-9M11 16v-8M15 19V9"/><path d="M19.4 3l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" fill="currentColor" stroke="none"/></svg>';
  toggle.title='Cloe · Transcrição';toggle.setAttribute('aria-label','Cloe · Transcrição');toggle.setAttribute('aria-expanded','false');toggle.setAttribute('aria-pressed','false');toggle.setAttribute('aria-controls','astro-panel');view.querySelector('.chat-actions').append(toggle);
  const panel=el('aside','astro-panel');panel.id='astro-panel';panel.hidden=true;panel.setAttribute('aria-label','Cloe e transcrição da call');
- function setOpen(next){panel.hidden=!next;toggle.setAttribute('aria-expanded',String(next));toggle.setAttribute('aria-pressed',String(next));if(next){fillVoices();sync();if(target){lastPoll=0;poll();}}}
+ function setOpen(next){if(!next)cancelListening();panel.hidden=!next;toggle.setAttribute('aria-expanded',String(next));toggle.setAttribute('aria-pressed',String(next));if(next){fillVoices();sync();if(target){lastPoll=0;poll();}}}
  const header=el('header'),title=el('h3','','Cloe'),close=button('Fechar',()=>setOpen(false),'text-button');header.append(title,close);
  const status=el('p','muted','Entre na call para iniciar.');status.setAttribute('role','status');
- const ownerNote=el('p','muted','Como dono, você pode pedir ações administrativas por voz — eu descrevo o que vou fazer e espero você falar a frase de confirmação.');ownerNote.hidden=true;
- const notice=el('p','muted','Diga “Ei Cloe” para perguntar ou pedir música (“Ei Cloe, toque For the Last Time”) — também dá para escrever abaixo. “Parar fala” — ou dizer “para de falar” — interrompe a resposta. Contexto temporário de 15 minutos.');
+ const ownerNote=el('p','muted','Como dono, toque em “Falar com a Cloe” e peça ações administrativas — eu descrevo o que vou fazer e espero você falar a frase de confirmação.');ownerNote.hidden=true;
+ const notice=el('p','muted','Toque em “Falar com a Cloe” para perguntar, pedir música ou dar uma ordem. Nada é transcrito antes disso. Use “Parar fala” para interromper. Contexto temporário de 15 minutos.');
  const tabs=el('div'),transcripts=button('Transcrição',()=>select('transcript')),answers=button('Respostas da Cloe',()=>select('answer'));tabs.append(transcripts,answers);
  const list=el('div','astro-events');list.setAttribute('role','log');list.setAttribute('aria-live','polite');
- const controls=el('div'),pause=button('Pausar meu áudio',()=>{enabled=!enabled;pause.textContent=enabled?'Pausar meu áudio':'Retomar meu áudio';pause.setAttribute('aria-pressed',String(!enabled));if(!enabled)queue=[];});pause.setAttribute('aria-pressed','false');controls.append(pause);
+ const controls=el('div'),listen=button('Falar com a Cloe',()=>toggleListening(),'soft-button astro-listen'),pause=button('Pausar meu áudio',()=>{enabled=!enabled;pause.textContent=enabled?'Pausar meu áudio':'Retomar meu áudio';pause.setAttribute('aria-pressed',String(!enabled));if(!enabled){queue=[];cancelListening();}});pause.setAttribute('aria-pressed','false');listen.setAttribute('aria-pressed','false');listen.title='Grava só o próximo trecho e envia para a Cloe';controls.append(listen,pause);
  const voiceBox=el('section','astro-voice'),voiceTitle=el('h4','','Voz da Cloe'),voiceRow=el('div','astro-voice-row');
  const voiceToggle=button('',()=>setVoiceEnabled(!voiceEnabled),'soft-button astro-voice-toggle'),stopButton=button('Parar fala',()=>stopSpeech(true),'soft-button');
  voiceRow.append(voiceToggle,stopButton);
@@ -50,7 +50,7 @@ export function initCloe(ctx){
  askInput.type='text';askInput.maxLength=500;askInput.placeholder='Pergunte à Cloe por texto';askInput.setAttribute('aria-label','Pergunta para a Cloe por texto');
  ask.append(askInput,askSend);
  panel.append(header,status,notice,ownerNote,tabs,list,controls,voiceBox,ask);view.append(panel);
- let target=null,version=0,cursor=0,items=[],tab='transcript',enabled=true,configured=false,audio,source,node,track,listenCopy=null,loadingAudio=false,polling=false,queue=[],sending=false,controller=null,pauseUntil=0,nextAttempt=0,retryAt=0,lastProblem='',lastPoll=0,joinedAt=Date.now()/1000;
+ let target=null,version=0,cursor=0,items=[],tab='transcript',enabled=true,configured=false,audio,source,node,track,listenCopy=null,loadingAudio=false,polling=false,queue=[],sending=false,controller=null,nextAttempt=0,retryAt=0,lastProblem='',lastPoll=0,joinedAt=Date.now()/1000,listening=false,listenTimer=0;
  let seenIds=new Set(),statusUntil=0;
  const POLL_OPEN=1200,POLL_IDLE=3000;
  let voiceEnabled=localStorage.getItem(VOICE_KEY)!=='off',voiceSource=localStorage.getItem(SOURCE_KEY)==='device'?'device':'natural',sourceChosen=localStorage.getItem(SOURCE_KEY)!==null,voiceName=localStorage.getItem(NAME_KEY)||'',serviceVoice=localStorage.getItem(SERVICE_KEY)||'',voiceRate=storedNumber(RATE_KEY,1),voiceVolume=storedNumber(VOLUME_KEY,.9);
@@ -61,6 +61,23 @@ export function initCloe(ctx){
  // Avisos importantes (voz indisponível, resultado do player) não podem ser apagados pelo tique de 500 ms.
  function setStatus(text,ms=0){status.textContent=text;statusUntil=ms?Date.now()+ms:0;}
  function defaultStatus(text){if(Date.now()>statusUntil)status.textContent=text;}
+ function cancelListening(){listening=false;clearTimeout(listenTimer);listenTimer=0;listen.textContent='Falar com a Cloe';listen.setAttribute('aria-pressed','false');try{node?.port.postMessage({enabled:false,quick:false});}catch{}}
+ function stopListening(message){cancelListening();if(message)setStatus(message,6000);}
+ function startListening(){
+  sync();
+  if(!target){setStatus('Entre na call para falar com a Cloe.',6000);return;}
+  if(!configured){setStatus('A Cloe ainda não foi ligada neste servidor.',6000);return;}
+  if(!enabled){setStatus('Seu áudio está pausado. Toque em “Retomar meu áudio” primeiro.',6000);return;}
+  if(Date.now()<nextAttempt){setStatus('Aguarde um instante e tente de novo.',5000);return;}
+  const state=ctx.state();
+  if(state.deafened||!state.room?.localParticipant?.isMicrophoneEnabled){setStatus('Abra seu microfone para falar com a Cloe.',6000);return;}
+  if(!node){setStatus('Preparando o microfone… toque novamente em instantes.',5000);return;}
+  if(speaking)stopSpeech(false);
+  listening=true;clearTimeout(listenTimer);listen.textContent='Ouvindo…';listen.setAttribute('aria-pressed','true');setStatus('Ouvindo… fale agora.',12000);
+  try{node.port.postMessage({enabled:true,quick:false});}catch{stopListening('Não foi possível abrir o microfone. Tente de novo.');return;}
+  listenTimer=setTimeout(()=>{if(listening)stopListening('Não ouvi nada. Toque em “Falar com a Cloe” e tente de novo.');},12000);
+ }
+ function toggleListening(){if(listening)stopListening('Chamada cancelada.');else startListening();}
  const pollEvery=()=>document.hidden||panel.hidden?POLL_IDLE:POLL_OPEN;
  function remember(event){if(!event||typeof event!=='object'||!event.kind)return false;if(event.id!==undefined&&seenIds.has(event.id))return false;if(event.id!==undefined)seenIds.add(event.id);items.push(event);items.sort((a,b)=>(Number(a.id)||Infinity)-(Number(b.id)||Infinity));return true;}
  function apply(event){if(event.kind==='answer')speak(event.text);else if(event.kind==='stop')stopSpeech(true);else if(event.kind==='transcript'&&event.wake)sound('astro-wake');}
@@ -94,9 +111,9 @@ export function initCloe(ctx){
  function renderVoiceState(){voiceToggle.textContent=voiceEnabled?'Voz ativada':'Voz desativada';voiceToggle.setAttribute('aria-pressed',String(voiceEnabled));stopButton.disabled=!speaking;}
  function clearWatchdog(){if(watchdog)clearTimeout(watchdog);watchdog=0;}
  function cleanForSpeech(text){return String(text||'').replace(/```[\s\S]*?```/g,' ').replace(/!\[[^\]]*\]\([^)]*\)/g,' ').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/[*_`#>~|]/g,'').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu,'').replace(/\s+/g,' ').trim();}
- function stopSpeech(cue){speakToken++;clearWatchdog();speechQueue=[];speechAbort?.abort();speechAbort=null;if(speaking||globalThis.speechSynthesis?.speaking)globalThis.speechSynthesis?.cancel();releaseAudio();speaking=false;pauseUntil=Date.now()+500;if(cue)sound('astro-stop');renderVoiceState();}
+ function stopSpeech(cue){speakToken++;clearWatchdog();speechQueue=[];speechAbort?.abort();speechAbort=null;if(speaking||globalThis.speechSynthesis?.speaking)globalThis.speechSynthesis?.cancel();releaseAudio();speaking=false;if(cue)sound('astro-stop');renderVoiceState();}
  function releaseAudio(){if(speechAudio){try{speechAudio.pause();}catch{}speechAudio=null;}if(speechUrl){URL.revokeObjectURL(speechUrl);speechUrl='';}}
- function finishSpeech(token){if(token!==speakToken)return;speaking=false;clearWatchdog();releaseAudio();pauseUntil=Date.now()+800;renderVoiceState();pump();}
+ function finishSpeech(token){if(token!==speakToken)return;speaking=false;clearWatchdog();releaseAudio();renderVoiceState();pump();}
  async function speakNatural(phrase,token){
   const abort=new AbortController();speechAbort=abort;
   const response=await apiFetch('/api/astro/'+encodeURIComponent(target)+'/speech',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:phrase,voice:selectedNaturalId(),rate:voiceRate}),signal:abort.signal});
@@ -111,17 +128,14 @@ export function initCloe(ctx){
   player.addEventListener('error',()=>{cleanup();finishSpeech(token);});
   const duration=await new Promise(resolve=>{const timer=setTimeout(()=>resolve(0),3000);player.addEventListener('loadedmetadata',()=>{clearTimeout(timer);resolve(player.duration||0);},{once:true});player.addEventListener('error',()=>{clearTimeout(timer);resolve(0);},{once:true});});
   if(token!==speakToken){cleanup();return false;}
-  if(duration)pauseUntil=Date.now()+duration*1000+1200;
   clearWatchdog();watchdog=setTimeout(()=>{releaseAudio();finishSpeech(token);},Math.max(8000,(duration||30)*1000+8000));
   await player.play();
   return true;
  }
- function noVoice(message){speaking=false;speechQueue=[];pauseUntil=Date.now()+600;voiceNote.textContent=message;setStatus(message,8000);renderVoiceState();}
+ function noVoice(message){speaking=false;speechQueue=[];voiceNote.textContent=message;setStatus(message,8000);renderVoiceState();}
  async function speakNow(text){
   const phrase=cleanForSpeech(text).slice(0,600);if(!phrase){speaking=false;return;}
   const token=++speakToken;
-  // O microfone fica pausado já durante a geração da voz na nuvem; o áudio em si ajusta o tempo depois.
-  const estimate=Math.min(120000,Math.max(5000,phrase.length*90/Math.max(.7,voiceRate)+4000));pauseUntil=Date.now()+estimate+900;
   speaking=true;renderVoiceState();
   if(voiceSource==='natural'){
    if(naturalVoiceMissing())return noVoice('A voz escolhida não está disponível agora. A resposta continua no texto.');
@@ -149,8 +163,8 @@ export function initCloe(ctx){
   releaseAudio();
   const utterance=new SpeechSynthesisUtterance(phrase);
   utterance.lang=voice?.lang||'pt-BR';if(voice)utterance.voice=voice;utterance.rate=voiceRate;utterance.volume=voiceVolume;
-  const estimate=Math.min(120000,Math.max(2000,phrase.length*90/Math.max(.7,voiceRate)));pauseUntil=Date.now()+estimate+900;
-  const finish=()=>{if(token!==speakToken)return;speaking=false;clearWatchdog();pauseUntil=Date.now()+800;renderVoiceState();pump();};
+  const estimate=Math.min(120000,Math.max(2000,phrase.length*90/Math.max(.7,voiceRate)));
+  const finish=()=>{if(token!==speakToken)return;speaking=false;clearWatchdog();renderVoiceState();pump();};
   utterance.onend=finish;utterance.onerror=finish;
   clearWatchdog();watchdog=setTimeout(()=>{if(token!==speakToken)return;synth.cancel();finish();},estimate+5000);
   if(synth.speaking)synth.cancel();speaking=true;renderVoiceState();synth.speak(utterance);
@@ -187,7 +201,7 @@ export function initCloe(ctx){
  function render(){const bottom=list.scrollHeight-list.scrollTop-list.clientHeight<80,fragment=document.createDocumentFragment();items=items.filter(e=>e.at>Date.now()/1000-900);const rows=items.filter(e=>tab==='transcript'?e.kind==='transcript':e.kind==='answer'||e.kind==='error');for(const e of rows){const card=el('article'),name=el('strong','',e.name),time=el('time','muted',new Date(e.at*1000).toLocaleTimeString('pt-BR'));card.append(name,time,el('p','',e.text));const sources=sourceItems(e);if(sources.length){const box=el('div','astro-sources');box.append(el('span','muted','Fontes'));for(const source of sources){const link=el('a','',source.title);link.href=source.url;link.target='_blank';link.rel='noopener noreferrer';box.append(link);}card.append(box);}fragment.append(card);}if(!rows.length)fragment.append(el('p','astro-empty',tab==='transcript'?'Nenhuma fala transcrita ainda. A Cloe mostra aqui o que ouve na call.':'Nenhuma resposta ainda. Diga “Ei Cloe” ou escreva abaixo.'));list.classList.toggle('is-empty',!rows.length);list.replaceChildren(fragment);if(bottom)list.scrollTop=list.scrollHeight;}
  // Só para a cópia própria da Cloe; a faixa publicada no LiveKit nunca é parada aqui.
  function stopAudio(){track=null;source?.disconnect();node?.disconnect();source=node=null;try{listenCopy?.stop();}catch{}listenCopy=null;if(audio){audio.close().catch(()=>{});audio=null;}loadingAudio=false;}
- function reset(){version++;stopSpeech(false);controller?.abort();controller=new AbortController();stopAudio();queue=[];sending=false;polling=false;configured=false;items=[];seenIds=new Set();cursor=0;lastProblem='';nextAttempt=0;retryAt=0;lastPoll=0;joinedAt=Date.now()/1000;pauseUntil=0;statusUntil=0;render();}
+ function reset(){version++;stopSpeech(false);cancelListening();controller?.abort();controller=new AbortController();stopAudio();queue=[];sending=false;polling=false;configured=false;items=[];seenIds=new Set();cursor=0;lastProblem='';nextAttempt=0;retryAt=0;lastPoll=0;joinedAt=Date.now()/1000;statusUntil=0;render();}
  ask.onsubmit=async event=>{event.preventDefault();const text=askInput.value.trim();if(!text)return;sync();if(!target){setStatus('Entre na call para perguntar à Cloe.',6000);return;}askSend.disabled=true;
   try{const response=await apiFetch('/api/astro/'+encodeURIComponent(target)+'/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text}),signal:controller.signal});let data={};try{data=await response.json();}catch{}askInput.value='';if(data?.watch)await runWatch(data.watch);else{if(data?.answer)deliver(data.answer);setStatus(data?.answer?'Cloe respondeu.':'Pergunta enviada à Cloe.',4000);}lastPoll=0;poll();}
   catch(error){if(error.name!=='AbortError')setStatus(error.message,8000);}
@@ -199,7 +213,7 @@ export function initCloe(ctx){
   finally{if(current(ticket))polling=false;}
  }
  async function drain(){if(sending||!queue.length||!target)return;sending=true;const ticket=version;
-  try{while(queue.length&&current(ticket)){const chunk=queue.shift();if(!enabled)continue;try{const response=await apiFetch('/api/astro/'+encodeURIComponent(target)+'/audio?chunk_id='+chunk.id+(chunk.stopOnly?'&stop_only=1':''),{method:'POST',headers:{'Content-Type':'audio/wav'},body:chunk.body,signal:controller.signal});let data={};try{data=await response.json();}catch{}if(data?.stop)stopSpeech(true);else if(data?.watch)runWatch(data.watch);else if(data?.answer)deliver(data.answer);}catch(error){if(!current(ticket)||error.name==='AbortError')return;// 429/5xx é contrapressão do servidor, não falha da pessoa: o trecho
+  try{while(queue.length&&current(ticket)){const chunk=queue.shift();if(!enabled)continue;try{const response=await apiFetch('/api/astro/'+encodeURIComponent(target)+'/audio?chunk_id='+chunk.id+'&direct=1',{method:'POST',headers:{'Content-Type':'audio/wav'},body:chunk.body,signal:controller.signal});let data={};try{data=await response.json();}catch{}if(data?.stop)stopSpeech(true);else if(data?.watch)runWatch(data.watch);else if(data?.answer)deliver(data.answer);else if(data?.transcribed===false)setStatus('Não ouvi nada. Toque em “Falar com a Cloe” e tente de novo.',6000);else if(data?.transcribed)setStatus('Não entendi. Toque em “Falar com a Cloe” e repita.',6000);}catch(error){if(!current(ticket)||error.name==='AbortError')return;// 429/5xx é contrapressão do servidor, não falha da pessoa: o trecho
        // é a única cópia daquela fala, jogá-lo fora perdia a transcrição e calava a Cloe por 10 s.
        if(error.status===429||error.status>=500){retryAt=Date.now()+900;queue.unshift(chunk);break;}lastProblem=error.message;setStatus(lastProblem,10000);nextAttempt=Date.now()+10000;queue=[];break;}}}
   finally{if(current(ticket))sending=false;}
@@ -210,8 +224,8 @@ export function initCloe(ctx){
    listenCopy=nextTrack.clone();source=ac.createMediaStreamSource(new MediaStream([listenCopy]));node=new AudioWorkletNode(ac,"cloe-recorder");source.connect(node);node.connect(ac.destination);
    // resume() fica pendente para sempre sem gesto no iOS; não trava a captura esperando.
    await Promise.race([ac.resume(),new Promise(resolve=>setTimeout(resolve,1500))]);if(!current(ticket)||audio!==ac)return;
-   // Mesmo com a Cloe falando, o trecho sobe: o servidor só o usa para achar "para de falar".
-   node.port.onmessage=event=>{if(!current(ticket)||!enabled||Date.now()<nextAttempt)return;const stopOnly=speaking||Date.now()<pauseUntil,chunk={id:crypto.randomUUID(),body:wav(event.data),stopOnly};if(queue.length>=3){if(!stopOnly){setStatus('Conexão lenta: alguns trechos não puderam ser enviados.',6000);return;}queue.shift();}queue.push(chunk);drain();};
+   // Só o trecho gravado depois do botão "Falar com a Cloe" é enviado.
+   node.port.onmessage=event=>{if(!current(ticket)||!enabled||!listening||Date.now()<nextAttempt)return;stopListening();const chunk={id:crypto.randomUUID(),body:wav(event.data)};if(queue.length>=3){setStatus('Conexão lenta: aguarde a resposta anterior.',6000);return;}queue.push(chunk);setStatus('Processando…',4000);drain();};
   }catch(error){if(current(ticket)){setStatus('Não foi possível capturar áudio: '+error.message,10000);stopAudio();nextAttempt=Date.now()+10000;}}
   // Captura abortada no meio (call mudou, contexto fechado): esquece a faixa para tentar de novo,
   // senão "track===nextTrack" bloqueava a Cloe de ouvir até a faixa mudar.
@@ -223,9 +237,9 @@ export function initCloe(ctx){
   const active=enabled&&configured&&!state.deafened&&state.room.localParticipant.isMicrophoneEnabled&&!pub?.isMuted&&Date.now()>nextAttempt;
   if(media&&media.readyState==='live'&&Date.now()>nextAttempt)capture(media);else if(track){stopAudio();if(enabled&&configured&&target&&!lastProblem)defaultStatus('O microfone foi desconectado: escolha outro em Entrada e saída de áudio.');}
   if(listenCopy&&media&&listenCopy.enabled!==media.enabled)listenCopy.enabled=media.enabled;
-  // Durante a fala o microfone segue aberto só para o comando de parar; o modo rápido
-  // fecha o trecho após ~0,6 s de silêncio para a interrupção chegar logo.
-  node?.port.postMessage({enabled:!!active,quick:speaking||Date.now()<pauseUntil});if(enabled&&configured&&!lastProblem){if(!state.room.localParticipant.isMicrophoneEnabled)defaultStatus('Cloe na call · seu microfone está fechado');else if(audio?.state==='suspended')defaultStatus('Toque em Ativar voz para liberar o áudio do navegador.');}if(!enabled)defaultStatus('Envio do seu áudio pausado. Os outros participantes controlam o próprio áudio.');
+  if(listening&&!active)stopListening('O microfone não está disponível agora.');
+  // O worklet fica desligado até o botão "Falar com a Cloe": nada é capturado nem enviado.
+  node?.port.postMessage({enabled:!!active&&listening,quick:false});if(enabled&&configured&&!lastProblem){if(!state.room.localParticipant.isMicrophoneEnabled)defaultStatus('Cloe pronta · abra seu microfone para falar');else if(audio?.state==='suspended')defaultStatus('Toque em Ativar voz para liberar o áudio do navegador.');else if(speaking)defaultStatus('Cloe falando · toque em “Parar fala” para interromper.');else if(!listening)defaultStatus('Cloe pronta · toque em “Falar com a Cloe”');}if(!enabled)defaultStatus('Envio do seu áudio pausado. Os outros participantes controlam o próprio áudio.');
  }
  for(const type of ['pointerdown','keydown'])document.addEventListener(type,()=>{if(audio?.state==='suspended')audio.resume().catch(()=>{});},{capture:true,passive:true});
  select('transcript');const timer=setInterval(sync,500);window.addEventListener('pagehide',event=>{if(!event.persisted){clearInterval(timer);target=null;reset();}});
