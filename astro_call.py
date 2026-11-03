@@ -122,6 +122,14 @@ def reserve_daily(uid, field, amount, limit, label):
     usage[field] += amount
 
 
+def release_daily(uid, field, amount):
+    """Devolve a reserva quando o provedor falha: tentativa recusada não consome cota."""
+    if amount <= 0:
+        return
+    usage = _usage_for(uid)
+    usage[field] = max(0, usage[field] - amount)
+
+
 def reset_daily_usage():
     _daily_usage.clear()
 
@@ -874,11 +882,16 @@ def install_astro(app, current_user, settings):
             # concorrência enquanto este request estiver na Groq.
             if reserved:
                 call.last_upload[uid] = time.time()
-            result = await groq_json(app, 'audio/transcriptions',
-                files={'file': ('call.wav', bytes(data), 'audio/wav')},
-                data={'model': os.getenv('CLOE_STT_MODEL', 'whisper-large-v3-turbo'),
-                      'language': 'pt', 'temperature': '0', 'response_format': 'verbose_json',
-                      'prompt': 'Conversa em português brasileiro em uma call. Nomes próprios: Cloe, Órbita.'})
+            try:
+                result = await groq_json(app, 'audio/transcriptions',
+                    files={'file': ('call.wav', bytes(data), 'audio/wav')},
+                    data={'model': os.getenv('CLOE_STT_MODEL', 'whisper-large-v3-turbo'),
+                          'language': 'pt', 'temperature': '0', 'response_format': 'verbose_json',
+                          'prompt': 'Conversa em português brasileiro em uma call. Nomes próprios: Cloe, Órbita.'})
+            except HTTPException:
+                # Sem a devolução, cada nova tentativa de um trecho recusado gastava cota outra vez.
+                release_daily(uid, 'stt', seconds)
+                raise
             text = str(result.get('text', '')).strip()[:6000]
             segments = result.get('segments') or []
             if segments and all(s.get('no_speech_prob', 0) > .7 for s in segments):

@@ -277,6 +277,16 @@ class CloeTests(unittest.TestCase):
         # O trecho descartado nem chega a custar uma transcrição na Groq.
         self.assertEqual(calls,['audio/transcriptions'])
 
+    def test_failed_transcription_gives_the_audio_seconds_back(self):
+        async def fail(*args,**kwargs):raise HTTPException(429,'Limite da Groq atingido.')
+        with patch.object(astro,'DAILY_STT_SECONDS',1), patch.object(astro,'groq_json',fail):
+            first=self.audio(chunk='77777777-7777-4777-8777-777777777709')
+            self.app.state.astro_calls[ROOM].last_upload[UID]=0
+            second=self.audio(chunk='77777777-7777-4777-8777-777777777710')
+        self.assertIn('Groq',first.json()['detail'])
+        # A tentativa recusada devolveu o segundo reservado, então a cota não bloqueia a seguinte.
+        self.assertIn('Groq',second.json()['detail'])
+
     def test_audio_warms_the_voice_before_the_panel_asks(self):
         calls=[]
         async def fake(text,voice,rate):
