@@ -223,3 +223,11 @@ body.camera-active #voice-view #camera-switch{min-width:88px;width:auto;padding-
 .astro-voice output{font-size:10.5px;color:var(--text-mut)}
 .astro-voice .muted{font-size:10.5px;line-height:1.4;margin:0}
 @media(max-width:480px){#voice-view .astro-panel{right:8px;left:8px;top:56px;width:auto;border-radius:18px}#voice-view .astro-status{max-width:52vw}#voice-view .astro-voice-grid{grid-template-columns:1fr}}
+
+/* Legibilidade: textos do painel da Cloe e rótulos da call não ficam abaixo de 11 px. */
+#astro-panel .astro-status,#astro-panel .astro-close,#astro-panel .astro-hint p,#astro-panel .astro-owner,#astro-panel .astro-meta strong,#astro-panel .astro-actions .soft-button{font-size:12px}
+#astro-panel .astro-msg p{font-size:13px}
+#astro-panel .astro-count,#astro-panel .astro-meta time,#astro-panel .astro-sources,#astro-panel .astro-voice .field,#astro-panel .astro-voice output,#astro-panel .astro-voice .muted{font-size:11px}
+#astro-panel .astro-empty,#astro-panel .astro-empty p{font-size:12.5px}
+#voice-view .ch-desc,#voice-view .participant-status,#voice-view .participant-name{font-size:12px}
+#voice-view .call-live{font-size:11px}

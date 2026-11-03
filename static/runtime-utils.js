@@ -5,8 +5,9 @@ export class DraftStore {
     this.flush(); this.clear(); this.account = id || null; this.storage = storage;
     if (!id || !storage) return;
     try {
+      // Rascunho é texto claro no aparelho: fica só uma semana, não um mês.
       const snapshot=JSON.parse(storage.getItem('orbita-drafts:'+id)||'null');
-      if (!snapshot || Date.now()-snapshot.savedAt>30*86400000 || !Array.isArray(snapshot.items)) return;
+      if (!snapshot || Date.now()-snapshot.savedAt>7*86400000 || !Array.isArray(snapshot.items)) { storage.removeItem('orbita-drafts:'+id); return; }
       for (const [key,text] of snapshot.items.slice(-this.limit)) if(typeof key==='string'&&key.startsWith(id+':')&&typeof text==='string') this.items.set(key,{text:text.slice(0,16000),revision:++this.clock});
     } catch {}
   }

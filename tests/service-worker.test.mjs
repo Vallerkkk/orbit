@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 
 const source=readFileSync(new URL('../static/service-worker.js',import.meta.url),'utf8');
+const MAX_ASSETS=Number(source.match(/MAX_ASSETS\s*=\s*(\d+)/)[1]);
 function worker(){
   const handlers={},entries=new Map(),origin='https://orbita.example',absolute=url=>new URL(typeof url==='string'?url:url.url,origin).href;
   let failNetwork=false,failStorage=false;
@@ -40,8 +41,8 @@ test('cache replaces query versions and retains only a bounded number of assets'
   assert.equal(w.entries.size,1);assert(w.entries.has('https://orbita.example/static/app.js?v=new'));
   await w.cache.addAll(['/static/offline.html','/static/icons/icon-192.png','/static/icons/icon-512.png']);
   await w.navigate('/');
-  await Promise.all(Array.from({length:100},(_,i)=>w.request('/static/chunk-'+i+'.js')));
-  assert.equal(w.entries.size,84);assert(w.entries.has('https://orbita.example/static/offline.html'));
+  await Promise.all(Array.from({length:MAX_ASSETS+80},(_,i)=>w.request('/static/chunk-'+i+'.js')));
+  assert.equal(w.entries.size,MAX_ASSETS+4);assert(w.entries.has('https://orbita.example/static/offline.html'));
   // A casca da navegação não entra na cota de recursos e sobrevive à limpeza.
   assert(w.entries.has('https://orbita.example/__orbita_navigation'));
 });

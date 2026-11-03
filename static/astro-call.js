@@ -29,7 +29,7 @@ export function initCloe(ctx){
  toggle.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 14v-3M7 18.5v-9M11 16v-8M15 19V9"/><path d="M19.4 3l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" fill="currentColor" stroke="none"/></svg>';
  toggle.title='Cloe · Transcrição';toggle.setAttribute('aria-label','Cloe · Transcrição');toggle.setAttribute('aria-expanded','false');toggle.setAttribute('aria-pressed','false');toggle.setAttribute('aria-controls','astro-panel');view.querySelector('.chat-actions').append(toggle);
  const panel=el('aside','astro-panel');panel.id='astro-panel';panel.hidden=true;panel.setAttribute('aria-label','Cloe e transcrição da call');
- function setOpen(next){panel.hidden=!next;toggle.setAttribute('aria-expanded',String(next));toggle.setAttribute('aria-pressed',String(next));if(next){unseen.transcript=unseen.answer=0;fillVoices();sync();render();if(target){lastPoll=0;poll();}}}
+ function setOpen(next){panel.hidden=!next;toggle.setAttribute('aria-expanded',String(next));toggle.setAttribute('aria-pressed',String(next));if(next){unseen.transcript=unseen.answer=0;fillVoices();sync();render();if(target){lastPoll=0;poll();}close.focus({preventScroll:true});}else{toggle.focus({preventScroll:true});}}
  const header=el('header','astro-head'),identity=el('div','astro-identity'),avatar=el('span','astro-avatar');
  avatar.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 2l1.5 4.3L17.8 7.8l-4.3 1.5L12 13.6l-1.5-4.3L6.2 7.8l4.3-1.5z"/><path d="M18.6 13.4l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9z"/></svg>';
  const heading=el('div','astro-title'),title=el('h3','','Cloe');
@@ -73,8 +73,9 @@ export function initCloe(ctx){
  const current=(ticket)=>ticket===version&&!!target;
  function sound(effect){try{getSharedSounds()?.play(effect);}catch{}}
  // Avisos importantes (voz indisponível, resultado do player) não podem ser apagados pelo tique de 500 ms.
- function setStatus(text,ms=0){status.textContent=text;status.title=text;statusUntil=ms?Date.now()+ms:0;}
- function defaultStatus(text){if(Date.now()>statusUntil){status.textContent=text;status.title=text;}}
+ // Escrever o mesmo texto cinco vezes por segundo faz o leitor de tela repetir o aviso sem parar.
+ function setStatus(text,ms=0){if(status.textContent!==text){status.textContent=text;status.title=text;}statusUntil=ms?Date.now()+ms:0;}
+ function defaultStatus(text){if(Date.now()>statusUntil&&status.textContent!==text){status.textContent=text;status.title=text;}}
  const pollEvery=()=>document.hidden||panel.hidden?POLL_IDLE:POLL_OPEN;
  function remember(event){if(!event||typeof event!=='object'||!event.kind)return false;if(event.id!==undefined&&seenIds.has(event.id))return false;if(event.id!==undefined)seenIds.add(event.id);items.push(event);items.sort((a,b)=>(Number(a.id)||Infinity)-(Number(b.id)||Infinity));if((event.kind==='transcript'?'transcript':'answer')!==tab)unseen[event.kind==='transcript'?'transcript':'answer']++;return true;}
  function apply(event){if(event.kind==='answer')speak(event.text);else if(event.kind==='stop')stopSpeech(true);else if(event.kind==='transcript'&&event.wake)sound('astro-wake');}
@@ -196,10 +197,24 @@ export function initCloe(ctx){
  globalThis.speechSynthesis?.addEventListener?.('voiceschanged',fillVoices);
  globalThis.speechSynthesis?.getVoices?.();fillVoices();renderVoiceState();
  function select(value){tab=value;unseen[value]=0;transcripts.setAttribute('aria-pressed',String(value==='transcript'));answers.setAttribute('aria-pressed',String(value==='answer'));render();}
- function render(){const bottom=list.scrollHeight-list.scrollTop-list.clientHeight<80,fragment=document.createDocumentFragment();items=items.filter(e=>e.at>Date.now()/1000-900);const transcriptRows=items.filter(e=>e.kind==='transcript'),answerRows=items.filter(e=>e.kind==='answer'||e.kind==='error'),rows=tab==='transcript'?transcriptRows:answerRows;
-  for(const e of rows){const card=el('article','astro-msg '+(e.kind==='transcript'?'is-transcript':e.kind==='error'?'is-error':'is-answer')),meta=el('div','astro-meta'),name=el('strong','',e.name),time=el('time','',new Date(e.at*1000).toLocaleTimeString('pt-BR'));meta.append(name,time);card.append(meta,el('p','',e.text));const sources=sourceItems(e);if(sources.length){const box=el('div','astro-sources');box.append(el('span','muted','Fontes'));for(const source of sources){const link=el('a','',source.title);link.href=source.url;link.target='_blank';link.rel='noopener noreferrer';box.append(link);}card.append(box);}fragment.append(card);}
-  if(!rows.length){const empty=el('div','astro-empty');empty.innerHTML='<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 3l1.3 3.7L17 8l-3.7 1.3L12 13l-1.3-3.7L7 8l3.7-1.3z"/><path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8z"/></svg>';empty.append(el('p','',tab==='transcript'?'Nada transcrito. Chame “Ei Cloe” e faça sua pergunta.':'Nenhuma resposta ainda. Chame “Ei Cloe” ou escreva abaixo.'));fragment.append(empty);}
-  list.classList.toggle('is-empty',!rows.length);list.replaceChildren(fragment);transcriptCount.textContent=String(transcriptRows.length);transcriptCount.hidden=!transcriptRows.length;answerCount.textContent=String(answerRows.length);answerCount.hidden=!answerRows.length;transcripts.dataset.unread=String(unseen.transcript>0);answers.dataset.unread=String(unseen.answer>0);if(bottom)list.scrollTop=list.scrollHeight;}
+ const EMPTY_ICON='<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 3l1.3 3.7L17 8l-3.7 1.3L12 13l-1.3-3.7L7 8l3.7-1.3z"/><path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8z"/></svg>';
+ let renderedTab=null,renderedNodes=new Map(),emptyBox=null,emptyText=null;
+ function cardFor(e){const card=el('article','astro-msg '+(e.kind==='transcript'?'is-transcript':e.kind==='error'?'is-error':'is-answer')),meta=el('div','astro-meta'),name=el('strong','',e.name),time=el('time','',new Date(e.at*1000).toLocaleTimeString('pt-BR'));meta.append(name,time);card.append(meta,el('p','',e.text));const sources=sourceItems(e);if(sources.length){const box=el('div','astro-sources');box.append(el('span','muted','Fontes'));for(const source of sources){const link=el('a','',source.title);link.href=source.url;link.target='_blank';link.rel='noopener noreferrer';box.append(link);}card.append(box);}return card;}
+ // Só eventos novos entram na lista: reconstruí-la a cada resposta fazia o leitor de tela
+ // reler a conversa inteira, porque o painel é uma região aria-live.
+ function render(){const bottom=list.scrollHeight-list.scrollTop-list.clientHeight<80;items=items.filter(e=>e.at>Date.now()/1000-900);
+  const transcriptRows=items.filter(e=>e.kind==='transcript'),answerRows=items.filter(e=>e.kind==='answer'||e.kind==='error'),rows=tab==='transcript'?transcriptRows:answerRows;
+  if(tab!==renderedTab){list.replaceChildren();renderedNodes.clear();renderedTab=tab;emptyBox=null;}
+  const live=new Set(rows.map(e=>e.id));for(const [id,node] of renderedNodes)if(!live.has(id)){node.remove();renderedNodes.delete(id);}
+  if(!rows.length){
+   if(!emptyBox){emptyBox=el('div','astro-empty');emptyBox.innerHTML=EMPTY_ICON;emptyText=el('p');emptyBox.append(emptyText);}
+   emptyText.textContent=tab==='transcript'?'Nada transcrito. Chame “Ei Cloe” e faça sua pergunta.':'Nenhuma resposta ainda. Chame “Ei Cloe” ou escreva abaixo.';
+   if(!emptyBox.isConnected)list.append(emptyBox);
+  }else{
+   emptyBox?.remove();
+   rows.forEach((e,index)=>{let node=renderedNodes.get(e.id);if(!node){node=cardFor(e);renderedNodes.set(e.id,node);}const anchor=rows[index+1]?renderedNodes.get(rows[index+1].id):null;list.insertBefore(node,anchor||null);});
+  }
+  list.classList.toggle('is-empty',!rows.length);transcriptCount.textContent=String(transcriptRows.length);transcriptCount.hidden=!transcriptRows.length;answerCount.textContent=String(answerRows.length);answerCount.hidden=!answerRows.length;transcripts.dataset.unread=String(unseen.transcript>0);answers.dataset.unread=String(unseen.answer>0);if(bottom)list.scrollTop=list.scrollHeight;}
  // Só para a cópia própria da Cloe; a faixa publicada no LiveKit nunca é parada aqui.
  function stopAudio(){track=null;source?.disconnect();node?.disconnect();source=node=null;try{listenCopy?.stop();}catch{}listenCopy=null;if(audio){audio.close().catch(()=>{});audio=null;}loadingAudio=false;}
  function reset(){version++;stopSpeech(false);controller?.abort();controller=new AbortController();stopAudio();queue=[];sending=false;fails=0;polling=false;configured=false;items=[];seenIds=new Set();cursor=0;lastProblem='';nextAttempt=0;retryAt=0;lastPoll=0;joinedAt=Date.now()/1000;pauseUntil=0;statusUntil=0;render();}
@@ -222,7 +237,7 @@ export function initCloe(ctx){
   finally{if(current(ticket))sending=false;}
  }
  async function capture(nextTrack){if(loadingAudio||track===nextTrack)return;stopAudio();loadingAudio=true;track=nextTrack;const ticket=version;
-  try{const ac=new AudioContext();audio=ac;await ac.audioWorklet.addModule('/static/astro-recorder.js?v=cloe-20261103');if(!current(ticket)||audio!==ac){ac.close().catch(()=>{});return;}
+  try{const ac=new AudioContext();audio=ac;await ac.audioWorklet.addModule('/static/astro-recorder.js');if(!current(ticket)||audio!==ac){ac.close().catch(()=>{});return;}
    // Escuta uma cópia (clone) da faixa: a Cloe nunca compartilha, muta nem encerra o microfone da call.
    listenCopy=nextTrack.clone();source=ac.createMediaStreamSource(new MediaStream([listenCopy]));node=new AudioWorkletNode(ac,"cloe-recorder");source.connect(node);node.connect(ac.destination);
    // resume() fica pendente para sempre sem gesto no iOS; não trava a captura esperando.

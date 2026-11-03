@@ -1,10 +1,12 @@
 importScripts('/static/share-worker.js');
-const CACHE = 'orbita-shell-20261102-v130';
-const SHELL = ['/static/offline.html', '/static/icons/icon-192.png', '/static/icons/icon-512.png'];
+const CACHE = 'orbita-shell-20261103-v131';
+const SHELL = ['/static/offline.html', '/static/icons/icon-192.png', '/static/icons/icon-512.png',
+  '/static/manifest.webmanifest', '/static/vendor/fonts/inter-latin-wght.woff2',
+  '/static/vendor/fonts/space-grotesk-latin-wght.woff2'];
 // Chave sintética para a página inicial já carregada: permite abrir o app instalado sem rede.
 // O HTML é público e igual para todos; dados continuam vindo apenas da API autenticada.
 const NAV_KEY = '/__orbita_navigation';
-const MAX_ASSETS = 80;
+const MAX_ASSETS = 120;
 let cacheWrites = Promise.resolve();
 function remember(request, response) {
   // Serialize pruning so concurrent downloads cannot exceed the cache budget.
