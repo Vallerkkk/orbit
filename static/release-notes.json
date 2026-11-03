@@ -2,9 +2,17 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.11.02+4bac986",
+   "version": "2026.11.02+3d0e86f",
    "date": "2 nov 2026",
    "highlights": [
+    [
+     "visual",
+     "a Cloe responde no mesmo pedido, enfileira perguntas simultâneas e usa exclusivamente a voz escolhida"
+    ],
+    [
+     "chamadas",
+     "Chamadas: CSP libera WebAssembly do filtro de ruído"
+    ],
     [
      "chamadas",
      "Chamadas: microfone não fica mudo quando o filtro de ruído é suspenso"
@@ -12,22 +20,16 @@
     [
      "chamadas",
      "Microfone nas chamadas: recupera faixa encerrada, ignora dispositivo salvo ausente,…"
-    ],
-    [
-     "visual",
-     "Grafite estilo Grok: remove tons violeta das superfícies"
-    ],
-    [
-     "visual",
-     "Tema Grafite padrão estilo Grok: preto/cinza neutro com destaques pastel"
     ]
    ],
    "items": {
     "chamadas": [
+     "Chamadas: CSP libera WebAssembly do filtro de ruído",
      "Chamadas: microfone não fica mudo quando o filtro de ruído é suspenso",
      "Microfone nas chamadas: recupera faixa encerrada, ignora dispositivo salvo ausente,…"
     ],
     "visual": [
+     "a Cloe responde no mesmo pedido, enfileira perguntas simultâneas e usa exclusivamente a voz escolhida",
      "Grafite estilo Grok: remove tons violeta das superfícies",
      "Tema Grafite padrão estilo Grok: preto/cinza neutro com destaques pastel",
      "Wip"
