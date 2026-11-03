@@ -1,9 +1,9 @@
 /* ===== Paleta Grafite neutro (opção A) — fonte única de cores do app =====
    Superfícies 4 níveis, bordas 2 níveis, texto 3 níveis (≥4.5:1), rosa só em CTA/ativo/menção. */
 :root{
-  --bg:#0a0b0f;--s1:#121318;--s2:#1a1b22;--s3:#23242d;--bd:#2e3039;--bdh:#3a3c47;--hl:rgba(255,255,255,.06);
-  --t1:#f2f3f5;--t2:#b4b7c2;--t3:#8b8f9c;--ac:#e07ad6;--ac-h:#ea94e2;--ac2:#b78cff;--onac:#1a0a18;
-  --ok:#3ddc84;--warn:#f5b544;--info:#5aa9ff;--err:#ff5d6c;
+  --bg:#000000;--s1:#0a0a0a;--s2:#141414;--s3:#1f1f1f;--bd:#262626;--bdh:#333333;--hl:rgba(255,255,255,.04);
+  --t1:#ececec;--t2:#b4b4b4;--t3:#8a8a8a;--ac:#c4b5fd;--ac-h:#d6cbfe;--ac2:#a7f3d0;--onac:#14112a;
+  --ok:#86efac;--warn:#fcd9a8;--info:#a5d8ff;--err:#fca5a5;
   --gx-shadow:inset 0 1px 0 var(--hl),0 1px 2px rgba(0,0,0,.35);
 }
 /* Mapeia os tokens legados (style/polish/orbita-v2/interface) para a paleta */
@@ -27,7 +27,7 @@
 
 
 /* ===== Temas: só o sistema de destaque muda; superfícies Grafite fixas ===== */
-body[data-theme=nitro]{--ac:#e07ad6;--ac-h:#ea94e2;--ac2:#b78cff;--onac:#1a0a18;--ac-l:#b03aa6}
+body[data-theme=nitro]{--ac:#c4b5fd;--ac-h:#d6cbfe;--ac2:#a7f3d0;--onac:#14112a;--ac-l:#7c6fd1}
 body[data-theme=orbita]{--ac:#9b87ff;--ac-h:#b3a4ff;--ac2:#5aa9ff;--onac:#0f0b24;--ac-l:#6a4fe0}
 body[data-theme=blurple]{--ac:#7f89ff;--ac-h:#9aa1ff;--ac2:#4fb3ff;--onac:#0b0d2a;--ac-l:#4752c4}
 body[data-theme=emerald]{--ac:#34d399;--ac-h:#5ee0b0;--ac2:#22d3ee;--onac:#03241a;--ac-l:#047857}

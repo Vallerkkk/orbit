@@ -13,11 +13,11 @@ body[data-theme="emerald"] {
   --accent-glow: rgba(16,185,129,0.38);
 }
 body[data-theme="nitro"] {
-  --accent: #ec4899;
-  --accent-hover: #f472b6;
-  --accent-2: #8b5cf6;
-  --accent-soft: rgba(236,72,153,0.16);
-  --accent-glow: rgba(236,72,153,0.38);
+  --accent: #c4b5fd;
+  --accent-hover: #d6cbfe;
+  --accent-2: #a7f3d0;
+  --accent-soft: rgba(196,181,253,0.14);
+  --accent-glow: rgba(196,181,253,0.28);
 }
 body[data-theme="cyber"] {
   --bg-deep: #05050f;
