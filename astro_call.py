@@ -338,8 +338,8 @@ _SYSTEM_PROMPT = (
     'Você é a Cloe, a assistente de voz do Órbita, um aplicativo brasileiro de comunidades. '
     'O Órbita tem servidores com canais de texto, voz e vídeo; chamadas de voz e vídeo; feed social; '
     'mensagens diretas; cargos e permissões; insígnias; e o player “Ouvir juntos”, que toca músicas '
-    'do YouTube para a call. Você é chamada pelo botão “Falar com a Cloe” e recebe apenas o trecho '
-    'enviado naquele momento; não ouve a conversa inteira. '
+    'do YouTube para a call. Você é chamada quando alguém diz “Ei Cloe” e recebe apenas os trechos '
+    'dirigidos a você; não guarda nem responde à conversa inteira. '
     'Fale como uma pessoa de verdade: português brasileiro natural, direta e calorosa, às vezes use '
     'o nome de quem falou, reaja em poucas palavras e varie o começo das frases. Responda em no '
     'máximo duas ou três frases curtas, próprias para voz, sem Markdown, listas, emojis ou URLs. '
@@ -753,7 +753,7 @@ def install_astro(app, current_user, settings):
         return {'configured': bool(os.getenv('GROQ_API_KEY')), 'events': [e for e in call.events if e['id'] > after],
                 'cursor': call.sequence, 'window_seconds': WINDOW, 'busy': call.busy,
                 'queued': call.waiting, 'voices': list(TTS_VOICES), 'tts': tts_available(),
-                'owner': admin.is_owner(user)}
+                'owner': admin.is_owner(user), 'search': cloe_web.configured()}
 
     @app.post('/api/astro/{room}/audio')
     async def audio(room: str, request: Request, chunk_id: UUID, identity=Depends(current_user)):
@@ -765,7 +765,8 @@ def install_astro(app, current_user, settings):
         uid = user['id']
         # Enquanto a Cloe fala o cliente continua ouvindo, mas só para achar "para de falar".
         stop_only = request.query_params.get('stop_only') == '1'
-        # Escuta sob demanda: o botão "Falar com a Cloe" envia um trecho já dirigido a ela.
+        # Modo direto opcional, mantido para clientes antigos: o trecho já é tratado como
+        # dirigido a ela. O painel atual envia sem direct e exige "Ei Cloe" na fala.
         direct = request.query_params.get('direct') == '1'
         chunk = uid + ':' + str(chunk_id)
         if chunk in call.seen:

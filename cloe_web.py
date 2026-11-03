@@ -34,20 +34,30 @@ CACHE_LIMIT = 64
 USER_AGENT = ('Mozilla/5.0 (compatible; OrbitaCloe/1.0; +https://orbita.chat) '
               'AppleWebKit/537.36 (KHTML, like Gecko)')
 _ALLOWED_PORTS = (80, 443)
+# Nomes aceitos para a chave: quem configura no Render às vezes usa outro rótulo.
+_KEY_ENVS = ('BRAVE_API_KEY', 'BRAVE_SEARCH_API_KEY', 'BRAVE_KEY', 'BRAVE_TOKEN')
 # Pedido explícito de pesquisa ou assunto que muda rápido demais para o modelo saber.
 _EXPLICIT = re.compile(
-    r'\b(?:pesquis[ae]|pesquisar|pesquise|procura(?:r)?\s+(?:na|no)\s+(?:internet|google|web)'
-    r'|busca(?:r)?\s+(?:na|no)\s+(?:internet|google|web)|consulta(?:r)?\s+(?:na|no)\s+(?:internet|web)'
-    r'|olha(?:r)?\s+(?:na|no)\s+(?:internet|web))\b'
-    r'|\b(?:noticia|noticias|ultimas?\s+noticias|manchetes?|cotacao|dolar|euro|bitcoin'
-    r'|placar|resultado\s+do\s+jogo|previsao\s+do\s+tempo|temperatura\s+em)\b'
-    r'|\b(?:quem\s+ganhou|quem\s+foi\s+eleito|qual\s+o\s+preco|quanto\s+custa)\b')
+    r'\b(?:pesquis(?:a|e|ar)|procur(?:a|e|ar)|busc(?:a|ue|ar)|consult(?:a|e|ar))\b'
+    r'|\bolh(?:a|e|ar)\s+(?:na|no)\s+(?:internet|web)\b'
+    r'|\b(?:na|no)\s+(?:internet|google|web)\b'
+    r'|\b(?:noticia|noticias|ultimas?\s+noticias|manchetes?|cotacao|dolar|euro|bitcoin|ibovespa'
+    r'|placar|resultado\s+do\s+jogo|jogo\s+de\s+(?:hoje|ontem)|previsao\s+do\s+tempo'
+    r'|temperatura\s+em|vai\s+chover)\b'
+    r'|\b(?:o\s+que\s+(?:aconteceu|esta\s+acontecendo|houve|rolou)|o\s+que\s+de\s+novo'
+    r'|novidades|me\s+atualiza(?:r)?|noticias\s+de\s+hoje|ultimas\s+sobre)\b'
+    r'|\b(?:quem\s+ganhou|quem\s+foi\s+eleito|qual\s+o\s+preco|quanto\s+custa|quanto\s+esta)\b')
 _QUERY_LEAD = re.compile(
     r'^(?:ei\s+|oi\s+)?(?:cloe\s*[,!.;:-]*\s*)?(?:por\s+favor\s*[,!.;:-]*\s*)?'
-    r'(?:(?:pesquis[ae]|pesquisar|pesquise|procura(?:r)?|busca(?:r)?|consulta(?:r)?|olha(?:r)?)'
+    r'(?:(?:pesquis(?:a|e|ar)|procur(?:a|e|ar)|busc(?:a|ue|ar)|consult(?:a|e|ar)|olh(?:a|e|ar))'
     r'\s+(?:(?:na|no)\s+)?(?:internet|google|web)\s*'
-    r'|(?:pesquis[ae]|pesquisar|pesquise)\s+)'
+    r'|(?:pesquis(?:a|e|ar)|procur(?:a|e|ar)|busc(?:a|ue|ar))\s+)'
     r'(?:sobre|por|de)?\s*', re.I)
+_QUERY_LEAD_NATURAL = re.compile(
+    r'^(?:me\s+)?(?:fala|fale|conta|conte|diz|diga|explica|resume|atualiza(?:r)?)'
+    r'(?:\s+(?:sobre|de|do|da|dos|das|pra\s+mim))?\s*', re.I)
+_WAKE_LEAD = re.compile(
+    r'^(?:ei\s+|oi\s+)?(?:cloe|chloe|kloe|cloi|kloy)\s*[,!.;:-]*\s*', re.I)
 _QUERY_TAIL = re.compile(r'\s+(?:para\s+mim|pra\s+mim|por\s+favor|pf)\s*[.!?]*\s*$', re.I)
 _ACCENTS = str.maketrans('áàâãäéèêëíìîïóòôõöúùûüçñ', 'aaaaaeeeeiiiiooooouuuucn')
 _CACHE = OrderedDict()
@@ -57,8 +67,17 @@ class SearchProblem(Exception):
     pass
 
 
+def _key():
+    for name in _KEY_ENVS:
+        raw = os.getenv(name, '').strip()
+        if raw:
+            # Aspas e espaços colados ao copiar a chave no painel do Render quebram o header.
+            return raw.strip('"\'').strip()
+    return ''
+
+
 def configured():
-    return bool(os.getenv('BRAVE_API_KEY', '').strip())
+    return bool(_key())
 
 
 def _fold(text):
@@ -73,11 +92,13 @@ def wants_search(text):
 
 def search_query(text):
     original = str(text or '')
-    folded = _QUERY_TAIL.sub('', original).strip()
-    match = _QUERY_LEAD.match(_fold(folded))
-    if match:
-        folded = folded[match.end():]
-    return folded.strip(' ,.;:!?-')[:MAX_QUERY] or original[:MAX_QUERY]
+    value = _QUERY_TAIL.sub('', original).strip()
+    value = _WAKE_LEAD.sub('', value)
+    for lead in (_QUERY_LEAD, _QUERY_LEAD_NATURAL):
+        match = lead.match(_fold(value))
+        if match:
+            value = value[match.end():]
+    return value.strip(' ,.;:!?-')[:MAX_QUERY] or original[:MAX_QUERY]
 
 
 class _Reader(HTMLParser):
@@ -197,7 +218,7 @@ async def _fetch_page(client, url):
 
 
 async def _brave(app, query):
-    key = os.getenv('BRAVE_API_KEY', '').strip()
+    key = _key()
     if not key:
         raise SearchProblem('A pesquisa na internet ainda não está configurada no servidor.')
     try:

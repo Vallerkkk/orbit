@@ -47,6 +47,13 @@ class IntentTests(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertTrue(web.wants_search(text))
 
+    def test_natural_phrases_about_daily_facts_are_searched(self):
+        for text in ('me fala sobre o jogo de ontem', 'o que aconteceu no mundo hoje',
+                     'Cloe, procure na web sobre o filme', 'me atualiza sobre a eleição',
+                     'busque o preço do dólar'):
+            with self.subTest(text=text):
+                self.assertTrue(web.wants_search(text))
+
     def test_ordinary_conversation_stays_with_the_model(self):
         for text in ('resume a conversa', 'qual é o seu nome?', 'o João falou do projeto',
                      'quanto é 2 + 2', ''):
@@ -59,6 +66,8 @@ class IntentTests(unittest.TestCase):
         self.assertEqual(web.search_query('pesquise notícias de hoje para mim'),
                          'notícias de hoje')
         self.assertEqual(web.search_query('pesquisa sobre o filme'), 'o filme')
+        self.assertEqual(web.search_query('Ei Cloe, me fala sobre o jogo de ontem'),
+                         'o jogo de ontem')
 
 
 class UrlTests(unittest.TestCase):
@@ -110,9 +119,16 @@ class BraveTests(unittest.TestCase):
         web.reset_cache()
 
     def test_missing_key_is_reported_instead_of_invented(self):
-        with patch.dict(os.environ, {'BRAVE_API_KEY': ''}):
+        with patch.dict(os.environ, {name: '' for name in web._KEY_ENVS}):
             with self.assertRaises(web.SearchProblem):
                 asyncio.run(web._brave(SimpleNamespace(), 'teste'))
+
+    def test_key_accepts_aliases_and_strips_quotes(self):
+        empty = {name: '' for name in web._KEY_ENVS}
+        with patch.dict(os.environ, {**empty, 'BRAVE_API_KEY': ' "chave"'}, clear=False):
+            self.assertEqual(web._key(), 'chave')
+        with patch.dict(os.environ, {**empty, 'BRAVE_SEARCH_API_KEY': 'outra'}, clear=False):
+            self.assertEqual(web._key(), 'outra')
 
     def test_brave_results_are_cleaned_and_limited(self):
         payload = {'web': {'results': [
