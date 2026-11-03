@@ -2,9 +2,13 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.11.02+7a46ef3",
+   "version": "2026.11.02+4bac986",
    "date": "2 nov 2026",
    "highlights": [
+    [
+     "chamadas",
+     "Chamadas: microfone não fica mudo quando o filtro de ruído é suspenso"
+    ],
     [
      "chamadas",
      "Microfone nas chamadas: recupera faixa encerrada, ignora dispositivo salvo ausente,…"
@@ -20,6 +24,7 @@
    ],
    "items": {
     "chamadas": [
+     "Chamadas: microfone não fica mudo quando o filtro de ruído é suspenso",
      "Microfone nas chamadas: recupera faixa encerrada, ignora dispositivo salvo ausente,…"
     ],
     "visual": [

@@ -23,6 +23,7 @@ export function createNoiseProcessor(defaults={}){
         this.gain=this.context.createGain();this.gain.gain.value=0;
         this.analyser=this.context.createAnalyser();this.analyser.fftSize=1024;
         this.destination=this.context.createMediaStreamDestination();
+        this.input=this.context.createAnalyser();this.input.fftSize=1024;this.source.connect(this.input);
         this.source.connect(this.highpass);
         this.highpass.connect(this.filter);
         this.filter.connect(this.analyser);
@@ -52,6 +53,9 @@ export function createNoiseProcessor(defaults={}){
         // Contexto parado por mais de 2,5 s (sem gesto no iOS/Android, interrupção do sistema): a faixa enviada fica muda
         // para todo mundo enquanto a pessoa vê o microfone ligado. Avisa para voltar ao microfone direto.
         if(this.context.state!=='running'){this.stuckSince??=performance.now();if(!this.reported&&performance.now()-this.stuckSince>2500){this.reported=true;try{defaults.onBlocked?.(this);}catch{}}}else this.stuckSince=null;
+        // Filtro que não processa (WASM bloqueado pela CSP, worklet com erro): entrada com som e saída em silêncio absoluto.
+        if(this.input){this.input.getFloatTimeDomainData(buf);let s=0;for(const v of buf)s+=v*v;const inDb=10*Math.log10(s/buf.length+1e-12);
+          if(inDb>-55&&this.lastLevel<-110){this.silentSince??=performance.now();if(!this.reported&&performance.now()-this.silentSince>3000){this.reported=true;try{defaults.onBlocked?.(this);}catch{}}}else if(this.lastLevel>=-110)this.silentSince=null;}
         this.analyser.getFloatTimeDomainData(buf);let sum=0;for(const v of buf)sum+=v*v;const db=10*Math.log10(sum/buf.length+1e-12);this.lastLevel=db;
         // Em aba oculta os timers ficam lentos; o gate fica aberto para não cortar a fala.
         const above=document.hidden||db>this.threshold;if(above){hold=12;}else if(hold>0)hold--;
