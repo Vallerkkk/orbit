@@ -26,6 +26,11 @@ import cloe_web
 from cloe_admin import DENIED as ADMIN_DENIED, AdminProblem, OwnerAdmin
 
 log = logging.getLogger('orbita.astro')
+if not log.handlers:
+    # Sem isto o Python descarta os registros INFO e o Render só mostra avisos:
+    # os tempos de transcrição, pesquisa e modelo ficariam invisíveis no painel.
+    log.addHandler(logging.StreamHandler())
+    log.setLevel(logging.INFO)
 
 WINDOW = 15 * 60
 _ACCENTS = str.maketrans('áàâãäéèêëíìîïóòôõöúùûüçñ', 'aaaaaeeeeiiiiooooouuuucn')
