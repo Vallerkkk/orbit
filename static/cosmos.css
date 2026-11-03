@@ -9,17 +9,17 @@
    1. Tokens
    -------------------------------------------------------------------------- */
 :root{
-  --bg:#08060f;
-  --s1:#0d0a19;
-  --s2:#141026;
-  --s3:#1d1734;
-  --bd:#2a2242;
-  --bdh:#40345f;
-  --hl:rgba(255,255,255,.055);
-  --t1:#f4efff;
-  --t2:#bcb3d6;
-  --t3:#978eae;
-  --ok:#42dfa2;
+  --bg:#000000;
+  --s1:#0a0a0a;
+  --s2:#141414;
+  --s3:#1f1f1f;
+  --bd:#262626;
+  --bdh:#333333;
+  --hl:rgba(255,255,255,.04);
+  --t1:#ececec;
+  --t2:#b4b4b4;
+  --t3:#8a8a8a;
+  --ok:#86efac;
   --orb-fast:110ms;
   --orb-base:160ms;
   --orb-ease:cubic-bezier(.2,.7,.3,1);
@@ -33,8 +33,8 @@
   --rf-base:160ms;
   --rf-toolbar:#100c1e;
   --rf-toolbar-border:#2d2547;
-  --rf-row-hover:rgba(198,178,255,.06);
-  --rf-row-active:rgba(198,178,255,.1);
+  --rf-row-hover:rgba(255,255,255,.06);
+  --rf-row-active:rgba(255,255,255,.1);
 }
 
 /* --------------------------------------------------------------------------
@@ -79,7 +79,7 @@ body,#app-view,.app,.main{background:var(--bg)!important}
   gap:8px!important;
   background:
     radial-gradient(120% 22% at 50% 0%,color-mix(in srgb,var(--ac) 14%,transparent),transparent 70%),
-    linear-gradient(180deg,#0c0918,#08060f 58%,#06040c)!important;
+    linear-gradient(180deg,#0a0a0a,#000 58%,#000)!important;
   border-right:1px solid var(--bd)!important;
 }
 #app-view .rail-divider{
@@ -183,7 +183,7 @@ body,#app-view,.app,.main{background:var(--bg)!important}
 #sidebar-server-title{font-family:var(--orb-display)!important;font-size:14.5px!important;letter-spacing:-.025em!important}
 #app-view .server-header .boost-pill{display:none!important}
 #server-header-btn{border-radius:10px!important;transition:background-color var(--orb-fast) linear!important}
-#server-header-btn:hover{background:rgba(198,178,255,.05)!important}
+#server-header-btn:hover{background:rgba(255,255,255,.05)!important}
 
 #server-banner-box{
   position:relative;
@@ -264,7 +264,7 @@ body,#app-view,.app,.main{background:var(--bg)!important}
   transition:background-color var(--orb-fast) linear,color var(--orb-fast) linear,border-color var(--orb-fast) linear!important;
 }
 .channel .ch-icon{color:var(--t3)!important;transition:color var(--orb-fast) linear!important}
-.channel:hover{background:rgba(198,178,255,.06)!important;color:var(--t1)!important;transform:none!important}
+.channel:hover{background:rgba(255,255,255,.06)!important;color:var(--t1)!important;transform:none!important}
 .channel:hover .ch-icon{color:var(--t2)!important}
 .channel.active{
   padding-left:7px!important;
@@ -287,7 +287,7 @@ body,#app-view,.app,.main{background:var(--bg)!important}
   background:transparent!important;
   color:var(--t2)!important;
 }
-#dm-channels .dm-row:hover .dm-item{background:rgba(198,178,255,.06)!important}
+#dm-channels .dm-row:hover .dm-item{background:rgba(255,255,255,.06)!important}
 #dm-channels .dm-item.active{
   background:linear-gradient(90deg,color-mix(in srgb,var(--ac) 15%,var(--s2)),color-mix(in srgb,var(--ac2) 6%,transparent))!important;
   box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ac) 14%,var(--bd)),inset 3px 0 0 var(--ac)!important;
@@ -318,7 +318,7 @@ body #app-view .user-panel{
   box-shadow:inset 0 1px 0 var(--hl)!important;
 }
 body #app-view .user-panel .up-profile-trigger{border-radius:10px!important;transition:background-color var(--orb-fast) linear!important}
-body #app-view .user-panel .up-profile-trigger:hover{background:rgba(198,178,255,.06)!important}
+body #app-view .user-panel .up-profile-trigger:hover{background:rgba(255,255,255,.06)!important}
 body #app-view .user-panel .up-avatar{
   border-radius:50%!important;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),0 4px 12px -6px #000!important;
@@ -330,7 +330,7 @@ body #app-view .user-panel .up-status{font-size:10.5px!important;color:var(--t3)
    `width:100%` espremia o gatilho do perfil a zero e sumia com o nickname. */
 body #app-view .user-panel .up-controls{display:flex!important;align-items:center!important;gap:2px!important}
 body #app-view .user-panel .up-btn{border-radius:50%!important;color:var(--t3)!important;transition:background-color var(--orb-fast) linear,color var(--orb-fast) linear!important}
-body #app-view .user-panel .up-btn:hover{background:rgba(198,178,255,.08)!important;color:var(--t1)!important}
+body #app-view .user-panel .up-btn:hover{background:rgba(255,255,255,.08)!important;color:var(--t1)!important}
 body #app-view .user-panel #logout{color:var(--t3)!important}
 body #app-view .user-panel #logout:hover{color:#ff9aa2!important;background:rgba(255,93,108,.1)!important}
 
@@ -348,7 +348,7 @@ body #app-view .user-panel #logout:hover{color:#ff9aa2!important;background:rgba
   height:56px!important;
   min-height:56px!important;
   padding:0 18px!important;
-  background:linear-gradient(180deg,#130f23,var(--s1))!important;
+  background:linear-gradient(180deg,#0f0f0f,var(--s1))!important;
   border-bottom:1px solid var(--bd)!important;
   position:relative;
   box-shadow:none!important;
@@ -435,7 +435,7 @@ body #app-view .user-panel #logout:hover{color:#ff9aa2!important;background:rgba
 .chat-header .header-search-wrap::before{color:var(--t3);opacity:.9}
 .header-popover{
   border-radius:14px!important;
-  background:linear-gradient(180deg,#151026,#100c1d)!important;
+  background:linear-gradient(180deg,#141414,#0a0a0a)!important;
   border:1px solid var(--bdh)!important;
   box-shadow:0 26px 60px -30px #000,inset 0 1px 0 rgba(255,255,255,.05)!important;
 }
@@ -532,7 +532,7 @@ body #app-view .user-panel #logout:hover{color:#ff9aa2!important;background:rgba
 #message-list .message-menu>summary:hover{background:color-mix(in srgb,var(--ac) 14%,transparent)!important;color:var(--ac-h)!important}
 #message-list .message-menu .message-actions{
   border-radius:13px!important;
-  background:linear-gradient(180deg,#151026,#100c1d)!important;
+  background:linear-gradient(180deg,#141414,#0a0a0a)!important;
   border:1px solid var(--bdh)!important;
   box-shadow:0 26px 60px -30px #000!important;
 }
@@ -544,7 +544,7 @@ body #app-view .user-panel #logout:hover{color:#ff9aa2!important;background:rgba
   min-height:26px!important;
   padding:1px 9px!important;
   border-radius:999px!important;
-  background:rgba(198,178,255,.05)!important;
+  background:rgba(255,255,255,.05)!important;
   border:1px solid transparent!important;
   color:var(--t2)!important;
   transition:background-color var(--orb-fast) linear,border-color var(--orb-fast) linear!important;
@@ -757,7 +757,7 @@ body #app-view .user-panel #logout:hover{color:#ff9aa2!important;background:rgba
 .reply-banner button:hover{color:var(--t1)!important}
 .composer-popover{
   border-radius:14px!important;
-  background:linear-gradient(180deg,#151026,#100c1d)!important;
+  background:linear-gradient(180deg,#141414,#0a0a0a)!important;
   border:1px solid var(--bdh)!important;
   box-shadow:0 26px 60px -30px #000,inset 0 1px 0 rgba(255,255,255,.05)!important;
 }
@@ -804,7 +804,7 @@ html body #members-sidebar.mv2{
   border-radius:10px!important;
   transition:background-color var(--orb-fast) linear!important;
 }
-.mv2-row:hover,.mv2-row:focus-visible{background:rgba(198,178,255,.06)!important}
+.mv2-row:hover,.mv2-row:focus-visible{background:rgba(255,255,255,.06)!important}
 .mv2-avwrap .avatar{border-radius:50%!important;box-shadow:0 0 0 1px rgba(255,255,255,.06)}
 .mv2-dot{width:11px!important;height:11px!important;border-width:2px!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--s1) 80%,transparent)}
 .mv2-body strong{font-size:13px!important;font-weight:600!important;letter-spacing:-.01em;color:var(--t1)!important}
@@ -880,7 +880,7 @@ body:has(#friends-view:not([hidden])) #text-view{display:none}
   height:64px!important;
   min-height:64px!important;
   padding:0 clamp(18px,3.2vw,32px)!important;
-  background:linear-gradient(180deg,#130f23,var(--s1))!important;
+  background:linear-gradient(180deg,#0f0f0f,var(--s1))!important;
   border-bottom:1px solid var(--bd)!important;
   flex:none;
 }
@@ -922,7 +922,7 @@ body:has(#friends-view:not([hidden])) #text-view{display:none}
   letter-spacing:-.01em!important;
   transition:background-color var(--orb-fast) linear,color var(--orb-fast) linear,box-shadow var(--orb-fast) linear!important;
 }
-.friends-tab:hover{background:rgba(198,178,255,.08)!important;color:var(--t1)!important}
+.friends-tab:hover{background:rgba(255,255,255,.08)!important;color:var(--t1)!important}
 .friends-tab.active{
   background:linear-gradient(180deg,var(--s3),color-mix(in srgb,var(--s3) 70%,var(--s1)))!important;
   color:var(--t1)!important;
@@ -1336,14 +1336,14 @@ dialog .community-card,.dialog .community-card{border-radius:12px!important;bord
 dialog .check-field input{accent-color:var(--ac)}
 
 #app-dialog.st-dialog{
-  --sg-bg:#0b0816;
-  --sg-s1:#120e21;
-  --sg-s2:#191329;
-  --sg-s3:#221a37;
-  --sg-b1:#2c2344;
-  --sg-b2:#40345f;
-  --sg-tx:#f4efff;
-  --sg-dim:#bcb3d6;
+  --sg-bg:#0a0a0a;
+  --sg-s1:#111111;
+  --sg-s2:#181818;
+  --sg-s3:#1f1f1f;
+  --sg-b1:#2a2a2a;
+  --sg-b2:#383838;
+  --sg-tx:#ececec;
+  --sg-dim:#b4b4b4;
   border-radius:22px!important;
   border-color:#332a4d!important;
   background:
@@ -1388,7 +1388,7 @@ dialog .check-field input{accent-color:var(--ac)}
    -------------------------------------------------------------------------- */
 #server-dropdown,.status-popover,.profile-card-popover{
   border-radius:14px!important;
-  background:linear-gradient(180deg,#151026,#100c1d)!important;
+  background:linear-gradient(180deg,#141414,#0a0a0a)!important;
   border:1px solid var(--bdh)!important;
   box-shadow:0 26px 60px -30px #000,inset 0 1px 0 rgba(255,255,255,.05)!important;
 }
