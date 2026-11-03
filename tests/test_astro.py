@@ -6,6 +6,7 @@ import unittest
 import wave
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
+import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 import astro_call as astro
@@ -655,5 +656,79 @@ class CloeTests(unittest.TestCase):
         messages = captured['body']['messages']
         self.assertIn('dados não confiáveis', messages[-1]['content'])
         self.assertIn('o dólar caiu hoje', messages[-1]['content'])
+
+    def test_answer_falls_back_to_another_model_on_rate_limit(self):
+        used = []
+        async def groq(app, path, **kwargs):
+            used.append(kwargs['json']['model'])
+            if len(used) == 1:
+                raise HTTPException(429, 'Limite da Groq atingido.')
+            return {'choices': [{'message': {'content': 'Resposta da reserva.'}}]}
+        with patch.object(astro, 'groq_json', groq):
+            answer, model = asyncio.run(astro.answer_model(self.app, [{'role': 'user', 'content': 'oi'}]))
+        self.assertEqual(answer, 'Resposta da reserva.')
+        self.assertEqual(model, used[-1])
+        self.assertNotEqual(used[0], used[1])
+
+    def test_transcription_falls_back_to_another_model(self):
+        used = []
+        async def groq(app, path, **kwargs):
+            if path == 'audio/transcriptions':
+                used.append(kwargs['data']['model'])
+                if len(used) == 1:
+                    raise HTTPException(429, 'Limite da Groq atingido.')
+                return {'text': 'Ei Cloe, tudo bem?'}
+            return {'choices': [{'message': {'content': 'Tudo bem!'}}]}
+        with patch.object(astro, 'groq_json', groq):
+            response = self.audio()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(used), 2)
+        self.assertNotEqual(used[0], used[1])
+
+    def test_non_retryable_error_does_not_switch_provider(self):
+        calls = []
+        async def deny(*args, **kwargs):
+            calls.append(1)
+            raise HTTPException(503, 'Configure GROQ_API_KEY no servidor para ativar a Cloe.')
+        with patch.object(astro, 'groq_json', deny):
+            with self.assertRaises(HTTPException):
+                asyncio.run(astro.answer_model(self.app, [{'role': 'user', 'content': 'oi'}]))
+        self.assertEqual(len(calls), 1)
+
+    def test_answer_uses_gemini_when_every_groq_model_is_limited(self):
+        limited = []
+        async def groq(*args, **kwargs):
+            limited.append(kwargs['json']['model'])
+            raise HTTPException(429, 'Limite da Groq atingido.')
+        async def gemini(app, messages):
+            return 'Resposta do Gemini.'
+        with patch.object(astro, 'groq_json', groq), patch.object(astro, 'gemini_answer', gemini):
+            answer, model = asyncio.run(astro.answer_model(self.app, [{'role': 'user', 'content': 'oi'}]))
+        self.assertEqual(answer, 'Resposta do Gemini.')
+        self.assertEqual(model, astro.gemini_model())
+        self.assertEqual(len(limited), len(astro.llm_models()))
+
+    def test_gemini_answer_parses_parts_and_skips_thoughts(self):
+        class Reply:
+            status_code = 200
+            is_error = False
+            headers = {}
+            def json(self):
+                return {'candidates': [{'content': {'parts': [
+                    {'thought': True, 'text': 'segredo'},
+                    {'text': 'Olá! '}, {'text': 'Tudo bem?'}]}}]}
+        captured = {}
+        async def post(client, url, **kwargs):
+            captured['url'] = url
+            captured['body'] = kwargs['json']
+            return Reply()
+        env = {'GEMINI_API_KEY': 'chave-teste', 'CLOE_GEMINI_MODEL': 'gemini-2.5-flash-lite'}
+        with patch.dict(os.environ, env), patch.object(httpx.AsyncClient, 'post', post):
+            text = asyncio.run(astro.gemini_answer(self.app, [
+                {'role': 'system', 'content': 'sistema'},
+                {'role': 'user', 'content': 'oi'}]))
+        self.assertEqual(text, 'Olá! Tudo bem?')
+        self.assertIn('gemini-2.5-flash-lite', captured['url'])
+        self.assertEqual(captured['body']['systemInstruction']['parts'][0]['text'], 'sistema')
 
 if __name__=='__main__':unittest.main()

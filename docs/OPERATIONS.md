@@ -73,6 +73,10 @@ Desempenho e concorrência também são ajustáveis sem mexer no código:
 - `CLOE_ANSWER_QUEUE` (padrão 3): perguntas simultâneas aguardando resposta na mesma call.
 - `CLOE_MEMBER_CACHE_SECONDS` (padrão 5): tempo do cache da checagem de presença no LiveKit. Presença negativa nunca é cacheada.
 
+### Reserva quando a cota aperta
+
+A Groq limita cada modelo separadamente. A Cloe tenta `CLOE_LLM_MODEL` (padrão `openai/gpt-oss-20b`), depois cada modelo de `CLOE_LLM_FALLBACK_MODELS` (padrão `openai/gpt-oss-120b,llama-3.3-70b-versatile`) e, se todos recusarem por cota ou indisponibilidade, responde com o Gemini definido em `CLOE_GEMINI_MODEL` (padrão `gemini-2.5-flash-lite`; vazio desliga a reserva e exige `GEMINI_API_KEY`). Na transcrição, `CLOE_STT_MODEL` (padrão `whisper-large-v3-turbo`) cai para `CLOE_STT_FALLBACK_MODELS` (padrão `whisper-large-v3`). Só cota (429) e falha do provedor (502) trocam de modelo; chave ausente continua sendo erro de configuração. Quando o Gemini assume, a pergunta e o histórico recente são enviados ao Google, como já acontece com a Groq; o log registra o modelo usado e cada troca.
+
 A voz natural (Thalita ou Francisca) é a única reproduzida quando escolhida. Se o serviço da Microsoft falhar, a Cloe não substitui a voz: o painel avisa e a resposta fica em texto até a voz voltar.
 
 ### Escuta contínua por palavra de ativação

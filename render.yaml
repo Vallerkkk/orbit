@@ -36,7 +36,13 @@ services:
         sync: false
       - key: CLOE_STT_MODEL
         sync: false
+      - key: CLOE_STT_FALLBACK_MODELS
+        sync: false
       - key: CLOE_LLM_MODEL
+        sync: false
+      - key: CLOE_LLM_FALLBACK_MODELS
+        sync: false
+      - key: CLOE_GEMINI_MODEL
         sync: false
       - key: CLOE_CONTEXT_CHARS
         sync: false
