@@ -2,9 +2,17 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.11.02+eb79aad",
+   "version": "2026.11.02+b79f5f2",
    "date": "2 nov 2026",
    "highlights": [
+    [
+     "visual",
+     "Wip"
+    ],
+    [
+     "visual",
+     "Grafite estilo Grok: remove tons violeta das superfícies"
+    ],
     [
      "visual",
      "Tema Grafite padrão estilo Grok: preto/cinza neutro com destaques pastel"
@@ -12,6 +20,8 @@
    ],
    "items": {
     "visual": [
+     "Wip",
+     "Grafite estilo Grok: remove tons violeta das superfícies",
      "Tema Grafite padrão estilo Grok: preto/cinza neutro com destaques pastel"
     ]
    }

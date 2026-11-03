@@ -1,4 +1,5 @@
 import {initCloe} from './astro-call.js';
+import {initMicHealth,micErrorText,forgetMissingInput,liveMicTrack} from './mic-health.js';
 import {screenSupport,screenCaptureOptions,screenErrorText} from './screen-share.js';
 import {initScreenWatch} from './screen-watch.js';
 import {initMusicChannel} from './music-channel.js';
@@ -108,6 +109,8 @@ function errorText(error) {
   if(error?.name==='TimeoutError')return 'A conexão demorou demais. Tente novamente.';
   if (error?.name === 'NotAllowedError') return 'Permissão recusada. Autorize o dispositivo no navegador.';
   if (error?.name === 'NotFoundError') return 'Nenhum dispositivo compatível foi encontrado.';
+  if (error?.name === 'NotReadableError'||error?.name==='TrackStartError') return 'O dispositivo está em uso por outro aplicativo. Feche-o e tente novamente.';
+  if (error?.name === 'OverconstrainedError') return 'O dispositivo escolhido não está disponível. Escolha outro em Entrada e saída de áudio.';
   if(error?.code==='42501'||/permission denied/i.test(error?.message||'')){console.info('[orbita] 42501',error);return /exclusivo dos administradores/i.test(error?.message||'')?error.message:'Você não tem permissão para fazer essa alteração. Se o problema continuar, avise um administrador.';}
   if (error?.message === 'Invalid login credentials') return 'E-mail ou senha incorretos.';
   if(error?.message==='Database error saving new user')return 'Não foi possível criar a conta. Tente outro nickname; ele pode já estar em uso.';
@@ -774,7 +777,7 @@ function updateSpeakingUI() {
 async function leaveCall({preserveJoin=false}={}) {
   if(!preserveJoin)cancelCallJoin();
   cameraTask=null;const previous = room,leftTarget=callChannel;if(previous)microphoneSwitch.set(previous.localParticipant,false);room = null;callChannel = null;talkHeld=false;
-  screenWatch.reset();
+  screenWatch.reset();micHealth?.stop();
   enhancements?.callEnded(previous);callReactions?.clear();
   if (previous) previous.removeAllListeners();
   for(const entry of [...callMedia.values()])disposeMedia(entry);
@@ -801,7 +804,10 @@ $('join-call').onclick = async () => {
     if (!current()) return;
     await leaveCall({preserveJoin:true});
     if(!current())return;
-    const media=mediaSettings();
+    const media=mediaSettings();const rejoinMic=callRejoinTarget?callRejoinMic:null;
+    // ID salvo que não existe mais (Safari/iOS e Android trocam a cada sessão) travava o microfone.
+    if(await forgetMissingInput())toast('O microfone salvo não está conectado. Usando o microfone padrão do sistema.');
+    if(!current())return;
     connected = new Room({
       adaptiveStream: {pixelDensity:'screen'},
       dynacast:true,
@@ -835,10 +841,12 @@ $('join-call').onclick = async () => {
     connected.on(RoomEvent.ConnectionQualityChanged,updateCallUI);
     connected.on(RoomEvent.Reconnecting, () => { $('call-status').textContent = 'Reconectando à sala…'; });
     connected.on(RoomEvent.Reconnected, updateCallUI);
+    // Depois de reconectar, confere se o microfone continua vivo e publicado; senão reabre.
+    connected.on(RoomEvent.Reconnected,()=>{if(room===connected&&connected.localParticipant.isMicrophoneEnabled&&!liveMicTrack(connected))micHealth?.recover(connected,'reconexão');});
     connected.on(RoomEvent.Disconnected, reason => { if (room === connected) {
       // Mobile: o sistema congela a aba em segundo plano e a conexão cai sem o usuário sair. Reentra automaticamente.
       const final=[DisconnectReason?.CLIENT_INITIATED,DisconnectReason?.DUPLICATE_IDENTITY,DisconnectReason?.PARTICIPANT_REMOVED,DisconnectReason?.ROOM_DELETED,DisconnectReason?.USER_REJECTED].includes(reason);
-      if(!final&&!shuttingDown&&session&&callRejoinAttempts<3){callRejoinTarget=target;leaveCall().catch(()=>{});$('call-status').textContent='Reconectando à sala…';scheduleCallRejoin();return;}
+      if(!final&&!shuttingDown&&session&&callRejoinAttempts<3){callRejoinTarget=target;callRejoinMic=!!connected.localParticipant.isMicrophoneEnabled;leaveCall().catch(()=>{});$('call-status').textContent='Reconectando à sala…';scheduleCallRejoin();return;}
       uiSound('leave');leaveCall(); toast('Você saiu da chamada.'); } });
     // autoSubscribe desligado: áudio e câmeras são assinados por screenWatch.apply; telas só quando a pessoa pede.
     await connected.connect(result.url, result.token, {autoSubscribe:false});
@@ -849,8 +857,10 @@ $('join-call').onclick = async () => {
     if(!current()||room!==connected){await connected.disconnect();return;}
     enhancements.connected(connected,RoomEvent,result);
     syncVoiceChat(true).catch(()=>{});
-    try { if(result.canPublish!==false)await connected.localParticipant.setMicrophoneEnabled(!pushToTalk&&!deafened, audioCapture()); }
-    catch (error) { toast('Você entrou sem microfone. ' + errorText(error)); }
+    micHealth?.start();
+    // Na reentrada automática o microfone volta como estava: quem tinha fechado continua fechado.
+    try { if(result.canPublish!==false)await micHealth.setEnabled(connected.localParticipant,!pushToTalk&&!deafened&&rejoinMic!==false); }
+    catch (error) { toast('Você entrou sem microfone. ' + (error?.cause?micErrorText(error.cause):errorText(error))); }
     if(current()&&room===connected)await audioTools?.connected(connected);
     if(!current()||room!==connected)await connected.disconnect();
   } catch (error) { if(current()){if(room===connected)await leaveCall({preserveJoin:true});toast(errorText(error));} }
@@ -1013,6 +1023,7 @@ let noise = localStorage.getItem('orbita-noise') !== 'false';
 let echoCancellation = localStorage.getItem('orbita-echo') !== 'false';
 let autoGainControl = localStorage.getItem('orbita-agc') !== 'false';
 let deafened = false;
+let micHealth,callRejoinMic=null;
 configureUiSounds({muted:()=>deafened});
 const audioCapture = () => ({
   noiseSuppression: noise,
@@ -1926,7 +1937,7 @@ editChannel=channel=>showDialog('Editar canal',container=>{
   container.append(button('Excluir canal e seu histórico',()=>showDialog('Excluir canal',box=>{box.append(el('p','','A exclusão remove permanentemente o histórico deste canal.'),button('Excluir permanentemente',async()=>{if(channel.kind==='voice'&&config.callsConfigured)await apiFetch(`/api/channels/${channel.id}/live-room`,{method:'DELETE'});await checked(db.from('channels').delete().eq('id',channel.id));channels=channels.filter(item=>item.id!==channel.id);$('app-dialog').close();renderChannels();if(selected?.id===channel.id)showFriends();},'danger'));}),'danger'));
 });
 
-const microphoneSwitch=serialToggle(async(participant,value)=>{await participant.setMicrophoneEnabled(value,audioCapture());if(room?.localParticipant===participant)updateCallUI();},(error,participant)=>{if(room?.localParticipant===participant)toast(errorText(error));});
+const microphoneSwitch=serialToggle(async(participant,value)=>{await micHealth.setEnabled(participant,value);if(room?.localParticipant===participant)updateCallUI();},(error,participant)=>{if(room?.localParticipant===participant)toast(error?.cause?micErrorText(error.cause):errorText(error));});
 function setTalkHeld(value){if(!room||!pushToTalk||talkHeld===value||value&&(deafened||room.localParticipant.permissions?.canPublish===false))return;talkHeld=value;microphoneSwitch.set(room.localParticipant,value);if(pttButton)pttButton.textContent=value?'Falando…':'Segure para falar';}
 pttButton=button('Segure para falar',()=>{},'vc-btn ptt-button');pttButton.setAttribute('aria-label','Segure para falar');$('mic').after(pttButton);
 pttButton.addEventListener('pointerdown',event=>{event.preventDefault();pttButton.setPointerCapture?.(event.pointerId);setTalkHeld(true);});
@@ -2317,7 +2328,8 @@ const friendsBeforeUX=showFriends;showFriends=()=>{friendsBeforeUX();communityUX
 communityUX.update();
 
 // Device preferences are local; no microphone is opened while listing settings.
-audioTools=initAudioControls({el,button,toast,dialog:showDialog,room:()=>room,noise:()=>noise,output:async id=>{await setUploadedVideoOutput(id);await enhancements.setAudioOutput(id);}});
+micHealth=initMicHealth({el,toast,room:()=>room,capture:()=>audioCapture(),wanted:()=>!deafened&&!(pushToTalk&&!talkHeld),updated:()=>updateCallUI()});
+audioTools=initAudioControls({el,button,toast,dialog:showDialog,room:()=>room,liveMic:()=>liveMicTrack(room),noise:()=>noise,output:async id=>{await setUploadedVideoOutput(id);await enhancements.setAudioOutput(id);}});
 callReactions=initCallReactions({el,button,toast,dialog:showDialog,room:()=>room});
 const settingsBeforeAudioDevices=$('settings').onclick;
 $('settings').onclick=()=>{settingsBeforeAudioDevices();audioTools.fields($('dialog-content'));};

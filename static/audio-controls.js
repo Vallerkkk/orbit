@@ -1,5 +1,6 @@
 import {requestWithDeadline} from './chat-state.js';
 import {createNoiseProcessor,gateThreshold} from './noise-processor.js';
+import {micErrorText} from './mic-health.js';
 
 export function initAudioControls(ctx){
   const {el,button}=ctx,read=kind=>localStorage.getItem('orbita-audio-'+kind)||'',tracks=new WeakMap();
@@ -30,6 +31,9 @@ export function initAudioControls(ctx){
       try{
         await requestWithDeadline(()=>track.setProcessor(processor),{timeout:12000});
         if(ctx.room()!==room){await track.stopProcessor();return;}
+        // Contexto de áudio bloqueado (sem gesto no iOS/Android): a faixa filtrada sairia muda.
+        // Volta para o microfone direto com a supressão do navegador em vez de calar a pessoa.
+        if(processor.blocked?.()){await track.stopProcessor().catch(()=>{});await processor.destroy().catch(()=>{});if(!warned){warned=true;ctx.toast('O filtro adicional ficou bloqueado pelo navegador. Seu microfone segue com a supressão de ruído do navegador.');}continue;}
         record.processor=processor;
       }catch{await processor.destroy();if(!warned&&ctx.room()===room){warned=true;ctx.toast('O filtro adicional não está disponível agora. A supressão de ruído do navegador continua ativa.');}}
       }while(record.again&&ctx.room()===room);
@@ -47,12 +51,16 @@ export function initAudioControls(ctx){
   function micMeter(threshold){
     const node=el('div','mic-meter'),bar=el('div','mic-meter-bar'),fill=el('div','mic-meter-fill'),mark=el('div','mic-meter-mark'),label=el('span','muted','Toque em Testar para ver o nível do microfone.');
     bar.setAttribute('role','meter');bar.setAttribute('aria-label','Nível do microfone');bar.setAttribute('aria-valuemin','0');bar.setAttribute('aria-valuemax','100');bar.setAttribute('aria-valuenow','0');bar.append(fill,mark);
-    let stream,audio,timer;const pct=db=>Math.max(0,Math.min(100,(db+90)/90*100));
+    let stream,audio,timer,own=false;const pct=db=>Math.max(0,Math.min(100,(db+90)/90*100));
     const paintMark=()=>{mark.style.left=pct(threshold())+'%';};paintMark();
-    const stop=()=>{clearInterval(timer);stream?.getTracks().forEach(t=>t.stop());audio?.close().catch(()=>{});stream=audio=null;fill.style.width='0%';bar.setAttribute('aria-valuenow','0');toggle.textContent='Testar microfone';toggle.setAttribute('aria-pressed','false');label.textContent='Toque em Testar para ver o nível do microfone.';};
+    const stop=()=>{clearInterval(timer);if(own)stream?.getTracks().forEach(t=>t.stop());own=false;audio?.close().catch(()=>{});stream=audio=null;fill.style.width='0%';bar.setAttribute('aria-valuenow','0');toggle.textContent='Testar microfone';toggle.setAttribute('aria-pressed','false');label.textContent='Toque em Testar para ver o nível do microfone.';};
     const toggle=el('button','soft-button mic-meter-toggle','Testar microfone');toggle.type='button';toggle.setAttribute('aria-pressed','false');
-    toggle.onclick=async()=>{if(stream)return stop();try{const id=read('input');stream=await navigator.mediaDevices.getUserMedia({audio:{deviceId:id?{exact:id}:undefined,noiseSuppression:ctx.noise(),echoCancellation:true,autoGainControl:true}});const A=window.AudioContext||window.webkitAudioContext;audio=new A();const an=audio.createAnalyser();an.fftSize=1024;audio.createMediaStreamSource(stream).connect(an);const buf=new Float32Array(an.fftSize);toggle.textContent='Parar teste';toggle.setAttribute('aria-pressed','true');
-      timer=setInterval(()=>{if(!node.isConnected)return stop();an.getFloatTimeDomainData(buf);let sum=0;for(const v of buf)sum+=v*v;const db=10*Math.log10(sum/buf.length+1e-12),p=pct(db),open=db>threshold();fill.style.width=p+'%';fill.classList.toggle('open',open);bar.setAttribute('aria-valuenow',String(Math.round(p)));label.textContent=open?'Sua voz passa pelo filtro.':'Abaixo do limiar: o microfone fica fechado.';},50);}catch{stop();label.textContent='Sem acesso ao microfone. Verifique a permissão do navegador.';}};
+    toggle.onclick=async()=>{if(stream)return stop();try{const id=read('input'),shared=ctx.liveMic?.();
+      // Na call, mede a faixa já publicada: um segundo getUserMedia no iOS silencia o microfone da call,
+      // e parar esse stream de teste não pode encerrar a faixa compartilhada.
+      if(shared){stream=new MediaStream([shared]);own=false;}
+      else{try{stream=await navigator.mediaDevices.getUserMedia({audio:{deviceId:id?{ideal:id}:undefined,noiseSuppression:ctx.noise(),echoCancellation:true,autoGainControl:true}});}catch(error){if(!id||!['OverconstrainedError','NotFoundError'].includes(error?.name))throw error;stream=await navigator.mediaDevices.getUserMedia({audio:true});}own=true;}const A=window.AudioContext||window.webkitAudioContext;audio=new A();const an=audio.createAnalyser();an.fftSize=1024;audio.createMediaStreamSource(stream).connect(an);const buf=new Float32Array(an.fftSize);toggle.textContent='Parar teste';toggle.setAttribute('aria-pressed','true');
+      timer=setInterval(()=>{if(!node.isConnected)return stop();an.getFloatTimeDomainData(buf);let sum=0;for(const v of buf)sum+=v*v;const db=10*Math.log10(sum/buf.length+1e-12),p=pct(db),open=db>threshold();fill.style.width=p+'%';fill.classList.toggle('open',open);bar.setAttribute('aria-valuenow',String(Math.round(p)));label.textContent=open?'Sua voz passa pelo filtro.':'Abaixo do limiar: o microfone fica fechado.';},50);}catch(error){stop();label.textContent=micErrorText(error);}};
     document.getElementById('app-dialog')?.addEventListener('close',stop,{once:true});
     node.append(bar,toggle,label);return {node,mark:paintMark,stop};
   }
@@ -93,8 +101,8 @@ export function initAudioControls(ctx){
       finally{node.disabled=false;}
     };
     box.append(status);setStatus();if(!supportsOutput())box.append(el('p','muted','Este navegador usa a saída de áudio definida no sistema.'));
-    box.append(button('Atualizar dispositivos',async()=>{let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true});}finally{stream?.getTracks().forEach(t=>t.stop());}await refresh();}));
+    box.append(button('Atualizar dispositivos',async()=>{let stream;try{if(!ctx.liveMic?.())stream=await navigator.mediaDevices.getUserMedia({audio:true});}catch(error){status.textContent=micErrorText(error);}finally{stream?.getTracks().forEach(t=>t.stop());}await refresh();}));
     container.append(box);refresh();const devicesAbort=new AbortController();navigator.mediaDevices?.addEventListener?.('devicechange',refresh,{signal:devicesAbort.signal});document.getElementById('app-dialog')?.addEventListener('close',()=>devicesAbort.abort(),{once:true});
   }
-  return {fields,sync,connected,mixOptions,bind,ended,capture:()=>read('input')?{deviceId:{exact:read('input')}}:{},open:()=>ctx.dialog('Entrada e saída de áudio',fields)};
+  return {fields,sync,connected,mixOptions,bind,ended,capture:()=>read('input')?{deviceId:{ideal:read('input')}}:{},open:()=>ctx.dialog('Entrada e saída de áudio',fields)};
 }

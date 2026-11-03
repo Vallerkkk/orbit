@@ -52,11 +52,14 @@ async function start(){
     if(permission==='media')return details?.mediaType?allowed.has(details.mediaType):false;
     return allowed.has(permission);
   });
-  let permissionDialog=false;
-  ses.setPermissionRequestHandler(async(contents,permission,callback,details)=>{
+  // Um pedido por vez: antes, um segundo pedido simultâneo (LiveKit + teste de microfone, ou
+  // microfone + câmera) era recusado na hora e virava NotAllowedError, com o microfone mudo.
+  let permissionDialog=false,permissionQueue=Promise.resolve();
+  ses.setPermissionRequestHandler((contents,permission,callback,details)=>{permissionQueue=permissionQueue.then(()=>handlePermission(contents,permission,callback,details)).catch(()=>callback(false));});
+  const handlePermission=async(contents,permission,callback,details)=>{
     if(contents!==mainWindow.webContents||!isAppURL(contents.getURL())||!isAppURL(details.requestingUrl||contents.getURL())||details.isMainFrame===false)return callback(false);
     if(['fullscreen','clipboard-sanitized-write','display-capture'].includes(permission))return callback(true);
-    if(!['media','notifications'].includes(permission)||permissionDialog)return callback(false);
+    if(!['media','notifications'].includes(permission))return callback(false);
     const media=(details.mediaTypes||[]).filter(type=>['audio','video'].includes(type));
     // Electron reports display capture as media with an empty mediaTypes list.
     // No camera/microphone permission is persisted here: the display handler
@@ -66,7 +69,7 @@ async function start(){
     if(permission==='media'&&media.every(type=>allowed.has(type)))return callback(true);
     permissionDialog=true;
     try{const label=permission==='notifications'?'mostrar notificações':media.map(type=>type==='audio'?'usar o microfone':'usar a câmera').join(' e ');const choice=await dialog.showMessageBox(mainWindow,{type:'question',title:'Permissão do Órbita',message:'Permitir que a Órbita possa '+label+'?',detail:'Esta permissão vale nesta execução. Você pode encerrar o aplicativo pela bandeja do Windows.',buttons:['Não permitir','Permitir'],defaultId:0,cancelId:0,noLink:true});const accept=choice.response===1&&isAppURL(contents.getURL());if(accept){for(const key of permission==='media'?media:[permission])allowed.add(key);}callback(accept);}catch{callback(false);}finally{permissionDialog=false;}
-  });
+  };
   ses.setDisplayMediaRequestHandler(async(request,callback)=>{
     if(!request.userGesture||!request.videoRequested||!isAppURL(request.securityOrigin)||!request.frame||request.frame!==mainWindow.webContents.mainFrame||picker)return callback(null);
     const frame=request.frame;let done=false;

@@ -1173,3 +1173,10 @@ html.has-pseudo-fullscreen,html.has-pseudo-fullscreen body{overflow:hidden}
   #voice-view #leave-call.leave-pill svg{display:block!important;width:20px;height:20px}
   #voice-view #leave-call.leave-pill{min-width:52px;width:52px!important;padding:0!important;flex:0 0 52px;justify-content:center;gap:0}
 }
+/* Medidor de nível do microfone no botão da call e aviso com "Tentar de novo". */
+#mic{position:relative}
+.call-mic-meter{position:absolute;left:18%;right:18%;bottom:4px;height:3px;border-radius:999px;background:color-mix(in srgb,currentColor 18%,transparent);overflow:hidden;pointer-events:none}
+.call-mic-meter::after{content:"";position:absolute;inset:0;width:calc(var(--mic-level,0)*100%);background:#3ecf8e;border-radius:inherit;transition:width .08s linear}
+.call-mic-meter.closed{opacity:.35}.call-mic-meter.closed::after{width:0}
+.mic-alert{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:8px auto;max-width:640px;padding:10px 14px;border-radius:12px;background:color-mix(in srgb,#e5484d 16%,var(--panel,#1b1b22));border:1px solid color-mix(in srgb,#e5484d 45%,transparent);font-size:14px;line-height:1.4}
+.mic-alert[hidden]{display:none}.mic-alert-text{flex:1 1 260px}

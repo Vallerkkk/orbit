@@ -31,7 +31,10 @@ export function createNoiseProcessor(defaults={}){
         this.volume=this.context.createGain();this.volume.gain.value=1;
         this.gain.connect(this.volume);this.volume.connect(this.destination);
         this.update({sensitivity,mode,volume});this.startGate();
-        await this.context.resume();
+        // iOS/Android interrompem o AudioContext (ligação, Siri, outra mídia) e ele fica suspenso:
+        // com o contexto parado a faixa processada sai muda para todo mundo. Retoma sozinho.
+        const context=this.context;this.onstate=()=>{if(this.context===context&&context.state!=='running'&&context.state!=='closed')context.resume().catch(()=>{});};context.addEventListener?.('statechange',this.onstate);
+        await Promise.race([context.resume(),new Promise(resolve=>setTimeout(resolve,1500))]);
         if(this.cancelled)throw Error('Processamento cancelado');
         this.processedTrack=this.destination.stream.getAudioTracks()[0];
       }catch(error){await this.destroy();throw error;}
@@ -45,7 +48,7 @@ export function createNoiseProcessor(defaults={}){
     level(){return this.lastLevel??-100;},
     startGate(){
       const buf=new Float32Array(this.analyser.fftSize);let open=false,hold=0;
-      const tick=()=>{if(!this.context||!this.analyser)return;
+      const tick=()=>{if(!this.context||!this.analyser)return;if(this.context.state==='suspended'||this.context.state==='interrupted')this.context.resume().catch(()=>{});
         this.analyser.getFloatTimeDomainData(buf);let sum=0;for(const v of buf)sum+=v*v;const db=10*Math.log10(sum/buf.length+1e-12);this.lastLevel=db;
         // Em aba oculta os timers ficam lentos; o gate fica aberto para não cortar a fala.
         const above=document.hidden||db>this.threshold;if(above){hold=12;}else if(hold>0)hold--;
@@ -53,7 +56,9 @@ export function createNoiseProcessor(defaults={}){
       };
       this.gateTimer=setInterval(tick,20);tick();
     },
-    async restart(options){await this.destroy();this.cancelled=false;await this.init(options);},
+    // O LiveKit chama restart ao trocar de microfone ou reabrir a faixa: mantém sensibilidade, modo e volume atuais.
+    async restart(options){const keep={sensitivity:this.sensitivity,mode:this.mode,volume:this.micVolume};await this.destroy();this.cancelled=false;await this.init({...options,...Object.fromEntries(Object.entries(keep).filter(([,v])=>v!==undefined))});},
+    blocked(){return !!this.context&&this.context.state!=='running';},
     async destroy(){
       this.cancelled=true;clearInterval(this.gateTimer);
       for(const node of [this.source,this.highpass,this.filter,this.analyser,this.gain,this.volume,this.destination]){try{node?.disconnect();}catch{}}
@@ -65,4 +70,6 @@ export function createNoiseProcessor(defaults={}){
   };
 }
 // 100% = sempre aberto; 10% = só fala forte passa. No modo agressivo o limiar sobe 6 dB.
-export function gateThreshold(sensitivity=50,mode='enhanced'){const s=Math.max(10,Math.min(100,Number(sensitivity)||50));return (s>=100?-100:-72+(100-s)*0.42)+(mode==='aggressive'?6:0);}
+// O padrão (50%) fica em -60 dBFS: o limiar antigo (-51 dBFS, -34 dBFS em 10%) cortava fala baixa
+// de microfone de notebook/headset sem AGC, e a pessoa parecia muda mesmo com o microfone ligado.
+export function gateThreshold(sensitivity=50,mode='enhanced'){const s=Math.max(10,Math.min(100,Number(sensitivity)||50));return (s>=100?-100:-80+(100-s)*0.4)+(mode==='aggressive'?6:0);}
