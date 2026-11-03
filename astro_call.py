@@ -496,6 +496,7 @@ class Call:
     tails: dict = field(default_factory=dict)
     uploading: set = field(default_factory=set)
     last_upload: dict = field(default_factory=dict)
+    last_stop: dict = field(default_factory=dict)
     last_ask: dict = field(default_factory=dict)
     last_speech: dict = field(default_factory=dict)
     sequence: int = 0
@@ -516,6 +517,7 @@ class Call:
         self.seen = {k: v for k, v in self.seen.items() if v > now - 120}
         self.pending = {k: v for k, v in self.pending.items() if v > now}
         self.last_upload = {k: v for k, v in self.last_upload.items() if v > now - 120}
+        self.last_stop = {k: v for k, v in self.last_stop.items() if v > now - 30}
         self.last_ask = {k: v for k, v in self.last_ask.items() if v > now - 10}
         self.last_speech = {k: v for k, v in self.last_speech.items() if v > now - 10}
         self.tails = {k: v for k, v in self.tails.items() if v[1] > now - 20}
@@ -604,7 +606,11 @@ async def groq_json(app, path, **kwargs):
             response = await client.post('https://api.groq.com/openai/v1/' + path,
                 headers={'Authorization': 'Bearer ' + key}, timeout=timeout, **kwargs)
         if response.status_code == 429:
-            raise HTTPException(429, 'Limite da Groq atingido. A Cloe tentará novamente em alguns segundos.')
+            retry = response.headers.get('retry-after', '').strip()
+            log.warning('Groq 429 em %s (retry-after=%s): %s', path, retry or '-',
+                        ' '.join(response.text.split())[:300])
+            raise HTTPException(429, 'Limite da Groq atingido. A Cloe tentará novamente em alguns segundos.',
+                                headers={'Retry-After': retry} if retry else None)
         if response.is_error:
             raise HTTPException(502, 'A Groq não concluiu a solicitação. Confira a chave e os modelos no servidor.')
         return response.json()
@@ -839,7 +845,14 @@ def install_astro(app, current_user, settings):
         # O trecho enviado enquanto a Cloe fala só serve para achar "para": ele fura a
         # espera, senão a interrupção ficava presa atrás do processamento anterior.
         if not stop_only and (uid in call.uploading or time.time() - call.last_upload.get(uid, 0) < .6):
-            raise HTTPException(429, 'Aguarde o trecho anterior ser processado.')
+            raise HTTPException(429, 'Aguarde o trecho anterior ser processado.',
+                                headers={'Retry-After': '1'})
+        # Trechos de interrupção chegam a cada pausa durante a fala; limitar a um a cada
+        # 0,5 s por pessoa evita uma enxurrada de transcrições sem perder o "para".
+        if stop_only:
+            if time.time() - call.last_stop.get(uid, 0) < .5:
+                return {'transcribed': False}
+            call.last_stop[uid] = time.time()
         if request.headers.get('content-type', '').split(';')[0] != 'audio/wav':
             raise HTTPException(415, 'Formato esperado: audio/wav.')
         # Reserva antes do primeiro await: corpo e Groq vêm logo abaixo e, sem isto, duas

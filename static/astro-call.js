@@ -64,7 +64,7 @@ export function initCloe(ctx){
  composer.append(ask,actions,voiceBox);
  panel.append(header,notice,ownerNote,searchNote,tabs,list,composer);view.append(panel);
  panel.addEventListener('keydown',event=>{if(event.key==='Escape'){event.stopPropagation();setOpen(false);}});
- let target=null,version=0,cursor=0,items=[],tab='transcript',enabled=true,configured=false,audio,source,node,track,listenCopy=null,loadingAudio=false,polling=false,queue=[],sending=false,controller=null,pauseUntil=0,nextAttempt=0,retryAt=0,lastProblem='',lastPoll=0,joinedAt=Date.now()/1000,unseen={transcript:0,answer:0};
+ let target=null,version=0,cursor=0,items=[],tab='transcript',enabled=true,configured=false,audio,source,node,track,listenCopy=null,loadingAudio=false,polling=false,queue=[],sending=false,fails=0,controller=null,pauseUntil=0,nextAttempt=0,retryAt=0,lastProblem='',lastPoll=0,joinedAt=Date.now()/1000,unseen={transcript:0,answer:0};
  let seenIds=new Set(),statusUntil=0;
  const POLL_OPEN=1200,POLL_IDLE=3000;
  let voiceEnabled=localStorage.getItem(VOICE_KEY)!=='off',voiceSource=localStorage.getItem(SOURCE_KEY)==='device'?'device':'natural',sourceChosen=localStorage.getItem(SOURCE_KEY)!==null,voiceName=localStorage.getItem(NAME_KEY)||'',serviceVoice=localStorage.getItem(SERVICE_KEY)||'',voiceRate=storedNumber(RATE_KEY,1),voiceVolume=storedNumber(VOLUME_KEY,.9);
@@ -202,7 +202,7 @@ export function initCloe(ctx){
   list.classList.toggle('is-empty',!rows.length);list.replaceChildren(fragment);transcriptCount.textContent=String(transcriptRows.length);transcriptCount.hidden=!transcriptRows.length;answerCount.textContent=String(answerRows.length);answerCount.hidden=!answerRows.length;transcripts.dataset.unread=String(unseen.transcript>0);answers.dataset.unread=String(unseen.answer>0);if(bottom)list.scrollTop=list.scrollHeight;}
  // Só para a cópia própria da Cloe; a faixa publicada no LiveKit nunca é parada aqui.
  function stopAudio(){track=null;source?.disconnect();node?.disconnect();source=node=null;try{listenCopy?.stop();}catch{}listenCopy=null;if(audio){audio.close().catch(()=>{});audio=null;}loadingAudio=false;}
- function reset(){version++;stopSpeech(false);controller?.abort();controller=new AbortController();stopAudio();queue=[];sending=false;polling=false;configured=false;items=[];seenIds=new Set();cursor=0;lastProblem='';nextAttempt=0;retryAt=0;lastPoll=0;joinedAt=Date.now()/1000;pauseUntil=0;statusUntil=0;render();}
+ function reset(){version++;stopSpeech(false);controller?.abort();controller=new AbortController();stopAudio();queue=[];sending=false;fails=0;polling=false;configured=false;items=[];seenIds=new Set();cursor=0;lastProblem='';nextAttempt=0;retryAt=0;lastPoll=0;joinedAt=Date.now()/1000;pauseUntil=0;statusUntil=0;render();}
  ask.onsubmit=async event=>{event.preventDefault();const text=askInput.value.trim();if(!text)return;sync();if(!target){setStatus('Entre na call para perguntar à Cloe.',6000);return;}askSend.disabled=true;
   try{const body={text};if(canUseNatural()){body.voice=selectedNaturalId();body.rate=voiceRate;}const response=await apiFetch('/api/astro/'+encodeURIComponent(target)+'/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});let data={};try{data=await response.json();}catch{}askInput.value='';if(data?.watch)await runWatch(data.watch);else{if(data?.answer)deliver(data.answer);setStatus(data?.answer?'Cloe respondeu.':'Pergunta enviada à Cloe.',4000);}lastPoll=0;poll();}
   catch(error){if(error.name!=='AbortError')setStatus(error.message,8000);}
@@ -215,9 +215,10 @@ export function initCloe(ctx){
  }
  async function drain(){if(sending||!queue.length||!target)return;sending=true;const ticket=version;
   try{while(queue.length&&current(ticket)){const chunk=queue.shift();if(!enabled)continue;try{// A voz escolhida vai no pedido: o servidor já gera o MP3 antes de o painel pedir.
-    const voice=canUseNatural()?'&voice='+encodeURIComponent(selectedNaturalId())+'&rate='+voiceRate:'';const response=await apiFetch('/api/astro/'+encodeURIComponent(target)+'/audio?chunk_id='+chunk.id+(chunk.stopOnly?'&stop_only=1':'')+voice,{method:'POST',headers:{'Content-Type':'audio/wav'},body:chunk.body,signal:controller.signal});let data={};try{data=await response.json();}catch{}if(data?.stop)stopSpeech(true);else if(data?.watch)runWatch(data.watch);else if(data?.answer)deliver(data.answer);}catch(error){if(!current(ticket)||error.name==='AbortError')return;// 429/5xx é contrapressão do servidor, não falha da pessoa: o trecho
-       // é a única cópia daquela fala, jogá-lo fora perdia a transcrição e calava a Cloe por 10 s.
-       if(error.status===429||error.status>=500){retryAt=Date.now()+900;queue.unshift(chunk);break;}lastProblem=error.message;setStatus(lastProblem,10000);nextAttempt=Date.now()+10000;queue=[];break;}}}
+    const voice=canUseNatural()?'&voice='+encodeURIComponent(selectedNaturalId())+'&rate='+voiceRate:'';const response=await apiFetch('/api/astro/'+encodeURIComponent(target)+'/audio?chunk_id='+chunk.id+(chunk.stopOnly?'&stop_only=1':'')+voice,{method:'POST',headers:{'Content-Type':'audio/wav'},body:chunk.body,signal:controller.signal});let data={};try{data=await response.json();}catch{}fails=0;if(data?.stop)stopSpeech(true);else if(data?.watch)runWatch(data.watch);else if(data?.answer)deliver(data.answer);}catch(error){if(!current(ticket)||error.name==='AbortError')return;// 429/5xx é contrapressão ou limite do serviço, não falha da pessoa: o trecho
+       // é a única cópia daquela fala. A espera dobra a cada tentativa para não martelar
+       // um serviço que já pediu para desacelerar.
+       if(error.status===429||error.status>=500){fails++;retryAt=Date.now()+Math.min(20000,1000*2**Math.min(fails,5));if(fails>=2)setStatus(error.message||'A Cloe está no limite agora. Tentando de novo em instantes.',8000);queue.unshift(chunk);break;}fails=0;lastProblem=error.message;setStatus(lastProblem,10000);nextAttempt=Date.now()+10000;queue=[];break;}}}
   finally{if(current(ticket))sending=false;}
  }
  async function capture(nextTrack){if(loadingAudio||track===nextTrack)return;stopAudio();loadingAudio=true;track=nextTrack;const ticket=version;

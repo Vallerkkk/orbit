@@ -265,6 +265,18 @@ class CloeTests(unittest.TestCase):
         # O trecho de parada não solta a reserva do upload que ainda está em andamento.
         self.assertIn(UID,call.uploading)
 
+    def test_stop_chunks_are_limited_to_one_per_half_second(self):
+        calls=[]
+        async def groq(app,path,**kwargs):
+            calls.append(path);return {'text':'ignorado'}
+        with patch.object(astro,'groq_json',groq):
+            first=self.client.post(f'/api/astro/{ROOM}/audio?chunk_id=77777777-7777-4777-8777-777777777707&stop_only=1',content=wav(),headers={'Content-Type':'audio/wav'})
+            second=self.client.post(f'/api/astro/{ROOM}/audio?chunk_id=77777777-7777-4777-8777-777777777708&stop_only=1',content=wav(),headers={'Content-Type':'audio/wav'})
+        self.assertEqual(first.json(),{'transcribed':False})
+        self.assertEqual(second.json(),{'transcribed':False})
+        # O trecho descartado nem chega a custar uma transcrição na Groq.
+        self.assertEqual(calls,['audio/transcriptions'])
+
     def test_audio_warms_the_voice_before_the_panel_asks(self):
         calls=[]
         async def fake(text,voice,rate):
