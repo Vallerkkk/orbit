@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: orbita-app
+    name: orbita
     runtime: python
     plan: free
     # Push na branch publicada dispara o deploy; o Render espera /healthz responder antes de trocar o tráfego.
@@ -9,15 +9,104 @@ services:
     buildCommand: pip install -r requirements.txt && npm ci && npm run build
     startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
     envVars:
+      # --- Núcleo (sem estas o app abre, mas login/calls não funcionam) ---
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
       - key: LIVEKIT_API_KEY
         sync: false
       - key: LIVEKIT_API_SECRET
         sync: false
       - key: LIVEKIT_URL
         sync: false
+      - key: GROQ_API_KEY
+        sync: false
+
+      # --- Cloe (voz, respostas, pesquisa e administração) ---
+      - key: BRAVE_API_KEY
+        sync: false
+      - key: CLOE_OWNER_ID
+        sync: false
+      - key: CLOE_CONFIRM_PHRASE
+        sync: false
+      - key: CLOE_OWNER_ACTION_SECONDS
+        sync: false
+      - key: CLOE_OWNER_ATTEMPTS
+        sync: false
+      - key: CLOE_STT_MODEL
+        sync: false
+      - key: CLOE_LLM_MODEL
+        sync: false
+      - key: CLOE_CONTEXT_CHARS
+        sync: false
+      - key: CLOE_MAX_ANSWER_TOKENS
+        sync: false
+      - key: CLOE_REASONING_EFFORT
+        sync: false
+      - key: CLOE_ANSWER_QUEUE
+        sync: false
+      - key: CLOE_MEMBER_CACHE_SECONDS
+        sync: false
+      - key: CLOE_DAILY_STT_SECONDS
+        sync: false
+      - key: CLOE_DAILY_ASKS
+        sync: false
+      - key: CLOE_DAILY_TTS_CHARS
+        sync: false
+      - key: CLOE_DAILY_WEB_SEARCHES
+        sync: false
+
+      # --- YouTube e conta Google (opcionais) ---
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: YOUTUBE_TOKEN_KEY
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false
+
+      # --- Spotify (opcional) ---
+      - key: SPOTIFY_CLIENT_ID
+        sync: false
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false
+      - key: SPOTIFY_REDIRECT_URI
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+      # --- Mídia e notificações ---
       - key: GIPHY_API_KEY
         sync: false
-      - key: SUPABASE_PUBLISHABLE_KEY
+      - key: VAPID_PUBLIC_KEY
         sync: false
-      - key: SUPABASE_URL
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false
+      - key: PUSH_TRANSPORT_KEY
+        sync: false
+      - key: DAILY_DIGEST_ENABLED
+        sync: false
+
+      # --- Diagnóstico e vídeo (opcionais, desligados por padrão) ---
+      - key: SENTRY_PUBLIC_DSN
+        sync: false
+      - key: UMAMI_SCRIPT_URL
+        sync: false
+      - key: UMAMI_WEBSITE_ID
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_DIAGNOSTICS_ENABLED
+        sync: false
+      - key: GEMINI_FREE_TIER_CONFIRMED
+        sync: false
+      - key: VIDEOCHAMADA_API_KEY
+        sync: false
+      - key: VIDEOCHAMADA_FREE_PLAN_CONFIRMED
         sync: false

@@ -63,7 +63,7 @@ A política Referrer-Policy envia somente a origem em solicitações externas HT
 
 Ícone do YouTube no rail: início/Em alta, busca (vídeos, canais, playlists), página do vídeo com comentários e relacionados, canal, playlist, mini player flutuante que continua tocando enquanto você navega, Histórico e Assistir depois (tabela `youtube_library` com RLS) e "Enviar no Órbita" para canais/DMs. Links do YouTube no chat viram um card leve (thumbnail primeiro; o iframe só carrega no clique).
 
-Todas as chamadas passam pelo proxy `/api/youtube/*` (cache TTL em memória); a `YOUTUBE_API_KEY` nunca chega ao navegador. Sem a chave, a interface mostra um aviso em pt-BR. Como a cota do YouTube é compartilhada por toda a comunidade, cada conta tem limite próprio: 20 buscas novas e 60 outras chamadas por 10 minutos (resultados em cache não consomem busca).
+Todas as chamadas passam pelo proxy `/api/youtube/*` (cache TTL em memória); a `YOUTUBE_API_KEY` nunca chega ao navegador. Sem a chave, a interface mostra um aviso em pt-BR. Como a cota do YouTube é compartilhada por toda a comunidade, cada conta tem limite próprio de 600 unidades por 10 minutos: uma busca nova custa 100 (equivalente a 6 buscas) e as demais chamadas custam 1. Resultados em cache não consomem cota.
 
 **Conta Google (opcional):** é apenas uma conexão do YouTube presa ao usuário logado do Órbita — não usa o provedor Google do Supabase Auth e não altera sessão, e-mail, @, nome, avatar ou perfil. O refresh token fica só no servidor, cifrado (AES-GCM) com `YOUTUBE_TOKEN_KEY`, em `orbita_private.youtube_tokens`, acessível apenas por RPCs do próprio dono. "Sair da conta Google" revoga o token e apaga a linha. Com a conta conectada: Inscrições, Minhas playlists e Vídeos curtidos.
 
