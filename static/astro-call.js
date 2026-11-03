@@ -86,7 +86,7 @@ export function initCloe(ctx){
  // A voz padrão (sem escolha salva) é a primeira da lista; uma escolha salva nunca é substituída.
  function selectedNaturalId(){if(!serverVoices.length)return '';if(serviceVoice)return serverVoices.some(v=>v.id===serviceVoice)?serviceVoice:'';return serverVoices[0]?.id||'';}
  function naturalVoiceMissing(){return !!serviceVoice&&naturalReady&&serverVoices.length>0&&!selectedNaturalId();}
- function canUseNatural(){return voiceSource==='natural'&&naturalReady&&!!selectedNaturalId()&&Date.now()>=naturalDownUntil&&!!target;}
+ function canUseNatural(){return voiceEnabled&&voiceSource==='natural'&&naturalReady&&!!selectedNaturalId()&&Date.now()>=naturalDownUntil&&!!target;}
  function fillVoices(){
   const voices=allVoices(),pt=voices.filter(v=>/^pt/i.test(v.lang)),device=pt.length?pt:voices,groups=[];
   const natural=document.createElement('optgroup');natural.label='Vozes naturais';
@@ -204,7 +204,7 @@ export function initCloe(ctx){
  function stopAudio(){track=null;source?.disconnect();node?.disconnect();source=node=null;try{listenCopy?.stop();}catch{}listenCopy=null;if(audio){audio.close().catch(()=>{});audio=null;}loadingAudio=false;}
  function reset(){version++;stopSpeech(false);controller?.abort();controller=new AbortController();stopAudio();queue=[];sending=false;polling=false;configured=false;items=[];seenIds=new Set();cursor=0;lastProblem='';nextAttempt=0;retryAt=0;lastPoll=0;joinedAt=Date.now()/1000;pauseUntil=0;statusUntil=0;render();}
  ask.onsubmit=async event=>{event.preventDefault();const text=askInput.value.trim();if(!text)return;sync();if(!target){setStatus('Entre na call para perguntar à Cloe.',6000);return;}askSend.disabled=true;
-  try{const response=await apiFetch('/api/astro/'+encodeURIComponent(target)+'/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text}),signal:controller.signal});let data={};try{data=await response.json();}catch{}askInput.value='';if(data?.watch)await runWatch(data.watch);else{if(data?.answer)deliver(data.answer);setStatus(data?.answer?'Cloe respondeu.':'Pergunta enviada à Cloe.',4000);}lastPoll=0;poll();}
+  try{const body={text};if(canUseNatural()){body.voice=selectedNaturalId();body.rate=voiceRate;}const response=await apiFetch('/api/astro/'+encodeURIComponent(target)+'/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});let data={};try{data=await response.json();}catch{}askInput.value='';if(data?.watch)await runWatch(data.watch);else{if(data?.answer)deliver(data.answer);setStatus(data?.answer?'Cloe respondeu.':'Pergunta enviada à Cloe.',4000);}lastPoll=0;poll();}
   catch(error){if(error.name!=='AbortError')setStatus(error.message,8000);}
   finally{askSend.disabled=false;}};
  async function poll(){if(polling||Date.now()<nextAttempt)return;polling=true;lastPoll=Date.now();const ticket=version;
@@ -214,13 +214,14 @@ export function initCloe(ctx){
   finally{if(current(ticket))polling=false;}
  }
  async function drain(){if(sending||!queue.length||!target)return;sending=true;const ticket=version;
-  try{while(queue.length&&current(ticket)){const chunk=queue.shift();if(!enabled)continue;try{const response=await apiFetch('/api/astro/'+encodeURIComponent(target)+'/audio?chunk_id='+chunk.id+(chunk.stopOnly?'&stop_only=1':''),{method:'POST',headers:{'Content-Type':'audio/wav'},body:chunk.body,signal:controller.signal});let data={};try{data=await response.json();}catch{}if(data?.stop)stopSpeech(true);else if(data?.watch)runWatch(data.watch);else if(data?.answer)deliver(data.answer);}catch(error){if(!current(ticket)||error.name==='AbortError')return;// 429/5xx é contrapressão do servidor, não falha da pessoa: o trecho
+  try{while(queue.length&&current(ticket)){const chunk=queue.shift();if(!enabled)continue;try{// A voz escolhida vai no pedido: o servidor já gera o MP3 antes de o painel pedir.
+    const voice=canUseNatural()?'&voice='+encodeURIComponent(selectedNaturalId())+'&rate='+voiceRate:'';const response=await apiFetch('/api/astro/'+encodeURIComponent(target)+'/audio?chunk_id='+chunk.id+(chunk.stopOnly?'&stop_only=1':'')+voice,{method:'POST',headers:{'Content-Type':'audio/wav'},body:chunk.body,signal:controller.signal});let data={};try{data=await response.json();}catch{}if(data?.stop)stopSpeech(true);else if(data?.watch)runWatch(data.watch);else if(data?.answer)deliver(data.answer);}catch(error){if(!current(ticket)||error.name==='AbortError')return;// 429/5xx é contrapressão do servidor, não falha da pessoa: o trecho
        // é a única cópia daquela fala, jogá-lo fora perdia a transcrição e calava a Cloe por 10 s.
        if(error.status===429||error.status>=500){retryAt=Date.now()+900;queue.unshift(chunk);break;}lastProblem=error.message;setStatus(lastProblem,10000);nextAttempt=Date.now()+10000;queue=[];break;}}}
   finally{if(current(ticket))sending=false;}
  }
  async function capture(nextTrack){if(loadingAudio||track===nextTrack)return;stopAudio();loadingAudio=true;track=nextTrack;const ticket=version;
-  try{const ac=new AudioContext();audio=ac;await ac.audioWorklet.addModule('/static/astro-recorder.js?v=cloe-20261031');if(!current(ticket)||audio!==ac){ac.close().catch(()=>{});return;}
+  try{const ac=new AudioContext();audio=ac;await ac.audioWorklet.addModule('/static/astro-recorder.js?v=cloe-20261103');if(!current(ticket)||audio!==ac){ac.close().catch(()=>{});return;}
    // Escuta uma cópia (clone) da faixa: a Cloe nunca compartilha, muta nem encerra o microfone da call.
    listenCopy=nextTrack.clone();source=ac.createMediaStreamSource(new MediaStream([listenCopy]));node=new AudioWorkletNode(ac,"cloe-recorder");source.connect(node);node.connect(ac.destination);
    // resume() fica pendente para sempre sem gesto no iOS; não trava a captura esperando.

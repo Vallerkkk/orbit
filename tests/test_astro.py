@@ -250,6 +250,51 @@ class CloeTests(unittest.TestCase):
         events=self.client.get('/api/astro/'+ROOM).json()['events']
         self.assertEqual([e['kind'] for e in events],['stop'])
 
+    def test_stop_chunk_is_not_stuck_behind_a_busy_upload(self):
+        # Com a Cloe falando, o pedido de parar não pode esperar o trecho anterior terminar.
+        async def groq(app,path,**kwargs):return {'text':'Cloe, para de falar.'}
+        self.assertEqual(self.client.get('/api/astro/'+ROOM).status_code,200)
+        call=self.app.state.astro_calls[ROOM]
+        call.uploading.add(UID);call.last_upload[UID]=time.time()
+        with patch.object(astro,'groq_json',groq):
+            blocked=self.audio(chunk='77777777-7777-4777-8777-777777777703')
+            stopped=self.client.post(f'/api/astro/{ROOM}/audio?chunk_id=77777777-7777-4777-8777-777777777704&stop_only=1',content=wav(),headers={'Content-Type':'audio/wav'})
+        self.assertEqual(blocked.status_code,429)
+        self.assertEqual(stopped.status_code,200)
+        self.assertEqual(stopped.json(),{'transcribed':True,'stop':True})
+        # O trecho de parada não solta a reserva do upload que ainda está em andamento.
+        self.assertIn(UID,call.uploading)
+
+    def test_audio_warms_the_voice_before_the_panel_asks(self):
+        calls=[]
+        async def fake(text,voice,rate):
+            calls.append((text,voice,rate));return b'ID3\x04\x00\x00\x00\x00\x00\x00fake'
+        async def groq(app,path,**kwargs):
+            if path=='audio/transcriptions': return {'text':'Ei Cloe, tudo bem?'}
+            return {'choices':[{'message':{'content':'Tudo certo por aqui.'}}]}
+        with patch.object(astro,'synthesize_speech',fake), patch.object(astro,'groq_json',groq):
+            answered=self.client.post(f'/api/astro/{ROOM}/audio?chunk_id=77777777-7777-4777-8777-777777777706'
+                                      '&voice=pt-BR-FranciscaNeural&rate=1.1',content=wav(),headers={'Content-Type':'audio/wav'})
+            speech=self.client.post(f'/api/astro/{ROOM}/speech',
+                                    json={'text':'Tudo certo por aqui.','voice':'pt-BR-FranciscaNeural','rate':1.1})
+        self.assertEqual(answered.json()['answer']['text'],'Tudo certo por aqui.')
+        self.assertEqual(speech.status_code,200)
+        # A voz já foi gerada durante a resposta: o painel recebe o mesmo MP3 sem nova síntese.
+        self.assertEqual(calls,[('Tudo certo por aqui.','pt-BR-FranciscaNeural','+10%')])
+
+    def test_ask_text_warms_the_voice_chosen_in_the_panel(self):
+        calls=[]
+        async def fake(text,voice,rate):
+            calls.append((text,voice,rate));return b'ID3\x04\x00\x00\x00\x00\x00\x00fake'
+        async def groq(app,path,**kwargs):return {'choices':[{'message':{'content':'Resposta curta.'}}]}
+        with patch.object(astro,'synthesize_speech',fake), patch.object(astro,'groq_json',groq):
+            data=self.client.post(f'/api/astro/{ROOM}/ask',
+                                  json={'text':'qual é o resumo?','voice':'pt-BR-ThalitaMultilingualNeural','rate':.9}).json()
+            speech=self.client.post(f'/api/astro/{ROOM}/speech',
+                                    json={'text':data['answer']['text'],'voice':'pt-BR-ThalitaMultilingualNeural','rate':.9})
+        self.assertEqual(speech.status_code,200)
+        self.assertEqual(calls,[('Resposta curta.','pt-BR-ThalitaMultilingualNeural','-10%')])
+
     def test_hallucination_is_filtered_before_transcript(self):
         async def hallucination(*args,**kwargs):return {'text':'Legendas pela comunidade Amara.org','segments':[]}
         with patch.object(astro,'groq_json',hallucination):self.assertFalse(self.audio().json()['transcribed'])

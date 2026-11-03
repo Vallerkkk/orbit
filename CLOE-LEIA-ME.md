@@ -41,7 +41,7 @@ Todos os participantes precisam carregar esta versão para falar com a Cloe pelo
 
 O plano da Groq pode ter limites e custos. A escuta contínua transcreve os trechos de fala da call para detectar o nome, então o consumo é maior do que no modo por botão; pausar o próprio áudio ou fechar o microfone interrompe o envio. A pesquisa na internet depende da cota gratuita do Brave (2.000 consultas/mês por padrão) e de páginas que aceitem leitura automática; sem chave, ela fica desligada e o painel do dono avisa. A busca do YouTube continua separada e é usada somente para pedidos de música no Ouvir juntos. A voz neural gratuita depende de um serviço externo da Microsoft: se ele mudar ou ficar fora do ar, a Cloe **não troca de voz** — o painel avisa e a resposta fica em texto até a voz escolhida voltar.
 
-Configure modelos e desempenho no servidor usando `CLOE_STT_MODEL`, `CLOE_LLM_MODEL`, `CLOE_CONTEXT_CHARS` (padrão 8000), `CLOE_MAX_ANSWER_TOKENS` (padrão 500), `CLOE_REASONING_EFFORT` (padrão `low`), `CLOE_ANSWER_QUEUE` (padrão 3) e `CLOE_MEMBER_CACHE_SECONDS` (padrão 5).
+Configure modelos e desempenho no servidor usando `CLOE_STT_MODEL`, `CLOE_LLM_MODEL`, `CLOE_CONTEXT_CHARS` (padrão 3000), `CLOE_MAX_ANSWER_TOKENS` (padrão 350), `CLOE_REASONING_EFFORT` (padrão `low`), `CLOE_ANSWER_QUEUE` (padrão 3) e `CLOE_MEMBER_CACHE_SECONDS` (padrão 5).
 
 Administração e pesquisa usam `CLOE_OWNER_ID` (UUID da **sua** conta no Supabase; vazio desliga a administração), `CLOE_CONFIRM_PHRASE` (padrão `Eu Kalil Confirmo`), `CLOE_OWNER_ACTION_SECONDS` (padrão 90), `CLOE_OWNER_ATTEMPTS` (padrão 3) e `BRAVE_API_KEY`. Nenhuma migração de banco é necessária: as permissões existentes são reaproveitadas.
 

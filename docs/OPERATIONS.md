@@ -67,8 +67,8 @@ A Cloe usa Groq. As cotas diárias por pessoa ficam em memória e são ajustáve
 
 Desempenho e concorrência também são ajustáveis sem mexer no código:
 
-- `CLOE_CONTEXT_CHARS` (padrão 8000): tamanho do histórico de perguntas enviado ao modelo; menor responde mais rápido.
-- `CLOE_MAX_ANSWER_TOKENS` (padrão 500): teto da resposta falada; respostas longas demoram mais.
+- `CLOE_CONTEXT_CHARS` (padrão 3000): tamanho do histórico de perguntas enviado ao modelo; menor responde mais rápido.
+- `CLOE_MAX_ANSWER_TOKENS` (padrão 350): teto da resposta falada; respostas longas demoram mais.
 - `CLOE_REASONING_EFFORT` (padrão `low`): esforço de raciocínio do `gpt-oss`; `low` prioriza velocidade.
 - `CLOE_ANSWER_QUEUE` (padrão 3): perguntas simultâneas aguardando resposta na mesma call.
 - `CLOE_MEMBER_CACHE_SECONDS` (padrão 5): tempo do cache da checagem de presença no LiveKit. Presença negativa nunca é cacheada.

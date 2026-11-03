@@ -27,3 +27,14 @@ test('worklet rejects silence, emits bounded complete chunks, discards muted aud
  frame.fill(.1);for(let i=0;i<3100;i++)p.process([[frame]]);assert.equal(emitted.length,1);assert.ok(emitted[0].byteLength<=256000);
  p.port.onmessage({data:{enabled:false}});for(let i=0;i<4000;i++)p.process([[frame]]);assert.equal(emitted.length,1);
 });
+test('the end of a phrase closes the chunk after about half a second of silence',()=>{
+ let Processor;const emitted=[];class Base{constructor(){this.port={postMessage:b=>emitted.push(b)};}}
+ vm.runInNewContext(readFileSync(new URL('../static/astro-recorder.js',import.meta.url),'utf8'),{AudioWorkletProcessor:Base,sampleRate:48000,registerProcessor:(name,p)=>{Processor=p;}});
+ const p=new Processor();p.port.onmessage({data:{enabled:true}});
+ const quiet=new Float32Array(128),voiced=new Float32Array(128).fill(.1);
+ for(let i=0;i<200;i++)p.process([[voiced]]);assert.equal(emitted.length,0);
+ // 100 quadros de silêncio são ~0,27 s: ainda é cedo para fechar o trecho.
+ for(let i=0;i<100;i++)p.process([[quiet]]);assert.equal(emitted.length,0,'trecho fechado antes da pausa');
+ // Somados, os 200 quadros passam de 0,45 s de silêncio: o trecho é enviado.
+ for(let i=0;i<100;i++)p.process([[quiet]]);assert.equal(emitted.length,1,'trecho não foi fechado no fim da fala');
+});
