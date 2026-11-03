@@ -1,10 +1,11 @@
 import asyncio
 import io
+import os
 import time
 import unittest
 import wave
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 import astro_call as astro
@@ -373,5 +374,151 @@ class CloeTests(unittest.TestCase):
         self.assertEqual(self.client.get('/api/astro/'+ROOM).status_code,403)
         self.assertEqual(self.client.get('/api/astro/'+ROOM).status_code,403)
         self.assertEqual(FakeLiveKit.checks,3)
+
+    def owner_plan(self, kind='delete_message', result='Pronto. Apaguei a mensagem.'):
+        from cloe_admin import Plan
+        return Plan(kind, 'Vou apagar a última mensagem. Para confirmar, diga a sua frase de confirmação.',
+                    {'message': 'x'}, result, {'community': 'Servidor'})
+
+    def test_owner_command_needs_spoken_confirmation(self):
+        executed = []
+        proposal = self.owner_plan()
+
+        async def plan_for(self, text, room, headers, user_id=None):
+            return proposal
+
+        async def execute(self, plan, headers, room):
+            executed.append(plan.kind)
+            return plan.result
+
+        texts = iter(['Ei Cloe, apaga a última mensagem do canal geral', 'Eu Kalil Confirmo'])
+
+        async def groq(app, path, **kwargs):
+            if path == 'audio/transcriptions':
+                return {'text': next(texts)}
+            return {'choices': [{'message': {'content': 'não deveria responder'}}]}
+
+        with patch.dict(os.environ, {'CLOE_OWNER_ID': UID, 'CLOE_CONFIRM_PHRASE': 'Eu Kalil Confirmo'}), \
+                patch.object(astro.OwnerAdmin, 'plan_for', plan_for), \
+                patch.object(astro.OwnerAdmin, 'execute', execute), \
+                patch.object(astro, 'groq_json', groq):
+            first = self.audio(chunk='99999999-9999-4999-8999-999999999901').json()
+            self.assertEqual(first['answer']['kind'], 'answer')
+            self.assertIn('frase de confirmação', first['answer']['text'])
+            self.assertEqual(executed, [])
+            self.app.state.astro_calls[ROOM].last_upload[UID] = 0
+            second = self.audio(chunk='99999999-9999-4999-8999-999999999902').json()
+        self.assertEqual(second['answer']['text'], 'Pronto. Apaguei a mensagem.')
+        self.assertEqual(executed, ['delete_message'])
+        context = self.app.state.astro_calls[ROOM].context()
+        self.assertNotIn('Kalil', context)
+        self.assertIn('[fala de confirmação]', context)
+
+    def test_typed_confirmation_never_executes(self):
+        executed = []
+
+        async def execute(self, plan, headers, room):
+            executed.append(plan.kind)
+
+        with patch.dict(os.environ, {'CLOE_OWNER_ID': UID}), \
+                patch.object(astro.OwnerAdmin, 'execute', execute):
+            response = self.client.post(f'/api/astro/{ROOM}/ask',
+                                        json={'text': 'Eu Kalil Confirmo'}).json()
+        self.assertIn('falada no microfone', response['answer']['text'])
+        self.assertEqual(executed, [])
+
+    def test_admin_commands_are_denied_to_other_users(self):
+        async def groq(app, path, **kwargs):
+            if path == 'audio/transcriptions':
+                return {'text': 'Ei Cloe, apaga a última mensagem do canal geral'}
+            return {'choices': [{'message': {'content': 'não deveria responder'}}]}
+
+        plan_for = AsyncMock()
+        with patch.dict(os.environ, {'CLOE_OWNER_ID': 'outra-pessoa'}), \
+                patch.object(astro.OwnerAdmin, 'plan_for', plan_for), \
+                patch.object(astro, 'groq_json', groq):
+            response = self.audio(chunk='99999999-9999-4999-8999-999999999903').json()
+        self.assertIn('Só o dono', response['answer']['text'])
+        plan_for.assert_not_awaited()
+
+    def test_three_wrong_confirmations_cancel_the_action(self):
+        executed = []
+        proposal = self.owner_plan()
+        texts = iter(['Ei Cloe, apaga a última mensagem do canal geral',
+                      'Eu Kalil Aprovo', 'Eu Kalil Aprovo', 'Eu Kalil Aprovo'])
+
+        async def plan_for(self, text, room, headers, user_id=None):
+            return proposal
+
+        async def execute(self, plan, headers, room):
+            executed.append(plan.kind)
+            return 'não deveria executar'
+
+        async def groq(app, path, **kwargs):
+            if path == 'audio/transcriptions':
+                return {'text': next(texts)}
+            return {'choices': [{'message': {'content': 'não deveria responder'}}]}
+
+        with patch.dict(os.environ, {'CLOE_OWNER_ID': UID, 'CLOE_OWNER_ATTEMPTS': '3'}), \
+                patch.object(astro.OwnerAdmin, 'plan_for', plan_for), \
+                patch.object(astro.OwnerAdmin, 'execute', execute), \
+                patch.object(astro, 'groq_json', groq):
+            self.audio(chunk='99999999-9999-4999-8999-999999999904')
+            replies = []
+            for index in range(3):
+                self.app.state.astro_calls[ROOM].last_upload[UID] = 0
+                replies.append(self.audio(
+                    chunk=f'99999999-9999-4999-8999-99999999991{index}').json()['answer']['text'])
+        self.assertEqual(executed, [])
+        self.assertIn('cancelei o pedido', replies[-1])
+        self.assertNotIn(UID, self.app.state.astro_calls[ROOM].owner_pending)
+
+    def test_expired_proposal_is_not_executed(self):
+        executed = []
+        proposal = self.owner_plan()
+        texts = iter(['Ei Cloe, apaga a última mensagem do canal geral', 'Eu Kalil Confirmo'])
+
+        async def plan_for(self, text, room, headers, user_id=None):
+            return proposal
+
+        async def execute(self, plan, headers, room):
+            executed.append(plan.kind)
+
+        async def groq(app, path, **kwargs):
+            if path == 'audio/transcriptions':
+                return {'text': next(texts)}
+            return {'choices': [{'message': {'content': 'não deveria responder'}}]}
+
+        with patch.dict(os.environ, {'CLOE_OWNER_ID': UID}), \
+                patch.object(astro.OwnerAdmin, 'plan_for', plan_for), \
+                patch.object(astro.OwnerAdmin, 'execute', execute), \
+                patch.object(astro, 'groq_json', groq):
+            self.audio(chunk='99999999-9999-4999-8999-999999999920')
+            self.app.state.astro_calls[ROOM].owner_pending[UID]['until'] = 0
+            self.app.state.astro_calls[ROOM].last_upload[UID] = 0
+            response = self.audio(chunk='99999999-9999-4999-8999-999999999921').json()
+        self.assertNotIn('answer', response)
+        self.assertEqual(executed, [])
+
+    def test_web_answer_returns_sources_and_marks_them_untrusted(self):
+        captured = {}
+        found = {'sources': [{'title': 'Banco Central', 'url': 'https://exemplo.com/cotacao'}],
+                 'context': '[1] Banco Central\no dólar caiu hoje.'}
+
+        async def groq(app, path, **kwargs):
+            captured['body'] = kwargs.get('json', {})
+            return {'choices': [{'message': {'content': 'O dólar caiu hoje, segundo o Banco Central.'}}]}
+
+        with patch.object(astro.cloe_web, 'wants_search', lambda text: True), \
+                patch.object(astro.cloe_web, 'configured', lambda: True), \
+                patch.object(astro.cloe_web, 'research', AsyncMock(return_value=found)), \
+                patch.object(astro, 'groq_json', groq):
+            response = self.client.post(f'/api/astro/{ROOM}/ask',
+                                        json={'text': 'pesquisa o preço do dólar'}).json()
+        answer = response['answer']
+        self.assertEqual(answer['sources'], found['sources'])
+        messages = captured['body']['messages']
+        self.assertIn('dados não confiáveis', messages[-1]['content'])
+        self.assertIn('o dólar caiu hoje', messages[-1]['content'])
 
 if __name__=='__main__':unittest.main()

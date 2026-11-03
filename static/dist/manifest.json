@@ -1,9 +1,9 @@
 {
-  "version": "c1b61376eeb65cd3",
-  "entry": "/static/dist/app-EASYKNTU.js",
+  "version": "e13003c6fccd8e95",
+  "entry": "/static/dist/app-GXOH443G.js",
   "files": [
-    "/static/dist/app-EASYKNTU.js",
-    "/static/dist/call-layout-0cc49be914a83149.css",
+    "/static/dist/app-GXOH443G.js",
+    "/static/dist/call-layout-51b4200ce3f8be31.css",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js",
     "/static/dist/chunk-app-diagnostics-2QD3IM5Z.js",
@@ -60,7 +60,7 @@
     "/static/interface.css": "/static/dist/interface-873e50655c276577.css",
     "/static/fluency.css": "/static/dist/fluency-e8bd643cf9fd04e1.css",
     "/static/social-feed.css": "/static/dist/social-feed-3968bce45c84364b.css",
-    "/static/call-layout.css": "/static/dist/call-layout-0cc49be914a83149.css",
+    "/static/call-layout.css": "/static/dist/call-layout-51b4200ce3f8be31.css",
     "/static/community-ux.css": "/static/dist/community-ux-f1d2cee68ca44291.css",
     "/static/identity.css": "/static/dist/identity-88e796ffa63422d2.css",
     "/static/polish.css": "/static/dist/polish-6f749e518969d62f.css",
@@ -75,8 +75,8 @@
     "/static/loader.css": "/static/dist/loader-2d3fc658d3944c83.css"
   },
   "integrity": {
-    "/static/dist/app-EASYKNTU.js": "01e8a90efcac38d5df9b2f6e8e0c15cd1c65aab7e48fbb580abd756f6b879e60",
-    "/static/dist/call-layout-0cc49be914a83149.css": "0cc49be914a83149b7fa6b367f886b3f061e23ba9d871fa7020a9016553dcaf4",
+    "/static/dist/app-GXOH443G.js": "33a88864cd91ac907f7d17a0fc5b2668468b48e4fa701e451624f98a1f9c1991",
+    "/static/dist/call-layout-51b4200ce3f8be31.css": "51b4200ce3f8be314486f6d3ee486f288cfc26b5177a9a25dc6c7f6580982cf5",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js": "20cfee0fc731efe53611da92202bd240b2f9d28e6b3115691ed50fc718851ee0",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js": "db2508c2c9152fbe631806e53dd148bd67a8b3695a0094caa6145d906b978027",
     "/static/dist/chunk-app-diagnostics-2QD3IM5Z.js": "0163a63d4a8d77ec1df314bf7902c62baf6148cef02c8f7770e9f9b7d45cef20",

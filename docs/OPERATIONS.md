@@ -63,6 +63,7 @@ A Cloe usa Groq. As cotas diárias por pessoa ficam em memória e são ajustáve
 - `CLOE_DAILY_STT_SECONDS` (padrão 7200): segundos de áudio transcrito por dia.
 - `CLOE_DAILY_ASKS` (padrão 200): perguntas respondidas pelo modelo por dia.
 - `CLOE_DAILY_TTS_CHARS` (padrão 100000): caracteres de voz neural por dia.
+- `CLOE_DAILY_WEB_SEARCHES` (padrão 50): pesquisas na internet por dia.
 
 Desempenho e concorrência também são ajustáveis sem mexer no código:
 
@@ -73,6 +74,16 @@ Desempenho e concorrência também são ajustáveis sem mexer no código:
 - `CLOE_MEMBER_CACHE_SECONDS` (padrão 5): tempo do cache da checagem de presença no LiveKit. Presença negativa nunca é cacheada.
 
 A voz natural (Thalita ou Francisca) é a única reproduzida quando escolhida. Se o serviço da Microsoft falhar, a Cloe não substitui a voz: o painel avisa e a resposta fica em texto até a voz voltar.
+
+### Administração pela Cloe
+
+A administração só existe para a conta definida em `CLOE_OWNER_ID` (UUID do Supabase). Sem essa variável, o modo fica desligado e a Cloe avisa. Outros usuários — inclusive outros administradores do site — recebem recusa. Cada pedido vira uma proposta e só executa após a frase `CLOE_CONFIRM_PHRASE` (padrão `Eu Kalil Confirmo`) ser falada no microfone pelo dono autenticado na call. A frase é redigida da transcrição e do contexto do modelo e nunca é revelada; confirmação por texto é recusada. `CLOE_OWNER_ACTION_SECONDS` (padrão 90) expira a proposta e `CLOE_OWNER_ATTEMPTS` (padrão 3) limita as tentativas erradas.
+
+Moderação (banir, remover, suspender, apagar mensagem, encerrar call, expulsar) passa pelas funções SQL auditadas já existentes e exige que o dono seja administrador/criador do site. Canais, cargos e dados do servidor são gravados com a sessão do próprio dono no PostgREST, então as políticas RLS valem; essas alterações ficam no log do servidor. Excluir canais, servidores ou cargos e transferir posse continuam bloqueados.
+
+### Pesquisa na internet
+
+Defina `BRAVE_API_KEY` (plano gratuito do Brave: 2.000 consultas/mês) para ligar a pesquisa. A Cloe só busca por pedido explícito ou assunto temporal (notícias, cotação, placar, previsão), lê até três páginas e mostra os links no painel. O servidor valida DNS e IP públicos, recusa endereços internos e portas fora de 80/443, segue no máximo três redirecionamentos, limita cada página a 600 KB/8 s e guarda o resultado por 10 minutos. O conteúdo é marcado como não confiável no prompt; a resposta falada não lê URLs. As pesquisas contam em `CLOE_DAILY_WEB_SEARCHES` e a cota global gratuita é compartilhada por todos.
 
 Como o contador é de um único processo, reiniciar o serviço zera o dia e não há compartilhamento entre instâncias. O limite do YouTube também é por conta (20 buscas novas e 60 chamadas à API por 10 minutos), mas protege uma cota compartilhada; veja `README.md`.
 

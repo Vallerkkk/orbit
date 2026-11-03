@@ -4,6 +4,7 @@ from unittest.mock import patch
 import httpx
 from fastapi.testclient import TestClient
 import app
+import media_search
 from test_integrations import ENV, USER
 
 AUTH = {'Authorization': 'Bearer test'}
@@ -47,7 +48,10 @@ class MediaSearchTests(unittest.TestCase):
             self.assertEqual(self.client.get('/api/media/trending?type=videos', headers=AUTH).status_code, 422)
 
     def test_rate_limit(self):
-        with patch.dict(os.environ, {'GIPHY_API_KEY': 'k'}), self.remote():
+        # Janela longa: 32 requisições de teste não devem escorregar para fora do limite
+        # de 60 s quando a máquina está carregada.
+        with patch.dict(os.environ, {'GIPHY_API_KEY': 'k'}), \
+                patch.object(media_search, 'RATE', (30, 3600)), self.remote():
             codes = [self.client.get(f'/api/media/search?q=t{i}', headers=AUTH).status_code for i in range(32)]
         self.assertIn(429, codes)
 

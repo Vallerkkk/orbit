@@ -7,6 +7,20 @@ export function wav(pcm){
 }
 const VOICE_KEY='orbita-astro-voice',NAME_KEY='orbita-astro-voice-name',SOURCE_KEY='orbita-astro-voice-source',SERVICE_KEY='orbita-astro-service-voice',RATE_KEY='orbita-astro-rate',VOLUME_KEY='orbita-astro-volume';
 const storedNumber=(key,fallback)=>{const raw=localStorage.getItem(key);if(raw===null)return fallback;const value=Number(raw);return Number.isFinite(value)?Math.max(0,Math.min(2,value)):fallback;};
+export function sourceItems(event){
+ const seen=new Set();
+ return (Array.isArray(event?.sources)?event.sources:[]).flatMap(item=>{
+  try{
+   const url=new URL(String(item?.url||'')),host=url.hostname.toLowerCase();
+   if(url.protocol!=='http:'&&url.protocol!=='https:')return [];
+   // Defesa extra: mesmo que o servidor erre, o painel não abre endereços internos.
+   if(host==='localhost'||host.endsWith('.local')||host==='[::1]'||/^\d+\.\d+\.\d+\.\d+$/.test(host))return [];
+   if(seen.has(url.href))return [];
+   seen.add(url.href);
+   return [{title:(String(item?.title||url.hostname).replace(/\s+/g,' ').trim()||url.hostname).slice(0,160),url:url.href}];
+  }catch{return [];}
+ }).slice(0,4);
+}
 
 export function initCloe(ctx){
  const {el,button,apiFetch}=ctx,view=document.getElementById('voice-view');
@@ -18,6 +32,7 @@ export function initCloe(ctx){
  function setOpen(next){panel.hidden=!next;toggle.setAttribute('aria-expanded',String(next));toggle.setAttribute('aria-pressed',String(next));if(next){fillVoices();sync();if(target){lastPoll=0;poll();}}}
  const header=el('header'),title=el('h3','','Cloe'),close=button('Fechar',()=>setOpen(false),'text-button');header.append(title,close);
  const status=el('p','muted','Entre na call para iniciar.');status.setAttribute('role','status');
+ const ownerNote=el('p','muted','Como dono, você pode pedir ações administrativas por voz — eu descrevo o que vou fazer e espero você falar a frase de confirmação.');ownerNote.hidden=true;
  const notice=el('p','muted','Diga “Ei Cloe” para perguntar ou pedir música (“Ei Cloe, toque For the Last Time”) — também dá para escrever abaixo. “Parar fala” — ou dizer “para de falar” — interrompe a resposta. Contexto temporário de 15 minutos.');
  const tabs=el('div'),transcripts=button('Transcrição',()=>select('transcript')),answers=button('Respostas da Cloe',()=>select('answer'));tabs.append(transcripts,answers);
  const list=el('div','astro-events');list.setAttribute('role','log');list.setAttribute('aria-live','polite');
@@ -34,7 +49,7 @@ export function initCloe(ctx){
  const ask=el('form','astro-ask'),askInput=el('input'),askSend=el('button','soft-button','Perguntar');askSend.type='submit';
  askInput.type='text';askInput.maxLength=500;askInput.placeholder='Pergunte à Cloe por texto';askInput.setAttribute('aria-label','Pergunta para a Cloe por texto');
  ask.append(askInput,askSend);
- panel.append(header,status,notice,tabs,list,controls,voiceBox,ask);view.append(panel);
+ panel.append(header,status,notice,ownerNote,tabs,list,controls,voiceBox,ask);view.append(panel);
  let target=null,version=0,cursor=0,items=[],tab='transcript',enabled=true,configured=false,audio,source,node,track,listenCopy=null,loadingAudio=false,polling=false,queue=[],sending=false,controller=null,pauseUntil=0,nextAttempt=0,retryAt=0,lastProblem='',lastPoll=0,joinedAt=Date.now()/1000;
  let seenIds=new Set(),statusUntil=0;
  const POLL_OPEN=1200,POLL_IDLE=3000;
@@ -169,7 +184,7 @@ export function initCloe(ctx){
  globalThis.speechSynthesis?.addEventListener?.('voiceschanged',fillVoices);
  globalThis.speechSynthesis?.getVoices?.();fillVoices();renderVoiceState();
  function select(value){tab=value;transcripts.setAttribute('aria-pressed',String(value==='transcript'));answers.setAttribute('aria-pressed',String(value==='answer'));render();}
- function render(){const bottom=list.scrollHeight-list.scrollTop-list.clientHeight<80,fragment=document.createDocumentFragment();items=items.filter(e=>e.at>Date.now()/1000-900);const rows=items.filter(e=>tab==='transcript'?e.kind==='transcript':e.kind==='answer'||e.kind==='error');for(const e of rows){const card=el('article'),name=el('strong','',e.name),time=el('time','muted',new Date(e.at*1000).toLocaleTimeString('pt-BR'));card.append(name,time,el('p','',e.text));fragment.append(card);}if(!rows.length)fragment.append(el('p','astro-empty',tab==='transcript'?'Nenhuma fala transcrita ainda. A Cloe mostra aqui o que ouve na call.':'Nenhuma resposta ainda. Diga “Ei Cloe” ou escreva abaixo.'));list.classList.toggle('is-empty',!rows.length);list.replaceChildren(fragment);if(bottom)list.scrollTop=list.scrollHeight;}
+ function render(){const bottom=list.scrollHeight-list.scrollTop-list.clientHeight<80,fragment=document.createDocumentFragment();items=items.filter(e=>e.at>Date.now()/1000-900);const rows=items.filter(e=>tab==='transcript'?e.kind==='transcript':e.kind==='answer'||e.kind==='error');for(const e of rows){const card=el('article'),name=el('strong','',e.name),time=el('time','muted',new Date(e.at*1000).toLocaleTimeString('pt-BR'));card.append(name,time,el('p','',e.text));const sources=sourceItems(e);if(sources.length){const box=el('div','astro-sources');box.append(el('span','muted','Fontes'));for(const source of sources){const link=el('a','',source.title);link.href=source.url;link.target='_blank';link.rel='noopener noreferrer';box.append(link);}card.append(box);}fragment.append(card);}if(!rows.length)fragment.append(el('p','astro-empty',tab==='transcript'?'Nenhuma fala transcrita ainda. A Cloe mostra aqui o que ouve na call.':'Nenhuma resposta ainda. Diga “Ei Cloe” ou escreva abaixo.'));list.classList.toggle('is-empty',!rows.length);list.replaceChildren(fragment);if(bottom)list.scrollTop=list.scrollHeight;}
  // Só para a cópia própria da Cloe; a faixa publicada no LiveKit nunca é parada aqui.
  function stopAudio(){track=null;source?.disconnect();node?.disconnect();source=node=null;try{listenCopy?.stop();}catch{}listenCopy=null;if(audio){audio.close().catch(()=>{});audio=null;}loadingAudio=false;}
  function reset(){version++;stopSpeech(false);controller?.abort();controller=new AbortController();stopAudio();queue=[];sending=false;polling=false;configured=false;items=[];seenIds=new Set();cursor=0;lastProblem='';nextAttempt=0;retryAt=0;lastPoll=0;joinedAt=Date.now()/1000;pauseUntil=0;statusUntil=0;render();}
@@ -179,7 +194,7 @@ export function initCloe(ctx){
   finally{askSend.disabled=false;}};
  async function poll(){if(polling||Date.now()<nextAttempt)return;polling=true;lastPoll=Date.now();const ticket=version;
   try{const response=await apiFetch('/api/astro/'+encodeURIComponent(target)+'?after='+cursor,{signal:controller.signal}),data=await response.json();if(!current(ticket))return;
-   configured=data.configured;if(Array.isArray(data.voices)){const signature=JSON.stringify([!!data.tts,data.voices]);if(signature!==voiceSignature){voiceSignature=signature;serverVoices=data.voices.filter(v=>v&&v.id);naturalReady=!!data.tts;if(!sourceChosen)voiceSource=naturalReady?'natural':'device';fillVoices();}}if(data.cursor<cursor){items=[];seenIds=new Set();cursor=0;return;}cursor=data.cursor;for(const e of data.events)if(remember(e)&&e.at>=joinedAt)apply(e);render();lastProblem='';defaultStatus(configured?((data.queued??data.busy)?'Cloe pensando…':'Cloe na call · ouvindo microfones abertos'):'A Cloe ainda não foi ligada neste servidor. Avise um administrador.');
+   configured=data.configured;ownerNote.hidden=!data.owner;if(Array.isArray(data.voices)){const signature=JSON.stringify([!!data.tts,data.voices]);if(signature!==voiceSignature){voiceSignature=signature;serverVoices=data.voices.filter(v=>v&&v.id);naturalReady=!!data.tts;if(!sourceChosen)voiceSource=naturalReady?'natural':'device';fillVoices();}}if(data.cursor<cursor){items=[];seenIds=new Set();cursor=0;return;}cursor=data.cursor;for(const e of data.events)if(remember(e)&&e.at>=joinedAt)apply(e);render();lastProblem='';defaultStatus(configured?((data.queued??data.busy)?'Cloe pensando…':'Cloe na call · ouvindo microfones abertos'):'A Cloe ainda não foi ligada neste servidor. Avise um administrador.');
   }catch(error){if(current(ticket)&&error.name!=='AbortError'){lastProblem=error.message;setStatus(lastProblem,10000);nextAttempt=Date.now()+10000;}}
   finally{if(current(ticket))polling=false;}
  }

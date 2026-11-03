@@ -2,10 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
-import {wav} from '../static/astro-call.js';
+import {sourceItems,wav} from '../static/astro-call.js';
 test('WAV is decodable mono PCM16 at 16 kHz',async()=>{
  const pcm=Int16Array.from([-32768,0,32767]),v=new DataView(await wav(pcm.buffer).arrayBuffer());
  assert.equal(v.getUint32(24,true),16000);assert.equal(v.getUint16(22,true),1);assert.equal(v.getUint32(40,true),6);assert.equal(v.getInt16(44,true),-32768);assert.equal(v.getInt16(48,true),32767);
+});
+test('search sources only expose safe http links and no duplicates',()=>{
+ const items=sourceItems({sources:[
+  {title:' Banco Central ',url:'https://exemplo.com/cotacao'},
+  {title:'Repetido',url:'https://exemplo.com/cotacao'},
+  {title:'Interno',url:'http://127.0.0.1/segredo'},
+  {title:'Script',url:'javascript:alert(1)'},
+  {title:'Outro',url:'https://outro.com/a'}
+ ]});
+ assert.deepEqual(items.map(item=>item.url),['https://exemplo.com/cotacao','https://outro.com/a']);
+ assert.equal(items[0].title,'Banco Central');
+ assert.deepEqual(sourceItems(null),[]);
 });
 test('worklet rejects silence, emits bounded complete chunks, discards muted audio',()=>{
  let Processor;const emitted=[];class Base{constructor(){this.port={postMessage:b=>emitted.push(b)};}}
