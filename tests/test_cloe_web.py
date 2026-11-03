@@ -13,6 +13,7 @@ class FakeResponse:
         self._payload = payload or {}
         self.content = content
         self.headers = headers or {}
+        self.text = content.decode('utf-8', 'replace') if content else ''
 
     @property
     def is_error(self):
@@ -145,7 +146,7 @@ class BraveTests(unittest.TestCase):
         sent = client.calls[0]
         self.assertEqual(sent[1]['headers']['X-Subscription-Token'], 'chave-teste')
         self.assertEqual(sent[1]['headers']['Cache-Control'], 'no-cache')
-        self.assertEqual(sent[1]['params']['search_lang'], 'pt')
+        self.assertEqual(sent[1]['params']['search_lang'], 'pt-br')
 
     def test_rate_limit_and_rejected_key_are_readable(self):
         client = FakeClient(FakeResponse(status=429))
@@ -156,6 +157,12 @@ class BraveTests(unittest.TestCase):
         with self.assertRaises(web.SearchProblem) as caught:
             asyncio.run(web._brave(app_with(client), 'gatos'))
         self.assertIn('chave', str(caught.exception).lower())
+
+    def test_unexpected_status_is_reported(self):
+        client = FakeClient(FakeResponse(status=422))
+        with self.assertRaises(web.SearchProblem) as caught:
+            asyncio.run(web._brave(app_with(client), 'gatos'))
+        self.assertIn('não respondeu', str(caught.exception))
 
     def test_redirect_to_a_private_address_is_blocked(self):
         client = FakeClient(FakeResponse(status=302, headers={'location': 'http://127.0.0.1/'}))

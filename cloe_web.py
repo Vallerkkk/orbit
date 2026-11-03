@@ -224,7 +224,7 @@ async def _brave(app, query):
     try:
         async with client_for(app) as client:
             response = await client.get(BRAVE_URL, params={
-                'q': query, 'count': 5, 'search_lang': 'pt', 'country': 'BR',
+                'q': query, 'count': 5, 'search_lang': 'pt-br', 'country': 'BR',
                 'safesearch': 'moderate', 'text_decorations': 'false'},
                 headers={'Accept': 'application/json', 'X-Subscription-Token': key,
                          'Cache-Control': 'no-cache'},
@@ -237,7 +237,8 @@ async def _brave(app, query):
     if response.status_code == 429:
         raise SearchProblem('O limite de pesquisas de hoje foi atingido. Tente mais tarde.')
     if response.is_error:
-        log.warning('Brave respondeu %s', response.status_code)
+        log.warning('Brave respondeu %s: %s', response.status_code,
+                    ' '.join(response.text.split())[:300])
         raise SearchProblem('A pesquisa na internet não respondeu agora.')
     try:
         results = response.json().get('web', {}).get('results', [])
