@@ -226,7 +226,8 @@ async def _brave(app, query):
             response = await client.get(BRAVE_URL, params={
                 'q': query, 'count': 5, 'search_lang': 'pt', 'country': 'BR',
                 'safesearch': 'moderate', 'text_decorations': 'false'},
-                headers={'Accept': 'application/json', 'X-Subscription-Token': key},
+                headers={'Accept': 'application/json', 'X-Subscription-Token': key,
+                         'Cache-Control': 'no-cache'},
                 timeout=SEARCH_TIMEOUT)
     except httpx.HTTPError:
         raise SearchProblem('A pesquisa na internet está indisponível agora.')

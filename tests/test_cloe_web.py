@@ -144,6 +144,7 @@ class BraveTests(unittest.TestCase):
         self.assertEqual(results[0]['title'], 'Resultado 1')
         sent = client.calls[0]
         self.assertEqual(sent[1]['headers']['X-Subscription-Token'], 'chave-teste')
+        self.assertEqual(sent[1]['headers']['Cache-Control'], 'no-cache')
         self.assertEqual(sent[1]['params']['search_lang'], 'pt')
 
     def test_rate_limit_and_rejected_key_are_readable(self):
