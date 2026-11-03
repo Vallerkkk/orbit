@@ -51,7 +51,7 @@ Ao passar do limite, a Cloe responde HTTP 429 com aviso em português e volta no
 
 Testes automatizados cobrem a janela temporal, isolamento de salas e participantes, ativação dividida em trechos, autorização de presença/publicação, WAV inválido, silêncio, duplicação de pedidos e recuperação de erros. O áudio PCM e o limite dos trechos têm testes de unidade em JavaScript. O pacote inclui o build atualizado.
 
-Validação nesta integração: 151 testes Python (incluindo `tests/test_astro.py`), 120 testes de JavaScript (incluindo `tests/astro.test.mjs`) e os testes de navegador da Cloe (painel, pedido por texto com o Ouvir juntos, resposta imediata e voz estrita) passaram contra o build atual. A chave da Groq usada pelo autor no pacote original respondeu HTTP 200; aqui nenhuma call real com vários dispositivos foi testada, porque isso depende de microfone, HTTPS e cota da Groq.
+Validação nesta integração: 151 testes Python (incluindo `tests/test_astro.py`), 124 testes de JavaScript (incluindo `tests/astro.test.mjs`) e os testes de navegador da Cloe (painel, pedido por texto com o Ouvir juntos, resposta imediata e voz estrita) passaram contra o build atual. A chave da Groq usada pelo autor no pacote original respondeu HTTP 200; aqui nenhuma call real com vários dispositivos foi testada, porque isso depende de microfone, HTTPS e cota da Groq.
 
 ## Origem dos arquivos
 
