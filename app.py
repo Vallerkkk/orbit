@@ -2,9 +2,11 @@
 import os
 import json
 import re
+import time
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from pathlib import Path
+from urllib.parse import urlsplit
 from uuid import UUID
 
 import httpx
@@ -52,16 +54,45 @@ app = FastAPI(title='Órbita', docs_url=None, redoc_url=None, openapi_url=None, 
 app.add_middleware(GZipMiddleware, minimum_size=800)
 bearer = HTTPBearer(auto_error=False)
 
-# Lista fechada de origens: scripts só do próprio site, do CDN do Supabase/LiveKit e do player do YouTube.
-# Umami, se for ativado, precisa do domínio dele incluído em script-src.
-CSP = ("default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://www.youtube.com; "
-       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-       "font-src 'self' data: https://fonts.gstatic.com; "
-       "img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; "
-       "connect-src 'self' https: wss:; "
-       "frame-src 'self' blob: https://www.youtube.com https://www.youtube-nocookie.com https://open.spotify.com; "
-       "worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; "
-       "form-action 'self'; frame-ancestors 'none'")
+def _origin(raw, schemes=('https',)):
+    """Devolve apenas esquema e host de uma URL configurada, para a CSP."""
+    try:
+        parts = urlsplit(str(raw or '').strip())
+    except ValueError:
+        return ''
+    if parts.scheme not in schemes or not parts.netloc:
+        return ''
+    return f'{parts.scheme}://{parts.netloc}'
+
+
+def content_security_policy():
+    """CSP montada a partir do ambiente: conexões só para os serviços que o app usa de fato."""
+    s = settings()
+    connect = ["'self'"]
+    supabase = _origin(s.get('SUPABASE_URL'))
+    if supabase:
+        connect.append(supabase)
+        connect.append('wss://' + urlsplit(supabase).netloc)
+    livekit = _origin(s.get('LIVEKIT_URL'), ('wss', 'https'))
+    if livekit:
+        connect.append(livekit)
+    sentry = _origin(os.getenv('SENTRY_PUBLIC_DSN', ''))
+    if sentry:
+        connect.append(sentry)
+    umami = _origin(os.getenv('UMAMI_SCRIPT_URL', ''))
+    if umami:
+        connect.append(umami)
+    script = ["'self'", "'wasm-unsafe-eval'", 'https://cdn.jsdelivr.net', 'https://www.youtube.com']
+    if umami:
+        script.append(umami)
+    return (f"default-src 'self'; script-src {' '.join(dict.fromkeys(script))}; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' data: https://fonts.gstatic.com; "
+            "img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; "
+            f"connect-src {' '.join(dict.fromkeys(connect))}; "
+            "frame-src 'self' blob: https://www.youtube.com https://www.youtube-nocookie.com https://open.spotify.com; "
+            "worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; "
+            "form-action 'self'; frame-ancestors 'none'")
 
 
 def settings():
@@ -70,14 +101,16 @@ def settings():
         'LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET')}
 
 
-@app.middleware('http')
-async def headers(request, call_next):
-    response = await call_next(request)
+# Maior corpo aceito pela API: o trecho de áudio da Cloe tem no máximo 400 KB.
+MAX_API_BODY = 600_000
+
+
+def _with_headers(response, request):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     # YouTube requires the embedding site's origin (error 153 without Referer).
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     response.headers['X-Frame-Options'] = 'DENY'
-    response.headers['Content-Security-Policy'] = CSP
+    response.headers['Content-Security-Policy'] = content_security_policy()
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     response.headers['Permissions-Policy'] = 'camera=(self), microphone=(self), display-capture=(self)'
     if request.url.path.startswith('/api/') or request.url.path in ('/', '/sw.js', '/healthz', '/readyz'):
@@ -89,6 +122,26 @@ async def headers(request, call_next):
     elif request.url.path.startswith('/static/'):
         response.headers['Cache-Control'] = 'no-cache'
     return response
+
+
+def _too_large(request):
+    if request.method not in ('POST', 'PUT', 'PATCH') or not request.url.path.startswith('/api/'):
+        return False
+    declared = request.headers.get('content-length')
+    if declared is None:
+        return False
+    try:
+        return int(declared) > MAX_API_BODY
+    except ValueError:
+        return True
+
+
+@app.middleware('http')
+async def headers(request, call_next):
+    if _too_large(request):
+        return _with_headers(JSONResponse({'detail': 'Envio muito grande.'}, status_code=413), request)
+    response = await call_next(request)
+    return _with_headers(response, request)
 
 
 @app.get('/api/config')
@@ -191,23 +244,34 @@ async def healthz():
     return {'status':'ok', 'service':'orbita'}
 
 
+_ready_cache = {'key': None, 'until': 0.0, 'status': 200, 'payload': None}
+READY_CACHE_SECONDS = 10
+
+
 @app.get('/readyz')
 async def readyz():
     """Pronto para atender: confirma também se o login do Supabase responde.
-    O Render usa /healthz (só processo); monitores externos devem usar /readyz."""
+    O Render usa /healthz (só processo); monitores externos devem usar /readyz.
+    O resultado fica em cache curto para a monitoração não virar carga no banco."""
     s = settings()
+    cache_key = (s['SUPABASE_URL'], bool(s['SUPABASE_PUBLISHABLE_KEY']))
+    now = time.monotonic()
+    if _ready_cache['key'] == cache_key and _ready_cache['until'] > now:
+        return JSONResponse(_ready_cache['payload'], status_code=_ready_cache['status'])
     if not s['SUPABASE_URL'] or not s['SUPABASE_PUBLISHABLE_KEY']:
-        return JSONResponse({'status': 'degraded', 'supabase': 'not-configured'}, status_code=503)
-    try:
-        async with client_for(app) as client:
-            response = await client.get(s['SUPABASE_URL'] + '/auth/v1/health',
-                headers={'apikey': s['SUPABASE_PUBLISHABLE_KEY']}, timeout=5)
-        healthy = response.status_code < 500
-    except httpx.HTTPError:
-        healthy = False
-    if not healthy:
-        return JSONResponse({'status': 'degraded', 'supabase': 'unreachable'}, status_code=503)
-    return {'status': 'ok', 'supabase': 'ok'}
+        payload, status = {'status': 'degraded', 'supabase': 'not-configured'}, 503
+    else:
+        try:
+            async with client_for(app) as client:
+                response = await client.get(s['SUPABASE_URL'] + '/auth/v1/health',
+                    headers={'apikey': s['SUPABASE_PUBLISHABLE_KEY']}, timeout=5)
+            healthy = response.status_code < 500
+        except httpx.HTTPError:
+            healthy = False
+        payload, status = ({'status': 'ok', 'supabase': 'ok'}, 200) if healthy else \
+            ({'status': 'degraded', 'supabase': 'unreachable'}, 503)
+    _ready_cache.update(key=cache_key, until=now + READY_CACHE_SECONDS, status=status, payload=payload)
+    return JSONResponse(payload, status_code=status)
 
 
 @app.get('/sw.js')

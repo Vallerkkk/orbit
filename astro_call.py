@@ -106,6 +106,10 @@ def _usage_for(uid):
         for old in [k for k in _daily_usage if k[0] == uid and k[1] != today]:
             _daily_usage.pop(old, None)
         _daily_usage[key] = {'stt': 0.0, 'asks': 0, 'tts': 0, 'web': 0}
+    # Contas que usaram ontem e não voltaram hoje ficariam na memória para sempre.
+    if len(_daily_usage) > 2000:
+        for old in [k for k in _daily_usage if k[1] != today]:
+            _daily_usage.pop(old, None)
     usage = _daily_usage[key]
     for field in ('stt', 'asks', 'tts', 'web'):
         usage.setdefault(field, 0.0 if field == 'stt' else 0)

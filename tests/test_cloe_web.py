@@ -168,11 +168,25 @@ class BraveTests(unittest.TestCase):
         client = FakeClient(FakeResponse(status=302, headers={'location': 'http://127.0.0.1/'}))
 
         async def public(host):
-            return host == 'exemplo.com'
+            return ['93.184.216.34'] if host == 'exemplo.com' else []
 
-        with patch.object(web, 'public_host', public):
+        with patch.object(web, 'resolve_public', public):
             with self.assertRaises(web.SearchProblem):
                 asyncio.run(web._fetch_page(client, 'https://exemplo.com/a'))
+
+    def test_page_is_fetched_from_the_verified_ip_with_the_original_host(self):
+        client = FakeClient(FakeResponse(status=200, content=b'<p>oi</p>',
+                                         headers={'content-type': 'text/html'}))
+
+        async def public(host):
+            return ['93.184.216.34']
+
+        with patch.object(web, 'resolve_public', public):
+            self.assertEqual(asyncio.run(web._fetch_page(client, 'https://exemplo.com/a')), 'oi')
+        url, kwargs = client.calls[0]
+        self.assertEqual(url, 'https://93.184.216.34/a')
+        self.assertEqual(kwargs['headers']['Host'], 'exemplo.com')
+        self.assertEqual(kwargs['extensions']['sni_hostname'], 'exemplo.com')
 
     def test_research_reads_pages_and_caches(self):
         found = [{'title': f'Pagina {i}', 'url': f'https://exemplo.com/{i}',

@@ -62,11 +62,11 @@ class Routes(unittest.TestCase):
     def tearDown(self):
         self.env.stop()
 
-    def remote(self):
+    def remote(self, uid=USER):
         async def request(_c, method, url, **kw):
             self.seen.append((method, url, kw.get('params'), kw.get('data')))
             if url.endswith('/auth/v1/user'):
-                return httpx.Response(200, json={'id': USER, 'email': 'eu@orbita.test'})
+                return httpx.Response(200, json={'id': uid, 'email': 'eu@orbita.test'})
             if '/rest/v1/rpc/youtube_token_put' in url:
                 self.store['c'] = kw['json']['ciphertext']; return httpx.Response(204)
             if '/rest/v1/rpc/youtube_token_get' in url:
@@ -108,7 +108,7 @@ class Routes(unittest.TestCase):
         self.assertEqual(self.client.get('/api/youtube/trending').status_code, 401)
 
     def test_limiter_blocks_burst_but_not_cached_search(self):
-        with patch.object(youtube, 'RATE', (1, 600)), self.remote():
+        with patch.object(youtube, 'CALL_COST', 600), self.remote(uid='conta-limite'):
             first = self.client.get('/api/youtube/videos', params={'id': 'LimiterAAAA'}, headers=AUTH)
             second = self.client.get('/api/youtube/videos', params={'id': 'LimiterAAAA'}, headers=AUTH)
         self.assertEqual(first.status_code, 200)

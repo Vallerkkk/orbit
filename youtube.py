@@ -32,8 +32,10 @@ SCOPES = 'openid email profile https://www.googleapis.com/auth/youtube.readonly'
 CALLBACK_PATH = '/api/youtube/oauth/callback'
 STATE_COOKIE, PENDING_COOKIE, COOKIE_PATH = 'orbita_yt_state', 'orbita_yt_pending', '/api/youtube/oauth'
 TTL = {'trending': 1800, 'search': 21600, 'videos': 3600, 'comments': 1800, 'channel': 3600, 'playlist': 3600, 'mine': 900}
-SEARCH_RATE = (20, 600)  # 20 buscas novas por 10 minutos por conta
-RATE = (60, 600)  # demais chamadas à API por conta, também por 10 minutos
+# A cota do Google é medida em unidades: uma busca custa 100, as demais chamadas 1.
+# Limitar só por número de pedidos deixava a comunidade gastar a cota diária sem aviso.
+SEARCH_COST, SEARCH_UNITS, SEARCH_WINDOW = 100, 600, 600  # 6 buscas novas por conta a cada 10 min
+CALL_COST, CALL_UNITS, CALL_WINDOW = 1, 600, 600  # 600 chamadas por conta a cada 10 min
 NOT_CONFIGURED = 'O YouTube ainda não foi configurado neste servidor (falta a YOUTUBE_API_KEY).'
 VIDEO_ID = re.compile(r'^[A-Za-z0-9_-]{11}$')
 CHANNEL_ID = re.compile(r'^UC[A-Za-z0-9_-]{22}$')
@@ -234,14 +236,18 @@ def install_youtube(app, current_user, settings):
 
     def limit(uid, kind='api'):
         # A cota do YouTube é compartilhada por toda a comunidade: o limite por conta impede
-        # que uma pessoa sozinha a esgote. Busca é mais cara (100 unidades) e tem regra própria.
-        count, window = SEARCH_RATE if kind == 'search' else RATE
+        # que uma pessoa sozinha a esgote, contando as unidades cobradas pelo Google.
+        cost, budget, window = ((SEARCH_COST, SEARCH_UNITS, SEARCH_WINDOW) if kind == 'search'
+                                else (CALL_COST, CALL_UNITS, CALL_WINDOW))
         now, bucket = time.monotonic(), hits[(uid, kind)]
-        while bucket and now - bucket[0] > window:
+        while bucket and now - bucket[0][0] > window:
             bucket.popleft()
-        if len(bucket) >= count:
+        if sum(units for _, units in bucket) + cost > budget:
             raise HTTPException(429, 'Muitas consultas ao YouTube seguidas. Espere um pouco.')
-        bucket.append(now)
+        bucket.append((now, cost))
+        if len(hits) > 2000:
+            for key in [k for k, b in hits.items() if not b or now - b[-1][0] > max(SEARCH_WINDOW, CALL_WINDOW)]:
+                hits.pop(key, None)
 
     async def details(ids, bearer=None):
         ids = [i for i in dict.fromkeys(ids) if VIDEO_ID.match(i)][:50]
@@ -374,6 +380,10 @@ def install_youtube(app, current_user, settings):
     async def account(identity, required=True):
         """Token de acesso do YouTube do usuário (memória → refresh token criptografado no Supabase)."""
         uid = identity[0]['id']
+        if len(access) > 500:
+            now = time.time()
+            for key in [k for k, v in access.items() if v.get('exp', 0) <= now]:
+                access.pop(key, None)
         hit = access.get(uid)
         if hit and hit['exp'] > time.time() + 30:
             return hit

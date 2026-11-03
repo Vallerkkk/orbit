@@ -6,6 +6,8 @@ SPOTIFY_CLIENT_ID/SECRET) a integração fica desligada e o app mostra "Em breve
 """
 import base64
 import hashlib
+import hmac
+import json
 import os
 import secrets
 import time
@@ -15,7 +17,7 @@ from uuid import UUID
 
 import httpx
 from fastapi import Depends, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from upstream import client_for, read_json
 
@@ -23,6 +25,53 @@ SCOPES = 'user-read-currently-playing user-read-playback-state'
 DEFAULT_REDIRECT = 'https://orbita-8nwu.onrender.com/api/spotify/callback'
 STATE_TTL = 600
 CACHE_TTL = 15
+CACHE_LIMIT = 500
+STATE_COOKIE, PENDING_COOKIE, COOKIE_PATH = 'orbita_sp_state', 'orbita_sp_pending', '/api/spotify'
+
+
+def _state_key(c):
+    return hashlib.sha256(('spotify-state:' + c['client_secret']).encode()).digest()
+
+
+def make_state(user_id, nonce, key, now=None):
+    body = base64.urlsafe_b64encode(json.dumps(
+        {'u': user_id, 'n': nonce, 'e': int((now or time.time()) + STATE_TTL)}).encode()).decode().rstrip('=')
+    sig = hmac.new(key, b'state.' + body.encode(), hashlib.sha256).hexdigest()
+    return body + '.' + sig
+
+
+def check_state(state, cookie_nonce, key, now=None):
+    """Devolve o id do usuário se o state é íntegro, não expirou e casa com o cookie deste navegador."""
+    try:
+        body, sig = str(state).split('.', 1)
+        if not hmac.compare_digest(sig, hmac.new(key, b'state.' + body.encode(), hashlib.sha256).hexdigest()):
+            return None
+        data = json.loads(base64.urlsafe_b64decode(body + '=' * (-len(body) % 4)))
+    except Exception:
+        return None
+    if data.get('e', 0) < (now or time.time()) or not cookie_nonce or not hmac.compare_digest(str(data.get('n')), str(cookie_nonce)):
+        return None
+    return data.get('u') or None
+
+
+def seal_pending(verifier, nonce, key, now=None):
+    body = base64.urlsafe_b64encode(json.dumps(
+        {'v': verifier, 'n': nonce, 'e': int((now or time.time()) + STATE_TTL)}).encode()).decode().rstrip('=')
+    sig = hmac.new(key, b'pending.' + body.encode(), hashlib.sha256).hexdigest()
+    return body + '.' + sig
+
+
+def unseal_pending(blob, nonce, key, now=None):
+    try:
+        body, sig = str(blob).split('.', 1)
+        if not hmac.compare_digest(sig, hmac.new(key, b'pending.' + body.encode(), hashlib.sha256).hexdigest()):
+            return None
+        data = json.loads(base64.urlsafe_b64decode(body + '=' * (-len(body) % 4)))
+    except Exception:
+        return None
+    if data.get('e', 0) < (now or time.time()) or not nonce or not hmac.compare_digest(str(data.get('n')), str(nonce)):
+        return None
+    return data.get('v') or None
 
 
 def config():
@@ -41,8 +90,14 @@ def enabled(c=None):
 
 
 def install_spotify(app, current_user):
-    states: dict[str, dict] = {}
     cache: dict[str, tuple[float, dict]] = {}
+
+    def trim_cache():
+        now = time.time()
+        for key in [k for k, v in cache.items() if v[0] <= now]:
+            cache.pop(key, None)
+        while len(cache) > CACHE_LIMIT:
+            cache.pop(next(iter(cache)))
 
     def rest(c):
         return c['url'] + '/rest/v1/spotify_connections', {
@@ -97,31 +152,45 @@ def install_spotify(app, current_user):
                 'showOnProfile': bool((row or {}).get('show_on_profile', True))}
 
     @app.post('/api/spotify/login')
-    async def spotify_login(identity=Depends(current_user)):
+    async def spotify_login(request: Request, identity=Depends(current_user)):
         c = config()
         if not enabled(c):
             raise HTTPException(503, 'Integração com Spotify em breve.')
-        now = time.time()
-        for k in [k for k, v in states.items() if v['exp'] < now]:
-            states.pop(k, None)
+        key = _state_key(c)
+        nonce = secrets.token_urlsafe(24)
         verifier = secrets.token_urlsafe(64)[:96]
         challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip('=')
-        state = secrets.token_urlsafe(24)
-        states[state] = {'user': identity[0]['id'], 'verifier': verifier, 'exp': now + STATE_TTL}
-        return {'url': 'https://accounts.spotify.com/authorize?' + urlencode({
+        response = JSONResponse({'url': 'https://accounts.spotify.com/authorize?' + urlencode({
             'response_type': 'code', 'client_id': c['client_id'], 'scope': SCOPES, 'redirect_uri': c['redirect'],
-            'state': state, 'code_challenge_method': 'S256', 'code_challenge': challenge})}
+            'state': make_state(identity[0]['id'], nonce, key), 'code_challenge_method': 'S256', 'code_challenge': challenge})})
+        # O nonce no cookie amarra o retorno a este navegador; o verifier fica só no servidor.
+        secure = request.url.scheme == 'https' or 'https' in request.headers.get('x-forwarded-proto', '')
+        for name, value in ((STATE_COOKIE, nonce), (PENDING_COOKIE, seal_pending(verifier, nonce, key))):
+            response.set_cookie(name, value, max_age=STATE_TTL, httponly=True, secure=secure, samesite='lax', path=COOKIE_PATH)
+        return response
 
     @app.get('/api/spotify/callback')
     async def spotify_callback(request: Request, code: str = '', state: str = '', error: str = ''):
         c = config()
-        pending = states.pop(state, None)
-        if error or not code or not pending or pending['exp'] < time.time() or not enabled(c):
-            return RedirectResponse('/#spotify=erro', status_code=303)
+
+        def back(result):
+            response = RedirectResponse('/#spotify=' + result, status_code=303)
+            response.delete_cookie(STATE_COOKIE, path=COOKIE_PATH)
+            response.delete_cookie(PENDING_COOKIE, path=COOKIE_PATH)
+            return response
+
+        if error or not code or not enabled(c):
+            return back('erro')
+        key = _state_key(c)
+        nonce = request.cookies.get(STATE_COOKIE) or ''
+        uid = check_state(state, nonce, key)
+        verifier = unseal_pending(request.cookies.get(PENDING_COOKIE, ''), nonce, key)
+        if not uid or not verifier:
+            return back('erro')
         t = await token_call(c, {'grant_type': 'authorization_code', 'code': code, 'redirect_uri': c['redirect'],
-                                 'client_id': c['client_id'], 'code_verifier': pending['verifier']})
+                                 'client_id': c['client_id'], 'code_verifier': verifier})
         if not t or not t.get('refresh_token'):
-            return RedirectResponse('/#spotify=erro', status_code=303)
+            return back('erro')
         name = None
         try:
             async with client_for(app) as client:
@@ -130,24 +199,29 @@ def install_spotify(app, current_user):
                 name = (read_json(me, dict).get('display_name') or '')[:80] or None
         except httpx.HTTPError:
             pass
-        await save(c, {'user_id': pending['user'], 'access_token': t['access_token'], 'refresh_token': t['refresh_token'],
+        await save(c, {'user_id': uid, 'access_token': t['access_token'], 'refresh_token': t['refresh_token'],
                        'expires_at': datetime.fromtimestamp(time.time() + int(t.get('expires_in', 3600)), timezone.utc).isoformat(),
                        'display_name': name})
-        cache.pop(pending['user'], None)
-        return RedirectResponse('/#spotify=conectado', status_code=303)
+        cache.pop(uid, None)
+        return back('conectado')
 
     @app.post('/api/spotify/settings')
     async def spotify_settings(request: Request, identity=Depends(current_user)):
         c = config()
         if not enabled(c):
             raise HTTPException(503, 'Integração com Spotify em breve.')
-        body = await request.json()
+        try:
+            body = await request.json()
+        except ValueError:
+            raise HTTPException(400, 'Pedido inválido.') from None
+        if not isinstance(body, dict):
+            raise HTTPException(400, 'Pedido inválido.')
         uid = identity[0]['id']
         if not await load(c, uid):
             raise HTTPException(404, 'Spotify não conectado.')
         url, h = rest(c)
         async with client_for(app) as client:
-            await client.patch(url, headers=h, params={'user_id': 'eq.' + uid}, json={'show_on_profile': bool(body.get('showOnProfile'))})
+            await client.patch(url, headers=h, params={'user_id': 'eq.' + uid}, json={'show_on_profile': body.get('showOnProfile') is True})
         cache.pop(uid, None)
         return {'ok': True}
 
@@ -177,6 +251,7 @@ def install_spotify(app, current_user):
         hit = cache.get(uid)
         if hit and hit[0] > time.time():
             return hit[1]
+        trim_cache()
         out = {'playing': False}
         token = await access_token(c, row)
         if token:

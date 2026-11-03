@@ -172,33 +172,55 @@ def clean_url(raw):
     return parts._replace(fragment='').geturl()
 
 
-async def public_host(host):
+async def resolve_public(host):
+    """Devolve os IPs públicos do host; lista vazia se qualquer resposta for interna."""
     try:
         infos = await asyncio.to_thread(socket.getaddrinfo, host, None, proto=socket.IPPROTO_TCP)
     except OSError:
-        return False
+        return []
     if not infos:
-        return False
+        return []
+    ips = []
     for info in infos:
         try:
             ip = ipaddress.ip_address(info[4][0].split('%')[0])
         except ValueError:
-            return False
+            return []
         # is_global barra loopback, privado, link-local, reservado e metadados de nuvem.
         if not ip.is_global:
-            return False
-    return True
+            return []
+        if str(ip) not in ips:
+            ips.append(str(ip))
+    return ips
+
+
+async def public_host(host):
+    return bool(await resolve_public(host))
+
+
+def _pinned_url(url, ip):
+    """Troca o nome pelo IP já verificado; o Host e o SNI continuam sendo do nome original."""
+    parts = urlsplit(url)
+    host = f'[{ip}]' if ':' in ip else ip
+    if parts.port:
+        host += f':{parts.port}'
+    return parts._replace(netloc=host).geturl()
 
 
 async def _fetch_page(client, url):
     current = clean_url(url)
     for _ in range(4):
         parts = urlsplit(current)
-        if not await public_host(parts.hostname):
+        ips = await resolve_public(parts.hostname)
+        if not ips:
             raise SearchProblem('endereço interno')
-        response = await client.get(current, headers={'User-Agent': USER_AGENT,
-                                                     'Accept': 'text/html,text/plain;q=0.9'},
-                                     follow_redirects=False, timeout=PAGE_TIMEOUT)
+        # Conectar no IP verificado fecha a janela de DNS rebinding entre a checagem e a conexão.
+        kwargs = {'headers': {'User-Agent': USER_AGENT, 'Accept': 'text/html,text/plain;q=0.9',
+                              'Host': parts.netloc},
+                  'follow_redirects': False, 'timeout': PAGE_TIMEOUT}
+        if parts.scheme == 'https':
+            kwargs['extensions'] = {'sni_hostname': parts.hostname}
+        response = await client.get(_pinned_url(current, ips[0]), **kwargs)
         if response.status_code in (301, 302, 303, 307, 308):
             location = response.headers.get('location', '')
             if not location:

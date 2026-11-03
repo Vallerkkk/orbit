@@ -115,6 +115,29 @@ class AppTests(unittest.TestCase):
         self.assertEqual(result.json()['status'],'degraded')
         self.assertIn('no-store', result.headers['cache-control'])
 
+    def test_readyz_caches_repeated_checks(self):
+        calls = []
+        async def get(client, url, **kwargs):
+            calls.append(url)
+            return httpx.Response(200, json={})
+        module._ready_cache.update(key=None, until=0.0)
+        with patch.object(httpx.AsyncClient, 'get', get):
+            self.assertEqual(self.client.get('/readyz').status_code, 200)
+            self.assertEqual(self.client.get('/readyz').status_code, 200)
+        self.assertEqual(len(calls), 1)
+
+    def test_api_body_limit_rejects_large_payloads(self):
+        huge = b'x' * (module.MAX_API_BODY + 1)
+        result = self.client.post('/api/spotify/settings', content=huge, headers={'Content-Type': 'application/json'})
+        self.assertEqual(result.status_code, 413)
+
+    def test_csp_connect_src_lists_only_the_services_in_use(self):
+        policy = self.client.get('/').headers['content-security-policy']
+        self.assertIn('https://example.supabase.co', policy)
+        self.assertIn('wss://example.livekit.cloud', policy)
+        connect = next(part for part in policy.split(';') if part.strip().startswith('connect-src'))
+        self.assertNotIn('https:', connect.split())
+
     def test_home_and_static_assets_are_served(self):
         home=self.client.get('/')
         self.assertEqual(home.status_code,200)
