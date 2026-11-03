@@ -2,9 +2,103 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.10.25+04db2f8",
+   "version": "2026.11.01+2810e30",
+   "date": "1 nov 2026",
+   "highlights": [
+    [
+     "visual",
+     "Grava os screenshots dos testes dentro de work/, que existe no CI"
+    ],
+    [
+     "visual",
+     "Protege as APIs, limita o uso da Cloe e do YouTube e fortalece a operação"
+    ]
+   ],
+   "items": {
+    "visual": [
+     "Grava os screenshots dos testes dentro de work/, que existe no CI",
+     "Protege as APIs, limita o uso da Cloe e do YouTube e fortalece a operação"
+    ]
+   }
+  },
+  {
+   "version": "2026.10.31+62aeff7",
+   "date": "31 out 2026",
+   "highlights": [
+    [
+     "visual",
+     "Reorganiza o menu de insígnias com detalhe no celular, filtros e vitrine editável"
+    ],
+    [
+     "chamadas",
+     "Cloe aplica comandos do Ouvir juntos em qualquer ordem e sinônimo"
+    ],
+    [
+     "perfil",
+     "Remove o nome Astro: a assistente agora é só Cloe"
+    ],
+    [
+     "feed",
+     "Cloe substitui o Astro, para de falar por voz e estreia novo Editar Perfil e Feed"
+    ]
+   ],
+   "items": {
+    "visual": [
+     "Reorganiza o menu de insígnias com detalhe no celular, filtros e vitrine editável",
+     "Auditoria visual: gaveta de canais, painel do Astro e leitura em telas largas",
+     "Voz feminina natural no Astro com Thalita e Francisca"
+    ],
+    "chamadas": [
+     "Cloe aplica comandos do Ouvir juntos em qualquer ordem e sinônimo",
+     "Astro controla o Ouvir juntos e responde hora, data e contas sem inventar",
+     "Astro só responde quando chamado, com voz ajustável e controles na call"
+    ],
+    "perfil": [
+     "Remove o nome Astro: a assistente agora é só Cloe"
+    ],
+    "feed": [
+     "Cloe substitui o Astro, para de falar por voz e estreia novo Editar Perfil e Feed"
+    ]
+   }
+  },
+  {
+   "version": "2026.10.29+1771e2e",
+   "date": "29 out 2026",
+   "highlights": [
+    [
+     "visual",
+     "Coleção Divino Exclusivo"
+    ]
+   ],
+   "items": {
+    "visual": [
+     "Coleção Divino Exclusivo"
+    ]
+   }
+  },
+  {
+   "version": "2026.10.27+240b994",
+   "date": "27 out 2026",
+   "highlights": [
+    [
+     "feed",
+     "Videoflow: feed vertical com melhorias de performance e UX"
+    ]
+   ],
+   "items": {
+    "feed": [
+     "Videoflow: feed vertical com melhorias de performance e UX"
+    ]
+   }
+  },
+  {
+   "version": "2026.10.25+7ab6675",
    "date": "25 out 2026",
    "highlights": [
+    [
+     "feed",
+     "As Novidades da Órbita deixam de encolher quando o git local é menor"
+    ],
     [
      "visual",
      "Endurece o backend contra falhas silenciosas de terceiros"
@@ -16,13 +110,12 @@
     [
      "chamadas",
      "Remove a tela de carregamento antiga"
-    ],
-    [
-     "chamadas",
-     "Substitui logos e aplica a nova tela de carregamento"
     ]
    ],
    "items": {
+    "feed": [
+     "As Novidades da Órbita deixam de encolher quando o git local é menor"
+    ],
     "correcoes": [
      "Corrige detalhes de interface, contraste e listeners que ficavam presos",
      "Corrige downloads repetidos, badges de não lidas, aparência em elementos novos e reduzir…",
@@ -34,6 +127,8 @@
      "Integra os clientes nativos e o login social no app WPF",
      "Adiciona cliente Windows nativo",
      "Adiciona app nativo para Windows",
+     "Atualiza com os arquivos de Orbita-todas-atualizacoes",
+     "Extrai e atualiza os arquivos do Orbita-atualizado.zip",
      "Deixa de rastrear o meta.json do build, que já estava no .gitignore",
      "O assistente de voz Lula foi removido das chamadas."
     ],
@@ -42,13 +137,24 @@
      "Remove a tela de carregamento antiga",
      "Substitui logos e aplica a nova tela de carregamento",
      "Ponte de voz Discord <-> Órbita e botão 'ID da chamada' para ADMs"
+    ],
+    "loja": [
+     "Adiciona pacote atualizado do app iOS Orbita"
     ]
    }
   },
   {
-   "version": "2026.10.24+20198d3",
+   "version": "2026.10.24+d3e2e4e",
    "date": "24 out 2026",
    "highlights": [
+    [
+     "chamadas",
+     "O assistente de voz Lula foi removido das chamadas."
+    ],
+    [
+     "chamadas",
+     "Ponte de voz Discord <-> Órbita e botão 'ID da chamada' para ADMs"
+    ],
     [
      "feed",
      "Novos membros: remove tema Orbita e efeito ao sair da area"
@@ -56,17 +162,19 @@
     [
      "feed",
      "Boas-vindas: push/notificacao abrem Novos membros"
-    ],
-    [
-     "feed",
-     "Novos membros: tema Orbita fixo com orbitas/estrelas, botao de boas-vindas novo com som e…"
-    ],
-    [
-     "feed",
-     "Feed: autoplay de video confiavel"
     ]
    ],
    "items": {
+    "chamadas": [
+     "O assistente de voz Lula foi removido das chamadas.",
+     "Ponte de voz Discord <-> Órbita e botão 'ID da chamada' para ADMs",
+     "Call v3: mudo/ensurdecido, sem engrenagem, ícones de chamada, duplo clique, botão Entrar central",
+     "Ícone de desligar vermelho",
+     "Faders de volume do microfone",
+     "Botão 'Mutar para mim' no menu de volume do participante",
+     "Telas opt-in, Ouvir juntos oculto ao entrar, palco responsivo, avatares mobile e toque duplo",
+     "Ouvir juntos: canal de texto #ouvir-juntos para comandos"
+    ],
     "feed": [
      "Novos membros: remove tema Orbita e efeito ao sair da area",
      "Boas-vindas: push/notificacao abrem Novos membros",
@@ -79,20 +187,10 @@
     ],
     "visual": [
      "Tema de servidor completo: paleta inteira",
-     "Avisa pedidos de amizade novos"
-    ],
-    "perfil": [
      "Configurações › Perfil: estúdio redesenhado",
      "Perfil: prévia vertical também em Configurações › Perfil",
-     "Prévia do perfil: fundo grafite com brilho e fótons animados"
-    ],
-    "chamadas": [
-     "Call v3: mudo/ensurdecido, sem engrenagem, ícones de chamada, duplo clique, botão Entrar central",
-     "Ícone de desligar vermelho",
-     "Faders de volume do microfone",
-     "Botão 'Mutar para mim' no menu de volume do participante",
-     "Telas opt-in, Ouvir juntos oculto ao entrar, palco responsivo, avatares mobile e toque duplo",
-     "Ouvir juntos: canal de texto #ouvir-juntos para comandos"
+     "Prévia do perfil: fundo grafite com brilho e fótons animados",
+     "Avisa pedidos de amizade novos"
     ],
     "correcoes": [
      "No celular sem suporte, o botão de compartilhar tela aparece e explica o motivo em vez de sumir",
@@ -110,7 +208,7 @@
    }
   },
   {
-   "version": "2026.10.23+b42d82a",
+   "version": "2026.10.23+28781bc",
    "date": "23 out 2026",
    "highlights": [
     [
@@ -131,6 +229,54 @@
     ]
    ],
    "items": {
+    "chat": [
+     "DM: redesign, chamadas 1:1 com toque, notificações de DMs não lidas no trilho",
+     "Membros v2: coluna direita dos canais de volta",
+     "Chat v3: agrupamento real",
+     "Chat v2: texto e nomes maiores, avatares 40px, barra de ações com destaque do tema, reações,…",
+     "Seletor de mídia no chat: emojis Unicode completos, GIFs e figurinhas via GIPHY"
+    ],
+    "chamadas": [
+     "Telas opt-in, Ouvir juntos oculto ao entrar, palco responsivo, avatares mobile e toque duplo",
+     "Ouvir juntos: canal de texto #ouvir-juntos para comandos",
+     "Chamada: Ouvir juntos e canais viram toggles reais",
+     "Ouvir juntos: barra de controles não invade mais a fila",
+     "Tooltips das insígnias: descrição curta para as 61 insígnias, tooltip próprio com cor da…",
+     "Chamada: nomes com estilo da Loja sempre legíveis nos chips, lista de voz e painel do usuário",
+     "Ouvir juntos v2: player 16:9 em destaque",
+     "Ícones ao vivo na lista de voz"
+    ],
+    "adm": [
+     "Permissões de servidor: engrenagem/edição só para dono e ADMs globais",
+     "ADM: exclusão de servidor/canal fecha o diálogo, limpa o estado e volta ao servidor padrão",
+     "Comandos de moderação para ADM global com checagem no servidor, auditoria e painel Administração"
+    ],
+    "visual": [
+     "YouTube dentro do Órbita — busque, assista no mini player enquanto conversa, salve para depois e conecte sua conta Google para ver suas inscrições.",
+     "Temas: o tema escolhido controla todo o sistema de destaque",
+     "Página /instalar redesenhada",
+     "Configurações v2: central única",
+     "Paleta Grafite neutro: tokens centrais, tooltip custom, tag ADM, agrupamento, pill de data e…",
+     "Editor de perfil: cards com ícones, estados de hover e ativo, prévia centralizada e maior,…",
+     "Lula: transcrição no servidor via Gemini quando não há STT_API_KEY, modo digitado como…",
+     "Add server-side desktop transcription fallback",
+     "Integrate Lula AI with Flatkey MiniMax-H3",
+     "Rename voice assistant to Lula",
+     "Regenera supabase.sql com o GRANT de valid_poll",
+     "Migração: concede EXECUTE em orbita_private.valid_poll(jsonb) a authenticated"
+    ],
+    "loja": [
+     "Loja v3: Decorações unificadas na Loja, coleções clássicas refeitas com animações próprias e…",
+     "Loja v2: coleções animadas, borda de cartão e estilos de nome",
+     "Loja de pacotes, fontes do nome, insígnias e editor de perfil estilo Discord"
+    ],
+    "perfil": [
+     "Identidade: @",
+     "Mensagens diretas v2: avatar com presença, nome de exibição estilizado, @handle/status,…",
+     "Insígnias v2: arte premium por categoria, nível e raridade",
+     "Migration de insígnias: divide jsonb_build_object de badge_metrics",
+     "Perfil: 'Sobre você' dos outros é relido de profiles ao abrir o cartão"
+    ],
     "feed": [
      "YouTube no Órbita: Início, Em alta, busca, canais, playlists e página do vídeo com comentários",
      "Mini player flutuante que continua tocando pelo app",
@@ -147,51 +293,6 @@
      "Feed Novos membros: timeline por dia com cartões, hero de boas-vindas, 👋 com RLS, Realtime…",
      "Feed: composer em barra única"
     ],
-    "chamadas": [
-     "Chamada: Ouvir juntos e canais viram toggles reais",
-     "Ouvir juntos: barra de controles não invade mais a fila",
-     "Chamada: nomes com estilo da Loja sempre legíveis nos chips, lista de voz e painel do usuário",
-     "Ouvir juntos v2: player 16:9 em destaque",
-     "Ícones ao vivo na lista de voz"
-    ],
-    "adm": [
-     "Permissões de servidor: engrenagem/edição só para dono e ADMs globais",
-     "ADM: exclusão de servidor/canal fecha o diálogo, limpa o estado e volta ao servidor padrão",
-     "Comandos de moderação para ADM global com checagem no servidor, auditoria e painel Administração"
-    ],
-    "visual": [
-     "YouTube dentro do Órbita — busque, assista no mini player enquanto conversa, salve para depois e conecte sua conta Google para ver suas inscrições.",
-     "Temas: o tema escolhido controla todo o sistema de destaque",
-     "Página /instalar redesenhada",
-     "Configurações v2: central única",
-     "Paleta Grafite neutro: tokens centrais, tooltip custom, tag ADM, agrupamento, pill de data e…",
-     "Lula: transcrição no servidor via Gemini quando não há STT_API_KEY, modo digitado como…",
-     "Add server-side desktop transcription fallback",
-     "Integrate Lula AI with Flatkey MiniMax-H3",
-     "Rename voice assistant to Lula",
-     "Regenera supabase.sql com o GRANT de valid_poll",
-     "Migração: concede EXECUTE em orbita_private.valid_poll(jsonb) a authenticated"
-    ],
-    "perfil": [
-     "Membros v2: coluna direita dos canais de volta",
-     "Identidade: @",
-     "Tooltips das insígnias: descrição curta para as 61 insígnias, tooltip próprio com cor da…",
-     "Mensagens diretas v2: avatar com presença, nome de exibição estilizado, @handle/status,…",
-     "Insígnias v2: arte premium por categoria, nível e raridade",
-     "Editor de perfil: cards com ícones, estados de hover e ativo, prévia centralizada e maior,…",
-     "Migration de insígnias: divide jsonb_build_object de badge_metrics",
-     "Perfil: 'Sobre você' dos outros é relido de profiles ao abrir o cartão"
-    ],
-    "chat": [
-     "Chat v3: agrupamento real",
-     "Chat v2: texto e nomes maiores, avatares 40px, barra de ações com destaque do tema, reações,…",
-     "Seletor de mídia no chat: emojis Unicode completos, GIFs e figurinhas via GIPHY"
-    ],
-    "loja": [
-     "Loja v3: Decorações unificadas na Loja, coleções clássicas refeitas com animações próprias e…",
-     "Loja v2: coleções animadas, borda de cartão e estilos de nome",
-     "Loja de pacotes, fontes do nome, insígnias e editor de perfil estilo Discord"
-    ],
     "correcoes": [
      "Corrige 'permission denied for table profiles': restaura grants por coluna ausentes no banco",
      "Corrige vídeo borrado nos tiles: a figcaption",
@@ -204,7 +305,7 @@
    }
   },
   {
-   "version": "2026.10.22+812f192",
+   "version": "2026.10.22+38e98c7",
    "date": "22 out 2026",
    "highlights": [
     [
@@ -229,48 +330,71 @@
      "Redesign geral do app: chat, canais, barra lateral e janelas",
      "Configurações organizadas em abas",
      "Ícones de \"ao vivo\" na lista de salas de voz",
+     "Lula: transcrição no servidor via Gemini quando não há STT_API_KEY, modo digitado como…",
+     "Add server-side desktop transcription fallback",
+     "Migration de insígnias: divide jsonb_build_object de badge_metrics",
+     "Integrate Lula AI with Flatkey MiniMax-H3",
+     "Rename voice assistant to Lula",
+     "Regenera supabase.sql com o GRANT de valid_poll",
+     "Migração: concede EXECUTE em orbita_private.valid_poll(jsonb) a authenticated",
      "Use NVIDIA NIM Nemotron 3 Ultra for LulaDroid",
+     "Painéis 1:1",
      "Integrate LulaDroid with OpenRouter",
      "Adiciona versao e botao para forcar atualizacao da interface",
      "Importa Orbita corrigida com envio de mensagens e novo layout"
-    ],
-    "chamadas": [
-     "Barra de controles flutuante na chamada (microfone, câmera, tela, Ouvir juntos, Mais, Sair)",
-     "Decorações do seu perfil aparecem no seu cartão da chamada",
-     "Ouvir juntos repaginado: player grande 16:9, fila com capa e quem adicionou, controles próprios e qualidade",
-     "Reconstrói a galeria de Decorações de Perfil: todas as decorações do pacote original por…",
-     "Ajusta cabecalho mobile da chamada com o LulaDroid",
-     "Evita duplicar o painel LulaDroid ao entrar na chamada",
-     "Implementa painel LulaDroid na chamada com respostas Gemini"
-    ],
-    "chat": [
-     "O envio de mensagens voltou a funcionar de forma confiável",
-     "Compacta o botao de chat no cabecalho mobile"
-    ],
-    "feed": [
-     "Feed novo, com abas Para você, Seguindo, Em alta e Salvos",
-     "Painel \"Ao vivo agora\" com as salas abertas",
-     "Barra de publicação mais limpa, com ícones",
-     "Esta área de Novidades"
-    ],
-    "perfil": [
-     "Decorações de perfil com quadros e efeitos animados",
-     "Fotos de perfil exibidas corretamente",
-     "Painéis 1:1",
-     "Redesenha interface e cria Profile Decoration gratuito"
-    ],
-    "audio": [
-     "Filtro de ruído e medidor do microfone nas configurações de voz",
-     "Sons sutis e animações nos controles da chamada",
-     "Animações e sons sutis na galeria de decorações",
-     "Atualiza para Jesus 19 corrigido com audio e LulaDroid"
     ],
     "correcoes": [
      "Vídeo da câmera e da tela não fica mais borrado ou escurecido",
      "\"Sobre você\" atualizado aparece para todo mundo",
      "Decorações não cobrem mais o vídeo das chamadas",
+     "Corrige 'permission denied for table profiles': restaura grants por coluna ausentes no banco",
+     "Corrige vídeo borrado nos tiles: a figcaption",
+     "Corrige redução de ruído: não inicializa o RNNoise antes de setProcessor",
+     "Corrige fotos de perfil: <img> com object-fit cover centralizado, recorte quadrado 512px no…",
      "Corrige permissão ao enviar mensagens: migração idempotente de grants/política, gatilhos…",
      "Corrige IA de chamadas: import time, seguranca e memoria"
+    ],
+    "audio": [
+     "Filtro de ruído e medidor do microfone nas configurações de voz",
+     "Sons sutis e animações nos controles da chamada",
+     "Enable PC/Electron fallback audio transcription for Lula",
+     "Animações e sons sutis na galeria de decorações",
+     "Atualiza para Jesus 19 corrigido com audio e LulaDroid"
+    ],
+    "loja": [
+     "Loja de pacotes, fontes do nome, insígnias e editor de perfil estilo Discord"
+    ],
+    "chat": [
+     "O envio de mensagens voltou a funcionar de forma confiável",
+     "Seletor de mídia no chat: emojis Unicode completos, GIFs e figurinhas via GIPHY",
+     "Compacta o botao de chat no cabecalho mobile"
+    ],
+    "adm": [
+     "Comandos de moderação para ADM global com checagem no servidor, auditoria e painel Administração"
+    ],
+    "chamadas": [
+     "Barra de controles flutuante na chamada (microfone, câmera, tela, Ouvir juntos, Mais, Sair)",
+     "Decorações do seu perfil aparecem no seu cartão da chamada",
+     "Ouvir juntos repaginado: player grande 16:9, fila com capa e quem adicionou, controles próprios e qualidade",
+     "Ouvir juntos v2: player 16:9 em destaque",
+     "Ícones ao vivo na lista de voz",
+     "Reconstrói a galeria de Decorações de Perfil: todas as decorações do pacote original por…",
+     "Ajusta cabecalho mobile da chamada com o LulaDroid",
+     "Evita duplicar o painel LulaDroid ao entrar na chamada",
+     "Implementa painel LulaDroid na chamada com respostas Gemini"
+    ],
+    "feed": [
+     "Feed novo, com abas Para você, Seguindo, Em alta e Salvos",
+     "Painel \"Ao vivo agora\" com as salas abertas",
+     "Barra de publicação mais limpa, com ícones",
+     "Esta área de Novidades",
+     "Feed: composer em barra única"
+    ],
+    "perfil": [
+     "Decorações de perfil com quadros e efeitos animados",
+     "Fotos de perfil exibidas corretamente",
+     "Perfil: 'Sobre você' dos outros é relido de profiles ao abrir o cartão",
+     "Redesenha interface e cria Profile Decoration gratuito"
     ]
    }
   }

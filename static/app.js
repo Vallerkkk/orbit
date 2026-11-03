@@ -1865,6 +1865,7 @@ const screenLabel=el('label','screen-option'),screenCheck=el('input');screenChec
 function updateScreenAudio(){localStorage.setItem('orbita-screen-audio',String(screenCheck.checked));}
 screenCheck.onchange=updateScreenAudio;updateScreenAudio();
 $('btn-notif-toggle').onclick=async()=>{if(!('Notification'in window))return toast('Este navegador não oferece notificações.');const permission=await Notification.requestPermission();toast(permission==='granted'?'Notificações ativadas neste navegador.':'Notificações não autorizadas.');};
+try{if(localStorage.getItem('orbita-theme-reset')!=='20261102'){localStorage.removeItem('orbita-theme');for(const k of Object.keys(localStorage))if(k.startsWith('orbita-server-theme:'))localStorage.removeItem(k);localStorage.setItem('orbita-theme-reset','20261102');}}catch{}
 document.body.dataset.theme=localStorage.getItem('orbita-theme')||'nitro';document.body.dataset.density=localStorage.getItem('orbita-density')||'cozy';
 window.addEventListener('pagehide',()=>{if(extraSubscription)db?.removeChannel(extraSubscription);});
 
