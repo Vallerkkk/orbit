@@ -22,10 +22,12 @@ def wav():
 class FakeLiveKit:
     allowed = True
     can_publish = True
+    checks = 0
     def __init__(self, *args): self.room = self
     async def __aenter__(self): return self
     async def __aexit__(self, *args): pass
     async def get_participant(self, req):
+        FakeLiveKit.checks += 1
         if not self.allowed: raise RuntimeError('not in room')
         return SimpleNamespace(name='João', permission=SimpleNamespace(can_publish=self.can_publish))
 
@@ -38,6 +40,7 @@ class CloeTests(unittest.TestCase):
         self.lk=patch.object(astro.api, 'LiveKitAPI', FakeLiveKit);self.lk.start()
         self.addCleanup(self.lk.stop)
         FakeLiveKit.allowed=FakeLiveKit.can_publish=True
+        FakeLiveKit.checks=0
         astro._TTS_CACHE.clear()
         astro.reset_daily_usage()
 
@@ -104,7 +107,7 @@ class CloeTests(unittest.TestCase):
             self.assertEqual(self.audio(chunk='44444444-4444-4444-8444-444444444401').status_code, 200)
             call = self.app.state.astro_calls[ROOM]
             call.last_upload[UID] = 0
-            call.last_answer = 0
+            call.recent.clear()
             blocked = self.audio(chunk='44444444-4444-4444-8444-444444444402')
         self.assertEqual(blocked.status_code, 429)
         self.assertIn('Limite diário', blocked.json()['detail'])
@@ -117,7 +120,7 @@ class CloeTests(unittest.TestCase):
             self.assertEqual(self.audio(chunk='55555555-5555-4555-8555-555555555501').status_code, 200)
             call = self.app.state.astro_calls[ROOM]
             call.last_upload[UID] = 0
-            call.last_answer = 0
+            call.recent.clear()
             blocked = self.audio(chunk='55555555-5555-4555-8555-555555555502')
         self.assertEqual(blocked.status_code, 429)
         self.assertIn('Limite diário', blocked.json()['detail'])
@@ -187,7 +190,10 @@ class CloeTests(unittest.TestCase):
         async def groq(app,path,**kwargs):return {'choices':[{'message':{'content':'Somos três na call.'}}]}
         with patch.object(astro,'groq_json',groq):
             response=self.client.post(f'/api/astro/{ROOM}/ask',json={'text':'quantos somos?'})
-        self.assertEqual((response.status_code,response.json()), (200,{'ok':True}))
+        body=response.json()
+        self.assertEqual(response.status_code,200)
+        self.assertEqual((body['ok'],body['cursor']), (True,2))
+        self.assertEqual(body['answer']['text'],'Somos três na call.')
         events=self.client.get('/api/astro/'+ROOM).json()['events']
         self.assertEqual([e['kind'] for e in events],['transcript','answer'])
         self.assertTrue(events[0]['wake'])
@@ -267,7 +273,9 @@ class CloeTests(unittest.TestCase):
             raise AssertionError('o modelo não deve ser chamado para um pedido de música')
         with patch.object(astro,'groq_json',groq):response=self.audio()
         self.assertEqual(response.status_code,200)
-        self.assertEqual(response.json(),{'transcribed':True,'watch':'/tocar Suicideboys For the Last Time'})
+        body=response.json()
+        self.assertEqual((body['transcribed'],body['watch'],body['cursor']),
+            (True,'/tocar Suicideboys For the Last Time',1))
         self.assertEqual(calls,['audio/transcriptions'])
         events=self.client.get('/api/astro/'+ROOM).json()['events']
         self.assertEqual([e['kind'] for e in events],['transcript'])
@@ -277,14 +285,16 @@ class CloeTests(unittest.TestCase):
         async def groq(*args,**kwargs):raise AssertionError('o modelo não deve ser chamado')
         with patch.object(astro,'groq_json',groq):
             response=self.client.post(f'/api/astro/{ROOM}/ask',json={'text':'toque Wonderwall'})
-        self.assertEqual(response.json(),{'ok':True,'watch':'/tocar Wonderwall'})
+        self.assertEqual(response.json(),{'ok':True,'watch':'/tocar Wonderwall','cursor':1})
         self.assertEqual(self.client.get('/api/astro/'+ROOM).json()['events'][0]['kind'],'transcript')
 
     def test_ask_with_time_answers_without_the_model(self):
         async def groq(*args,**kwargs):raise AssertionError('o modelo não deve ser chamado')
         with patch.object(astro,'groq_json',groq):
             response=self.client.post(f'/api/astro/{ROOM}/ask',json={'text':'que horas são?'})
-        self.assertEqual(response.json(),{'ok':True})
+        body=response.json()
+        self.assertEqual((body['ok'],body['cursor']), (True,2))
+        self.assertRegex(body['answer']['text'],r'^São \d{2}:\d{2}, horário de Brasília\.$')
         events=self.client.get('/api/astro/'+ROOM).json()['events']
         self.assertEqual([e['kind'] for e in events],['transcript','answer'])
         self.assertRegex(events[-1]['text'],r'^São \d{2}:\d{2}, horário de Brasília\.$')
@@ -310,10 +320,10 @@ class CloeTests(unittest.TestCase):
         self.assertEqual(speech(text='oi',voice='voz-desconhecida').status_code,400)
         self.assertEqual(speech(text='x',voice='pt-BR-FranciscaNeural').status_code,400)
         self.assertEqual(speech(text='x'*601,voice='pt-BR-FranciscaNeural').status_code,400)
-        FakeLiveKit.allowed=False
+        FakeLiveKit.allowed=False;self.app.state.astro_members.clear()
         self.assertEqual(speech(text='oi',voice='pt-BR-FranciscaNeural').status_code,403)
 
-    def test_natural_voice_failure_is_reported_for_device_fallback(self):
+    def test_natural_voice_failure_is_reported_to_the_panel(self):
         async def broken(*args,**kwargs):raise HTTPException(503,'A voz natural está indisponível agora.')
         with patch.object(astro,'synthesize_speech',broken):
             response=self.client.post(f'/api/astro/{ROOM}/speech',
@@ -327,5 +337,41 @@ class CloeTests(unittest.TestCase):
             ['pt-BR-ThalitaMultilingualNeural','pt-BR-FranciscaNeural'])
         self.assertIsInstance(data['tts'],bool)
         self.assertEqual((astro.tts_rate(None),astro.tts_rate(.8),astro.tts_rate(2)),('+0%','-20%','+30%'))
+
+    def test_answers_return_in_the_same_response_and_duplicates_are_ignored(self):
+        async def groq(app,path,**kwargs):return {'choices':[{'message':{'content':'Resposta pronta.'}}]}
+        with patch.object(astro,'groq_json',groq):
+            first=self.client.post(f'/api/astro/{ROOM}/ask',json={'text':'qual é o resumo?'}).json()
+            self.app.state.astro_calls[ROOM].last_ask[UID]=0
+            second=self.client.post(f'/api/astro/{ROOM}/ask',json={'text':'qual é o resumo?'}).json()
+        self.assertEqual(first['answer']['text'],'Resposta pronta.')
+        self.assertNotIn('answer',second)
+        self.assertEqual(second['cursor'],3)
+
+    def test_full_answer_queue_does_not_consume_the_daily_quota(self):
+        with patch.object(astro,'ANSWER_QUEUE',0), patch.object(astro,'DAILY_ASKS',1):
+            first=self.client.post(f'/api/astro/{ROOM}/ask',json={'text':'primeira pergunta'})
+            self.app.state.astro_calls[ROOM].last_ask[UID]=0
+            second=self.client.post(f'/api/astro/{ROOM}/ask',json={'text':'outra pergunta'})
+        self.assertEqual(first.status_code,200)
+        self.assertEqual(second.status_code,200)
+        self.assertIn('outras perguntas',first.json()['answer']['text'])
+        self.assertEqual(self.app.state.astro_calls[ROOM].waiting,0)
+
+    def test_context_is_trimmed_to_the_configured_limit(self):
+        c=astro.Call();c.add('transcript','a','x'*200)
+        with patch.object(astro,'CONTEXT_CHARS',60):text=c.context()
+        self.assertEqual(len(text),60)
+        self.assertTrue(text.endswith('x'*60))
+
+    def test_repeated_polls_reuse_the_presence_check(self):
+        self.assertEqual(self.client.get('/api/astro/'+ROOM).status_code,200)
+        self.assertEqual(self.client.get('/api/astro/'+ROOM).status_code,200)
+        self.assertEqual(FakeLiveKit.checks,1)
+        # Presença negativa não fica no cache: quem sai da call perde o acesso na hora.
+        self.app.state.astro_members.clear();FakeLiveKit.allowed=False
+        self.assertEqual(self.client.get('/api/astro/'+ROOM).status_code,403)
+        self.assertEqual(self.client.get('/api/astro/'+ROOM).status_code,403)
+        self.assertEqual(FakeLiveKit.checks,3)
 
 if __name__=='__main__':unittest.main()

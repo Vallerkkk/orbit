@@ -16,7 +16,7 @@ export function initEnhancements(context) {
   let inbox, typing, subscribedUser, typingTimer, idle = false, idleTimer, lastTyped = 0, registration;
   let unread = {}, panel, panelKind, threadRoot, threadTarget, threadVersion = 0, threadCursor, threadMore;
   let wakeLock, wakeRequest = false, focusedLink;
-  let watch,watchTask,watchJoined;
+  let watch,watchTask,watchJoined,watchEvents;
   function loadWatch(){if(!watchTask)watchTask=import('./watch-party.js').then(module=>watch=module.initWatchParty({...context,report:error=>toast(context.errorText(error))})).catch(error=>{watchTask=null;throw error;});return watchTask;}
   let lastSound = new Map(), searchTimer, searchVersion = 0, historyObserver, historyTimer, historyWanted = false, remoteSearch = false;
   const seenActivity = new Set(), typingUsers = new Map();
@@ -388,7 +388,7 @@ export function initEnhancements(context) {
       const card=$('participants').querySelector('.participant[data-participant-id="'+CSS.escape(p.identity)+'"]');if(!card||card.querySelector('.voice-moderation'))continue;const controls=el('div','voice-moderation');controls.append(button('Silenciar',()=>voiceAction(p,'mute'),'tiny-button'),button('Desconectar',()=>voiceAction(p,'kick'),'tiny-button'));if(s.room.orbitaStage)controls.append(button('Orador',()=>voiceAction(p,'speaker'),'tiny-button'),button('Plateia',()=>voiceAction(p,'audience'),'tiny-button'));card.append(controls);}
   }
   function connected(connected,events,rights){
-    connected.orbitaModerator=!!rights.moderator;connected.orbitaStage=!!rights.stage;watchJoined=connected;loadWatch().then(instance=>{if(watchJoined===connected&&state().room===connected)instance.connected(connected,events);}).catch(report);
+    connected.orbitaModerator=!!rights.moderator;connected.orbitaStage=!!rights.stage;watchJoined=connected;watchEvents=events;loadWatch().then(instance=>{if(watchJoined===connected&&state().room===connected)instance.connected(connected,events);}).catch(report);
     connected.on(events.DataReceived,(bytes,participant,_kind,topic)=>{if(topic!=='orbita-sound'||!participant||connected.remoteParticipants.get(participant.identity)!==participant||participant.permissions?.canPublish===false||bytes.length>2048)return;let data;try{data=JSON.parse(new TextDecoder().decode(bytes));}catch{return;}if(!data||!SOUND_EFFECTS.includes(data.effect))return;const last=lastSound.get(participant.identity)||0;if(Date.now()-last<2500)return;lastSound.set(participant.identity,Date.now());audio(data.effect);});
     connected.on(events.ParticipantConnected,()=>audio('join'));connected.on(events.ParticipantDisconnected,()=>audio('leave'));
     audio('join');syncWakeLock();
@@ -462,6 +462,8 @@ export function initEnhancements(context) {
   const brand=$('friends-nav');brand.replaceChildren();const brandImage=el('img');brandImage.src='/static/icons/icon.svg';brandImage.alt='Órbita';reserveImage(brandImage,32,32);brand.append(brandImage);
   $('toast').setAttribute('role','status');$('toast').setAttribute('aria-live','polite');
   runTimers();
-  async function watchCommand(raw,opts){await loadWatch();return watch.run(raw,opts);}
+  // O módulo do player carrega sob demanda: um comando pedido logo após entrar na call
+  // pode chegar antes do connected. Reconectar aqui evita "Entre em uma sala de voz".
+  async function watchCommand(raw,opts){await loadWatch();if(watchJoined&&state().room===watchJoined)watch.connected(watchJoined,watchEvents);return watch.run(raw,opts);}
 return { watchCommand, setAudioOutput:id=>appSounds.setOutput(id),soundFields:box=>appSounds.fields(box,el,button),realtimeChanged, sessionChanged, channelChanged, enhanceMessage, decorateVideo, callUpdated, connected, callEnded, dispatchPush, messageReceived, messageDeleted, disablePush, decorateNavigation, presenceStatus, showMediaPicker, sendFiles, showReports, showModeration, showAudit, historyLoaded };
 }

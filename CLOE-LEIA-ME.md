@@ -10,7 +10,7 @@ Esta atualização integra a Cloe às calls existentes, usando Groq para transcr
 4. Entre numa call. Abra **✦ Cloe · Transcrição** para ver as abas **Transcrição** e **Respostas da Cloe**.
 5. Diga, por exemplo: **“Ei Cloe, o que combinamos sobre o lançamento?”**. Também pode falar “Ei Cloe”, fazer uma breve pausa e perguntar em seguida (até 20 segundos depois).
 6. Para interromper a fala, toque em **Parar fala** ou diga **“para de falar”** — “pare”, “parar de falar” e “pode parar” também funcionam, com ou sem o nome. Enquanto a Cloe fala, o microfone continua aberto só para ouvir essa ordem: o restante do áudio é descartado e não entra na transcrição. Fones de ouvido ou o cancelamento de eco ligado ajudam a voz da própria Cloe não voltar pelo microfone.
-7. Se o navegador bloquear som, toque em **Testar voz**. A voz padrão é a **Thalita**, uma voz neural feminina gerada no servidor; no painel também é possível escolher **Francisca** ou a voz do aparelho. Se a conexão com o serviço de voz falhar, a Cloe volta sozinha para a voz do aparelho.
+7. Se o navegador bloquear som, toque em **Testar voz**. A voz padrão é a **Thalita**, uma voz neural feminina gerada no servidor; no painel também é possível escolher **Francisca** ou a voz do aparelho. A Cloe usa **somente** a voz escolhida: se ela não estiver disponível, o painel avisa e a resposta aparece apenas em texto, sem trocar de voz sozinha.
 8. No **Ouvir juntos**, a Cloe controla o player por voz ou por texto: “Ei Cloe, próxima música”, “Ei Cloe, pausa a música”, “Ei Cloe, continua”, “Ei Cloe, limpar a fila”, “Ei Cloe, limpar a lista de reprodução”, “Ei Cloe, remove a segunda da fila”, “Ei Cloe, embaralha a fila”, “Ei Cloe, que música está tocando”, “Ei Cloe, volume 60” e “Ei Cloe, toque Wonderwall”. O nome pode vir no fim (“próxima música, Cloe”) e a lista de reprodução também é chamada de fila ou playlist. Quem pede executa no próprio navegador; o player sincroniza a mudança para a call inteira. Para escolher uma música específica é preciso estar numa call de voz e ter a chave `YOUTUBE_API_KEY` configurada no servidor; links completos funcionam sem a chave.
 
 O envio do próprio microfone pode ser pausado com **Pausar meu áudio**. Microfones fechados, áudio de tela e câmera não são enviados. O painel avisa que o áudio é processado pela Groq. O mesmo funcionamento vale para calls privadas e canais de voz.
@@ -20,7 +20,8 @@ O envio do próprio microfone pode ser pausado com **Pausar meu áudio**. Microf
 - Cada navegador captura somente o microfone que já está publicado na call. Não abre outro microfone.
 - Os trechos são WAV mono PCM16 a 16 kHz, enviados após pausa de fala ou a cada 8 segundos de fala contínua. A transcrição é quase em tempo real, não palavra por palavra instantaneamente.
 - A transcrição usa `whisper-large-v3-turbo` com `language=pt`. O nome do participante vem do LiveKit, não de texto informado pelo cliente.
-- A resposta usa `openai/gpt-oss-20b` com as transcrições dos últimos 15 minutos daquela sala. O modelo analisa esse contexto quando chamado; não treina nem cria memória pessoal permanente.
+- A resposta usa `openai/gpt-oss-20b` com as transcrições dos últimos 15 minutos daquela sala, limitadas a cerca de 8 mil caracteres para responder mais rápido. O modelo analisa esse contexto quando chamado; não treina nem cria memória pessoal permanente.
+- A resposta volta na mesma requisição do áudio ou da pergunta escrita: o painel mostra e fala sem esperar a próxima consulta. Perguntas feitas juntas entram numa fila curta em vez de serem recusadas; a repetição do mesmo pedido em até 3 segundos é ignorada.
 - A aba de transcrição mostra só as falas; as respostas aparecem na outra aba. O histórico desta versão também é limitado aos últimos 15 minutos.
 - A resposta chega em texto a todos os participantes com o app atualizado; cada dispositivo reproduz a fala localmente. Não há um participante de áudio autônomo no servidor, nem uma voz sendo publicada como trilha no LiveKit. Aparelhos podem ter vozes ou tempos ligeiramente diferentes.
 - A voz natural usa o mesmo motor neural do "Ler em voz alta" do Microsoft Edge, sem chave de API. O texto da resposta é enviado a esse serviço para gerar o MP3; ele não é gravado no projeto. Falas repetidas ficam em cache por alguns minutos. Essa voz depende da internet e pode levar de 1 a 4 segundos para começar; o microfone fica pausado durante a geração para a Cloe não ouvir a si mesma.
@@ -32,9 +33,9 @@ O envio do próprio microfone pode ser pausado com **Pausar meu áudio**. Microf
 
 Todos os participantes precisam carregar esta versão para que os respectivos microfones sejam transcritos. O recurso depende de HTTPS (ou localhost), AudioWorklet, permissão de microfone, conexão e cota disponível na Groq. Uma aba suspensa pelo sistema, especialmente no celular em segundo plano, pode interromper a captura. Falas muito baixas, ruído ou cortes de trechos podem causar erros. Em rede lenta a fila é limitada e trechos podem ser descartados, com aviso no painel.
 
-O plano da Groq pode ter limites e custos. O descarte de silêncio reduz pedidos, mas não garante funcionamento gratuito e ilimitado. A Cloe não faz pesquisa na web para responder perguntas; a busca do YouTube é usada somente para pedidos de música no Ouvir juntos. A voz neural gratuita depende de um serviço externo da Microsoft: se ele mudar ou ficar fora do ar, a Cloe continua falando com a voz do aparelho.
+O plano da Groq pode ter limites e custos. O descarte de silêncio reduz pedidos, mas não garante funcionamento gratuito e ilimitado. A Cloe não faz pesquisa na web para responder perguntas; a busca do YouTube é usada somente para pedidos de música no Ouvir juntos. A voz neural gratuita depende de um serviço externo da Microsoft: se ele mudar ou ficar fora do ar, a Cloe **não troca de voz** — o painel avisa e a resposta fica em texto até a voz escolhida voltar.
 
-Configure modelos alternativos no servidor usando `CLOE_STT_MODEL` e `CLOE_LLM_MODEL`.
+Configure modelos e desempenho no servidor usando `CLOE_STT_MODEL`, `CLOE_LLM_MODEL`, `CLOE_CONTEXT_CHARS` (padrão 8000), `CLOE_MAX_ANSWER_TOKENS` (padrão 500), `CLOE_REASONING_EFFORT` (padrão `low`), `CLOE_ANSWER_QUEUE` (padrão 3) e `CLOE_MEMBER_CACHE_SECONDS` (padrão 5).
 
 ### Limites diários por pessoa
 
@@ -50,7 +51,7 @@ Ao passar do limite, a Cloe responde HTTP 429 com aviso em português e volta no
 
 Testes automatizados cobrem a janela temporal, isolamento de salas e participantes, ativação dividida em trechos, autorização de presença/publicação, WAV inválido, silêncio, duplicação de pedidos e recuperação de erros. O áudio PCM e o limite dos trechos têm testes de unidade em JavaScript. O pacote inclui o build atualizado.
 
-Validação nesta integração: 125 testes Python (incluindo `tests/test_astro.py`), 117 testes de JavaScript (incluindo `tests/astro.test.mjs`) e o teste de interface `tests/astro_panel_browser.cjs` passaram contra o build atual. A chave da Groq usada pelo autor no pacote original respondeu HTTP 200; aqui nenhuma call real com vários dispositivos foi testada, porque isso depende de microfone, HTTPS e cota da Groq.
+Validação nesta integração: 151 testes Python (incluindo `tests/test_astro.py`), 120 testes de JavaScript (incluindo `tests/astro.test.mjs`) e os testes de navegador da Cloe (painel, pedido por texto com o Ouvir juntos, resposta imediata e voz estrita) passaram contra o build atual. A chave da Groq usada pelo autor no pacote original respondeu HTTP 200; aqui nenhuma call real com vários dispositivos foi testada, porque isso depende de microfone, HTTPS e cota da Groq.
 
 ## Origem dos arquivos
 

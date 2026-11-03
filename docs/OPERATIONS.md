@@ -64,6 +64,16 @@ A Cloe usa Groq. As cotas diárias por pessoa ficam em memória e são ajustáve
 - `CLOE_DAILY_ASKS` (padrão 200): perguntas respondidas pelo modelo por dia.
 - `CLOE_DAILY_TTS_CHARS` (padrão 100000): caracteres de voz neural por dia.
 
+Desempenho e concorrência também são ajustáveis sem mexer no código:
+
+- `CLOE_CONTEXT_CHARS` (padrão 8000): tamanho da transcrição enviada ao modelo; menor responde mais rápido.
+- `CLOE_MAX_ANSWER_TOKENS` (padrão 500): teto da resposta falada; respostas longas demoram mais.
+- `CLOE_REASONING_EFFORT` (padrão `low`): esforço de raciocínio do `gpt-oss`; `low` prioriza velocidade.
+- `CLOE_ANSWER_QUEUE` (padrão 3): perguntas simultâneas aguardando resposta na mesma call.
+- `CLOE_MEMBER_CACHE_SECONDS` (padrão 5): tempo do cache da checagem de presença no LiveKit. Presença negativa nunca é cacheada.
+
+A voz natural (Thalita ou Francisca) é a única reproduzida quando escolhida. Se o serviço da Microsoft falhar, a Cloe não substitui a voz: o painel avisa e a resposta fica em texto até a voz voltar.
+
 Como o contador é de um único processo, reiniciar o serviço zera o dia e não há compartilhamento entre instâncias. O limite do YouTube também é por conta (20 buscas novas e 60 chamadas à API por 10 minutos), mas protege uma cota compartilhada; veja `README.md`.
 
 ## PWA, mídia e atualização

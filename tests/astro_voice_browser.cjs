@@ -8,7 +8,7 @@ const voices=[
  {id:'pt-BR-ThalitaMultilingualNeural',name:'Thalita',note:'feminina, jovem e natural'},
  {id:'pt-BR-FranciscaNeural',name:'Francisca',note:'feminina, clássica e natural'}
 ];
-let spoken=null;
+let spoken=null,speechRequests=0,voiceList=voices;
 let browser;
 (async()=>{
  browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||undefined});
@@ -19,8 +19,8 @@ let browser;
   if(url.includes('livekit-client'))return route.fulfill({contentType:'application/javascript',body:livekit});
   if(url.endsWith('/api/config'))return route.fulfill({json:{configured:true,supabaseUrl:'https://qa.supabase.co',supabaseKey:'public-qa',callsConfigured:true,storageConfigured:true,pushConfigured:false}});
   if(url.endsWith('/join'))return route.fulfill({json:{url:'wss://fake.invalid',token:'fake',canPublish:true}});
-  if(url.includes('/api/astro/')&&method==='POST'&&url.endsWith('/speech')){spoken=JSON.parse(route.request().postData()||'{}');return route.fulfill({contentType:'audio/mpeg',body:Buffer.from('ID3\u0004\u0000\u0000\u0000\u0000\u0000\u0000','binary')});}
-  if(url.includes('/api/astro/'))return route.fulfill({json:{configured:true,events:[],cursor:0,window_seconds:900,busy:false,tts:true,voices}});
+  if(url.includes('/api/astro/')&&method==='POST'&&url.endsWith('/speech')){speechRequests++;spoken=JSON.parse(route.request().postData()||'{}');return route.fulfill({contentType:'audio/mpeg',body:Buffer.from('ID3\u0004\u0000\u0000\u0000\u0000\u0000\u0000','binary')});}
+  if(url.includes('/api/astro/'))return route.fulfill({json:{configured:true,events:[],cursor:0,window_seconds:900,busy:false,tts:true,voices:voiceList}});
   return route.continue();});
  const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
  await page.goto(base,{waitUntil:'networkidle'});
@@ -41,7 +41,15 @@ let browser;
  assert.equal(spoken.voice,'pt-BR-FranciscaNeural','pedido usou outra voz');
  assert.match(spoken.text,/Cloe/,'texto de teste não foi enviado');
  assert.equal(typeof spoken.rate,'number','velocidade não foi enviada');
+ // A voz escolhida é a única permitida: se ela sair da lista, a Cloe não troca sozinha.
+ voiceList=[voices[0]];
+ await page.waitForFunction(()=>[...document.querySelectorAll('#astro-panel select[aria-label="Voz da Cloe"] option')].some(option=>/indisponível agora/.test(option.textContent)),null,{timeout:10000});
+ const sent=speechRequests;
+ await page.getByRole('button',{name:'Testar voz'}).click();
+ await page.waitForTimeout(500);
+ assert.equal(speechRequests,sent,'voz foi trocada sem a pessoa escolher');
+ assert(/não está disponível/i.test(await page.locator('#astro-panel').textContent()),'aviso de voz indisponível ausente');
  assert.deepEqual(errors,[]);
- console.log(JSON.stringify({voices:'ok',select:'ok',speechRequest:'ok',errors:0}));
+ console.log(JSON.stringify({voices:'ok',select:'ok',speechRequest:'ok',strictVoice:'ok',errors:0}));
  await browser.close();
 })().catch(async error=>{console.error(error);await browser?.close();process.exitCode=1;});
