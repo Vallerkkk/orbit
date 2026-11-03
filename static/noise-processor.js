@@ -49,6 +49,9 @@ export function createNoiseProcessor(defaults={}){
     startGate(){
       const buf=new Float32Array(this.analyser.fftSize);let open=false,hold=0;
       const tick=()=>{if(!this.context||!this.analyser)return;if(this.context.state==='suspended'||this.context.state==='interrupted')this.context.resume().catch(()=>{});
+        // Contexto parado por mais de 2,5 s (sem gesto no iOS/Android, interrupção do sistema): a faixa enviada fica muda
+        // para todo mundo enquanto a pessoa vê o microfone ligado. Avisa para voltar ao microfone direto.
+        if(this.context.state!=='running'){this.stuckSince??=performance.now();if(!this.reported&&performance.now()-this.stuckSince>2500){this.reported=true;try{defaults.onBlocked?.(this);}catch{}}}else this.stuckSince=null;
         this.analyser.getFloatTimeDomainData(buf);let sum=0;for(const v of buf)sum+=v*v;const db=10*Math.log10(sum/buf.length+1e-12);this.lastLevel=db;
         // Em aba oculta os timers ficam lentos; o gate fica aberto para não cortar a fala.
         const above=document.hidden||db>this.threshold;if(above){hold=12;}else if(hold>0)hold--;

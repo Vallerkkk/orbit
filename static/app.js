@@ -853,7 +853,7 @@ $('join-call').onclick = async () => {
     if (!current() || room !== connected) { await connected.disconnect(); return; }
     screenWatch.scan(connected);
     uiSound('join');callRejoinTarget=null;callRejoinAttempts=0;callMediaSession();
-    try { await connected.startAudio(); } catch { toast('A chamada entrou. Toque na tela para liberar o áudio neste navegador.'); }
+    try { await connected.startAudio(); if(audioTools.mixStuck?.(connected))throw Error('mix'); } catch { toast('A chamada entrou. Toque na tela para liberar o áudio neste navegador.'); }
     if(!current()||room!==connected){await connected.disconnect();return;}
     enhancements.connected(connected,RoomEvent,result);
     syncVoiceChat(true).catch(()=>{});
@@ -928,7 +928,11 @@ facingSelect.onchange=async()=>{
   }finally{if(cameraTask===operation)cameraTask=null;if(room===target){updateCallUI();updateCameraControl();}}
 };
 window.addEventListener('resize',updateCameraControl);
-document.addEventListener('pointerdown',()=>{const current=room;if(current?.state==='connected'&&current.canPlaybackAudio===false)current.startAudio().then(()=>{if(room===current)syncRemoteVolumes();}).catch(()=>{});},{passive:true});
+// O mixer de áudio (Web Audio) pode ser suspenso pelo iOS/Android depois de entrar (ligação, Siri, outra mídia, tela bloqueada).
+// O LiveKit continua com canPlaybackAudio=true e todo mundo some do alto-falante: retoma no próximo toque e ao voltar para o app.
+const unlockCallAudio=()=>{const current=room;if(current?.state!=='connected')return;const stuck=audioTools.mixStuck?.(current);if(current.canPlaybackAudio===false||stuck)Promise.resolve(stuck?audioTools.resumeMix(current):null).then(()=>current.startAudio()).then(()=>{if(room===current)syncRemoteVolumes();}).catch(()=>{});};
+document.addEventListener('pointerdown',unlockCallAudio,{passive:true});document.addEventListener('keydown',unlockCallAudio);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)unlockCallAudio();});
 // Ao trocar de app no celular a página pode ir para o bfcache (persisted) sem fechar: a chamada continua.
 let callRejoinTarget=null,callRejoinAttempts=0,callRejoinTimer;
 function scheduleCallRejoin(){clearTimeout(callRejoinTimer);if(!callRejoinTarget||document.hidden||!navigator.onLine)return;callRejoinTimer=setTimeout(async()=>{const target=callRejoinTarget;if(!target||room||joining||!session||document.hidden)return;callRejoinAttempts++;try{if(selected?.id!==target.id){const channel=channels.find(c=>c.id===target.id);if(channel)await selectChannel(channel);}if(selected?.id===target.id&&selected?.kind==='voice'){$('join-call').click();}else callRejoinTarget=null;}catch{}},800);}

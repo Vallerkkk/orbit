@@ -2,12 +2,12 @@
  "generated": true,
  "releases": [
   {
-   "version": "2026.11.02+b79f5f2",
+   "version": "2026.11.02+7a46ef3",
    "date": "2 nov 2026",
    "highlights": [
     [
-     "visual",
-     "Wip"
+     "chamadas",
+     "Microfone nas chamadas: recupera faixa encerrada, ignora dispositivo salvo ausente,…"
     ],
     [
      "visual",
@@ -19,10 +19,13 @@
     ]
    ],
    "items": {
+    "chamadas": [
+     "Microfone nas chamadas: recupera faixa encerrada, ignora dispositivo salvo ausente,…"
+    ],
     "visual": [
-     "Wip",
      "Grafite estilo Grok: remove tons violeta das superfícies",
-     "Tema Grafite padrão estilo Grok: preto/cinza neutro com destaques pastel"
+     "Tema Grafite padrão estilo Grok: preto/cinza neutro com destaques pastel",
+     "Wip"
     ]
    }
   },
