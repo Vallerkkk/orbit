@@ -236,6 +236,7 @@ async def _brave(app, query):
     if response.status_code == 429:
         raise SearchProblem('O limite de pesquisas de hoje foi atingido. Tente mais tarde.')
     if response.is_error:
+        log.warning('Brave respondeu %s', response.status_code)
         raise SearchProblem('A pesquisa na internet não respondeu agora.')
     try:
         results = response.json().get('web', {}).get('results', [])
