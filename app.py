@@ -54,7 +54,7 @@ bearer = HTTPBearer(auto_error=False)
 
 # Lista fechada de origens: scripts só do próprio site, do CDN do Supabase/LiveKit e do player do YouTube.
 # Umami, se for ativado, precisa do domínio dele incluído em script-src.
-CSP = ("default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://www.youtube.com; "
+CSP = ("default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://www.youtube.com; "
        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
        "font-src 'self' data: https://fonts.gstatic.com; "
        "img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; "

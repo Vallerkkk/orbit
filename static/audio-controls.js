@@ -8,6 +8,8 @@ export function initAudioControls(ctx){
   let warned=false,mixContext;const mixes=new WeakMap();
   function mixOptions(){const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return false;mixContext=new Audio();return {audioContext:mixContext};}
   function bind(room){if(mixContext){mixes.set(room,mixContext);mixContext=null;}}
+  function mixStuck(room){const audio=mixes.get(room);return !!audio&&audio.state!=='running'&&audio.state!=='closed';}
+  function resumeMix(room){const audio=mixes.get(room);return audio&&audio.state!=='closed'?Promise.race([audio.resume(),new Promise(r=>setTimeout(r,1500))]).catch(()=>{}):null;}
   async function ended(room){const audio=mixes.get(room);mixes.delete(room);if(audio&&audio.state!=='closed')await audio.close().catch(()=>{});}
   async function switchDevice(room,kind,value){
     // LiveKit 2.15's mixer switch does not await setSinkId. Confirm it ourselves.
@@ -23,17 +25,20 @@ export function initAudioControls(ctx){
     const prior=tracks.get(track);if(prior?.pending){prior.again=true;return prior.pending;}
     const record=prior||{};tracks.set(track,record);
     record.pending=(async()=>{do{record.again=false;
-      if(!enhanced()){if(record.processor){await track.stopProcessor();await record.processor.destroy().catch(()=>{});record.processor=null;}continue;}
+      if(!enhanced()||record.bypass){if(record.processor){await track.stopProcessor();await record.processor.destroy().catch(()=>{});record.processor=null;}continue;}
       // Processador já ativo: aplica sensibilidade e modo na hora, sem reiniciar a faixa.
       if(record.processor){record.processor.update({sensitivity:sensitivity(),mode:noiseMode(),volume:micVolume()});continue;}
       // O LiveKit chama processor.init() dentro de setProcessor; iniciar antes criava um segundo AudioContext.
-      const processor=createNoiseProcessor({sensitivity:sensitivity(),mode:noiseMode(),volume:micVolume()});
+      const processor=createNoiseProcessor({sensitivity:sensitivity(),mode:noiseMode(),volume:micVolume(),onBlocked:blocked=>{
+        if(record.processor!==blocked||ctx.room()!==room)return;record.processor=null;record.bypass=true;
+        track.stopProcessor().catch(()=>{}).finally(()=>blocked.destroy().catch(()=>{}));
+        ctx.toast('O filtro de ruído parou neste aparelho. Seu microfone continua com a supressão de ruído do navegador.');}});
       try{
         await requestWithDeadline(()=>track.setProcessor(processor),{timeout:12000});
         if(ctx.room()!==room){await track.stopProcessor();return;}
         // Contexto de áudio bloqueado (sem gesto no iOS/Android): a faixa filtrada sairia muda.
         // Volta para o microfone direto com a supressão do navegador em vez de calar a pessoa.
-        if(processor.blocked?.()){await track.stopProcessor().catch(()=>{});await processor.destroy().catch(()=>{});if(!warned){warned=true;ctx.toast('O filtro adicional ficou bloqueado pelo navegador. Seu microfone segue com a supressão de ruído do navegador.');}continue;}
+        if(processor.blocked?.()){record.bypass=true;await track.stopProcessor().catch(()=>{});await processor.destroy().catch(()=>{});if(!warned){warned=true;ctx.toast('O filtro adicional ficou bloqueado pelo navegador. Seu microfone segue com a supressão de ruído do navegador.');}continue;}
         record.processor=processor;
       }catch{await processor.destroy();if(!warned&&ctx.room()===room){warned=true;ctx.toast('O filtro adicional não está disponível agora. A supressão de ruído do navegador continua ativa.');}}
       }while(record.again&&ctx.room()===room);
@@ -104,5 +109,5 @@ export function initAudioControls(ctx){
     box.append(button('Atualizar dispositivos',async()=>{let stream;try{if(!ctx.liveMic?.())stream=await navigator.mediaDevices.getUserMedia({audio:true});}catch(error){status.textContent=micErrorText(error);}finally{stream?.getTracks().forEach(t=>t.stop());}await refresh();}));
     container.append(box);refresh();const devicesAbort=new AbortController();navigator.mediaDevices?.addEventListener?.('devicechange',refresh,{signal:devicesAbort.signal});document.getElementById('app-dialog')?.addEventListener('close',()=>devicesAbort.abort(),{once:true});
   }
-  return {fields,sync,connected,mixOptions,bind,ended,capture:()=>read('input')?{deviceId:{ideal:read('input')}}:{},open:()=>ctx.dialog('Entrada e saída de áudio',fields)};
+  return {fields,sync,connected,mixOptions,bind,ended,mixStuck,resumeMix,capture:()=>read('input')?{deviceId:{ideal:read('input')}}:{},open:()=>ctx.dialog('Entrada e saída de áudio',fields)};
 }

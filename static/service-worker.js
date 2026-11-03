@@ -1,5 +1,5 @@
 importScripts('/static/share-worker.js');
-const CACHE = 'orbita-shell-20261102-v128';
+const CACHE = 'orbita-shell-20261102-v130';
 const SHELL = ['/static/offline.html', '/static/icons/icon-192.png', '/static/icons/icon-512.png'];
 // Chave sintética para a página inicial já carregada: permite abrir o app instalado sem rede.
 // O HTML é público e igual para todos; dados continuam vindo apenas da API autenticada.
