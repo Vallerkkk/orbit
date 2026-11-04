@@ -27,6 +27,7 @@
 <link rel="stylesheet" href="/static/refino.css">
 <link rel="stylesheet" href="/static/cosmos.css">
 <link rel="stylesheet" href="/static/loader.css">
+<link rel="stylesheet" href="/static/mobile-fixes.css">
 <link rel="preload" href="/static/vendor/fonts/inter-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/fonts/space-grotesk-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
 </head>
@@ -118,6 +119,9 @@
 
     <!-- Server Dropdown Menu -->
     <div class="server-dropdown hidden" id="server-dropdown">
+      <div class="dd-section-title">Servidores</div>
+      <div class="dd-servers" id="dd-servers"></div>
+      <div class="dd-sep"></div>
       <button class="boost-item" id="dd-boost-btn">
         <span>Sobre esta versão Servidor</span>
         <span>✦</span>
@@ -271,11 +275,9 @@
     <div class="voice-view" id="text-view" style="background: transparent;">
       <header class="chat-header">
         <div class="chat-title">
-          <button class="mobile-nav-btn" id="mobile-menu-btn" aria-label="Menu de canais" title="Menu de canais" aria-expanded="false" aria-controls="sidebar-scroll-content">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <line x1="3" y1="6" x2="21" y2="6"/>
-              <line x1="3" y1="12" x2="21" y2="12"/>
-              <line x1="3" y1="18" x2="21" y2="18"/>
+          <button class="mobile-nav-btn" id="mobile-menu-btn" aria-label="Voltar para a lista de canais" title="Voltar para a lista de canais" aria-expanded="false" aria-controls="sidebar-scroll-content">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
             </svg>
           </button>
           <svg class="ch-icon" id="header-ch-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">

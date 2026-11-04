@@ -2,6 +2,55 @@
  "generated": true,
  "releases": [
   {
+   "version": "2026.11.04+3118c8d",
+   "date": "4 nov 2026",
+   "highlights": [
+    [
+     "visual",
+     "Ajusta o teste de login social à CSP do servidor de teste"
+    ],
+    [
+     "visual",
+     "Remove arquivos e objetos de banco sem uso"
+    ],
+    [
+     "chat",
+     "Cria servidores privados com canais, cargos e convites do criador"
+    ],
+    [
+     "correcoes",
+     "Corrige câmera ocupada e áudio da transmissão de tela"
+    ]
+   ],
+   "items": {
+    "visual": [
+     "Ajusta o teste de login social à CSP do servidor de teste",
+     "Remove arquivos e objetos de banco sem uso"
+    ],
+    "chat": [
+     "Cria servidores privados com canais, cargos e convites do criador"
+    ],
+    "correcoes": [
+     "Corrige câmera ocupada e áudio da transmissão de tela"
+    ]
+   }
+  },
+  {
+   "version": "2026.11.03+cd3412a",
+   "date": "3 nov 2026",
+   "highlights": [
+    [
+     "visual",
+     "Cria reserva automática de modelos quando a Groq bate o limite"
+    ]
+   ],
+   "items": {
+    "visual": [
+     "Cria reserva automática de modelos quando a Groq bate o limite"
+    ]
+   }
+  },
+  {
    "version": "2026.11.02+3d0e86f",
    "date": "2 nov 2026",
    "highlights": [
@@ -264,6 +313,22 @@
     ]
    ],
    "items": {
+    "feed": [
+     "YouTube no Órbita: Início, Em alta, busca, canais, playlists e página do vídeo com comentários",
+     "Mini player flutuante que continua tocando pelo app",
+     "Histórico e Assistir depois salvos na sua conta",
+     "Entrar com Google (somente leitura) para ver Inscrições, playlists e curtidos — sua conta do Órbita não muda",
+     "Links do YouTube no chat viram um cartão leve com Assistir aqui e Assistir depois",
+     "Novo ícone (mão acenando) para Novos membros no trilho",
+     "Trilho v2: ícones com mais contraste, squircle no hover/ativo, pílula animada, brilho do…",
+     "Novidades automáticas: release-notes.json gerado do git no build, overrides curados e aviso…",
+     "Feed v3: ações coloridas com estados, cartões e widgets mais detalhados, composer com ícones…",
+     "Feed: remove a aba 'Novos membros' da barra",
+     "Novos membros: título próprio e só o atalho do trilho destacado",
+     "Trilho: atalho 'Novos membros' ao lado do Feed, com estado ativo e acesso por teclado",
+     "Feed Novos membros: timeline por dia com cartões, hero de boas-vindas, 👋 com RLS, Realtime…",
+     "Feed: composer em barra única"
+    ],
     "chat": [
      "DM: redesign, chamadas 1:1 com toque, notificações de DMs não lidas no trilho",
      "Membros v2: coluna direita dos canais de volta",
@@ -311,22 +376,6 @@
      "Insígnias v2: arte premium por categoria, nível e raridade",
      "Migration de insígnias: divide jsonb_build_object de badge_metrics",
      "Perfil: 'Sobre você' dos outros é relido de profiles ao abrir o cartão"
-    ],
-    "feed": [
-     "YouTube no Órbita: Início, Em alta, busca, canais, playlists e página do vídeo com comentários",
-     "Mini player flutuante que continua tocando pelo app",
-     "Histórico e Assistir depois salvos na sua conta",
-     "Entrar com Google (somente leitura) para ver Inscrições, playlists e curtidos — sua conta do Órbita não muda",
-     "Links do YouTube no chat viram um cartão leve com Assistir aqui e Assistir depois",
-     "Novo ícone (mão acenando) para Novos membros no trilho",
-     "Trilho v2: ícones com mais contraste, squircle no hover/ativo, pílula animada, brilho do…",
-     "Novidades automáticas: release-notes.json gerado do git no build, overrides curados e aviso…",
-     "Feed v3: ações coloridas com estados, cartões e widgets mais detalhados, composer com ícones…",
-     "Feed: remove a aba 'Novos membros' da barra",
-     "Novos membros: título próprio e só o atalho do trilho destacado",
-     "Trilho: atalho 'Novos membros' ao lado do Feed, com estado ativo e acesso por teclado",
-     "Feed Novos membros: timeline por dia com cartões, hero de boas-vindas, 👋 com RLS, Realtime…",
-     "Feed: composer em barra única"
     ],
     "correcoes": [
      "Corrige 'permission denied for table profiles': restaura grants por coluna ausentes no banco",
@@ -378,35 +427,6 @@
      "Adiciona versao e botao para forcar atualizacao da interface",
      "Importa Orbita corrigida com envio de mensagens e novo layout"
     ],
-    "correcoes": [
-     "Vídeo da câmera e da tela não fica mais borrado ou escurecido",
-     "\"Sobre você\" atualizado aparece para todo mundo",
-     "Decorações não cobrem mais o vídeo das chamadas",
-     "Corrige 'permission denied for table profiles': restaura grants por coluna ausentes no banco",
-     "Corrige vídeo borrado nos tiles: a figcaption",
-     "Corrige redução de ruído: não inicializa o RNNoise antes de setProcessor",
-     "Corrige fotos de perfil: <img> com object-fit cover centralizado, recorte quadrado 512px no…",
-     "Corrige permissão ao enviar mensagens: migração idempotente de grants/política, gatilhos…",
-     "Corrige IA de chamadas: import time, seguranca e memoria"
-    ],
-    "audio": [
-     "Filtro de ruído e medidor do microfone nas configurações de voz",
-     "Sons sutis e animações nos controles da chamada",
-     "Enable PC/Electron fallback audio transcription for Lula",
-     "Animações e sons sutis na galeria de decorações",
-     "Atualiza para Jesus 19 corrigido com audio e LulaDroid"
-    ],
-    "loja": [
-     "Loja de pacotes, fontes do nome, insígnias e editor de perfil estilo Discord"
-    ],
-    "chat": [
-     "O envio de mensagens voltou a funcionar de forma confiável",
-     "Seletor de mídia no chat: emojis Unicode completos, GIFs e figurinhas via GIPHY",
-     "Compacta o botao de chat no cabecalho mobile"
-    ],
-    "adm": [
-     "Comandos de moderação para ADM global com checagem no servidor, auditoria e painel Administração"
-    ],
     "chamadas": [
      "Barra de controles flutuante na chamada (microfone, câmera, tela, Ouvir juntos, Mais, Sair)",
      "Decorações do seu perfil aparecem no seu cartão da chamada",
@@ -417,6 +437,11 @@
      "Ajusta cabecalho mobile da chamada com o LulaDroid",
      "Evita duplicar o painel LulaDroid ao entrar na chamada",
      "Implementa painel LulaDroid na chamada com respostas Gemini"
+    ],
+    "chat": [
+     "O envio de mensagens voltou a funcionar de forma confiável",
+     "Seletor de mídia no chat: emojis Unicode completos, GIFs e figurinhas via GIPHY",
+     "Compacta o botao de chat no cabecalho mobile"
     ],
     "feed": [
      "Feed novo, com abas Para você, Seguindo, Em alta e Salvos",
@@ -430,6 +455,30 @@
      "Fotos de perfil exibidas corretamente",
      "Perfil: 'Sobre você' dos outros é relido de profiles ao abrir o cartão",
      "Redesenha interface e cria Profile Decoration gratuito"
+    ],
+    "audio": [
+     "Filtro de ruído e medidor do microfone nas configurações de voz",
+     "Sons sutis e animações nos controles da chamada",
+     "Enable PC/Electron fallback audio transcription for Lula",
+     "Animações e sons sutis na galeria de decorações",
+     "Atualiza para Jesus 19 corrigido com audio e LulaDroid"
+    ],
+    "correcoes": [
+     "Vídeo da câmera e da tela não fica mais borrado ou escurecido",
+     "\"Sobre você\" atualizado aparece para todo mundo",
+     "Decorações não cobrem mais o vídeo das chamadas",
+     "Corrige 'permission denied for table profiles': restaura grants por coluna ausentes no banco",
+     "Corrige vídeo borrado nos tiles: a figcaption",
+     "Corrige redução de ruído: não inicializa o RNNoise antes de setProcessor",
+     "Corrige fotos de perfil: <img> com object-fit cover centralizado, recorte quadrado 512px no…",
+     "Corrige permissão ao enviar mensagens: migração idempotente de grants/política, gatilhos…",
+     "Corrige IA de chamadas: import time, seguranca e memoria"
+    ],
+    "loja": [
+     "Loja de pacotes, fontes do nome, insígnias e editor de perfil estilo Discord"
+    ],
+    "adm": [
+     "Comandos de moderação para ADM global com checagem no servidor, auditoria e painel Administração"
     ]
    }
   }

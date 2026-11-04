@@ -94,6 +94,7 @@ function mediaSettings(){
 }
 function closeMobileMenu(){
   document.body.classList.remove('mobile-menu-open');
+  $('server-dropdown')?.classList.add('hidden');
   $('mobile-menu-btn')?.setAttribute('aria-expanded','false');
   document.querySelectorAll('.mobile-nav-btn').forEach(menu=>menu.setAttribute('aria-expanded','false'));
 }
@@ -1733,12 +1734,30 @@ function navigation(direct=false){
   $('sidebar-scroll-content').classList.toggle('hidden',direct);$('dm-scroll-content').classList.toggle('hidden',!direct);
   $('friends-nav').classList.toggle('active',direct);$('server-banner-box').classList.toggle('hidden',direct);
   const serverTitle=direct?'Mensagens Diretas':communities.find(c=>c.id===activeCommunity)?.name||'Órbita';$('sidebar-server-title').textContent=serverTitle;$('sidebar-server-title').title=serverTitle;
+  const headerTitle=$('channel-title');if(headerTitle){headerTitle.dataset.server=serverTitle;headerTitle.parentElement.dataset.server=serverTitle;}
   $('create-channel').hidden=!managesCommunity();closeMobileMenu();
+}
+function renderServerSheet(){
+  const list=$('dd-servers');if(!list)return;
+  list.replaceChildren();
+  for(const community of communities){
+    const row=el('button','dd-server'+(community.id===activeCommunity?' active':''));
+    row.type='button';
+    row.append(el('span','dd-server-av',initials(community.name)),el('span','dd-server-name',community.name));
+    if(community.id===activeCommunity)row.append(el('span','dd-server-check','✓'));
+    row.onclick=()=>{$('server-dropdown').classList.add('hidden');openCommunity(community);};
+    list.append(row);
+  }
+  const add=el('button','dd-server dd-server-add');
+  add.type='button';
+  add.append(el('span','dd-server-av','+'),el('span','dd-server-name','Adicionar servidor'));
+  add.onclick=()=>{$('server-dropdown').classList.add('hidden');createCommunity();};
+  list.append(add);
 }
 function renderCommunityRail(){
   const nodes=[],keep=new Set();
   for(const c of communities){keep.add(c.id);let b=communityNodes.get(c.id);if(!b){b=button(initials(c.name),()=>openCommunity(b.orbitaCommunity),'server-icon');b.dataset.communityId=c.id;communityNodes.set(c.id,b);}b.orbitaCommunity=c;b.title=c.name;b.setAttribute('aria-label',c.name);b.classList.toggle('active',c.id===activeCommunity&&!home&&!selected?.private);if(b.textContent!==initials(c.name))b.textContent=initials(c.name);nodes.push(b);}
-  for(const id of communityNodes.keys())if(!keep.has(id))communityNodes.delete(id);reconcileNodes($('rail-servers-list'),nodes);navigation(home||selected?.private);markLiveServers();
+  for(const id of communityNodes.keys())if(!keep.has(id))communityNodes.delete(id);reconcileNodes($('rail-servers-list'),nodes);navigation(home||selected?.private);renderServerSheet();markLiveServers();
 }
 function markLiveServers(){for(const [id,b] of communityNodes){const ids=new Set((communityViews.get(id)?.channels||[]).map(ch=>ch.id));const live=publicVoicePresence.some(p=>ids.has(p.channel_id));b.classList.toggle('live',live);if(live)b.dataset.live='Chamada ativa';else delete b.dataset.live;}}
 window.addEventListener('orbita:presence',()=>markLiveServers());
@@ -1934,7 +1953,26 @@ $('btn-search-toggle').onclick=()=>$('search-messages').focus();
   $('mobile-menu-btn').onclick=()=>{const open=document.body.classList.toggle('mobile-menu-open');$('mobile-menu-btn').setAttribute('aria-expanded',String(open));};
   $('mobile-menu-close').onclick=event=>{event.stopPropagation();closeMobileMenu();};
 document.addEventListener('click',event=>{if(!document.body.classList.contains('mobile-menu-open'))return;const target=event.target;if(!(target instanceof Element)||!target.closest('.sidebar,.rail,#mobile-menu-btn,.mobile-nav-btn'))closeMobileMenu();});
-for(const view of ['friends-view','voice-view']){const target=$(view).querySelector('.chat-title');const menu=button('',()=>{const open=document.body.classList.toggle('mobile-menu-open');menu.setAttribute('aria-expanded',String(open));},'mobile-nav-btn');menu.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';menu.setAttribute('aria-label','Menu de canais');menu.setAttribute('aria-expanded','false');target.prepend(menu);}
+for(const view of ['friends-view','voice-view']){const target=$(view).querySelector('.chat-title');const menu=button('',()=>{const open=document.body.classList.toggle('mobile-menu-open');menu.setAttribute('aria-expanded',String(open));},'mobile-nav-btn');menu.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>';menu.setAttribute('aria-label','Voltar para a lista de canais');menu.setAttribute('aria-expanded','false');target.prepend(menu);}
+// No celular o trilho de servidores entra na gaveta, que passa a ocupar a tela toda.
+const railMobileQuery=matchMedia('(max-width: 780px)');
+function syncRailPlacement(){
+  const rail=$('server-rail'),app=$('app-view'),sidebar=app?.querySelector(':scope > .sidebar');
+  if(!rail||!app||!sidebar)return;
+  if(railMobileQuery.matches){if(rail.parentElement!==sidebar)sidebar.prepend(rail);}
+  else if(rail.parentElement!==app)app.insertBefore(rail,sidebar);
+}
+syncRailPlacement();
+railMobileQuery.addEventListener('change',syncRailPlacement);
+// No celular o menu do servidor sobe como uma folha: tocar fora fecha.
+document.addEventListener('click',event=>{
+  if(!railMobileQuery.matches)return;
+  const dropdown=$('server-dropdown');
+  if(!dropdown||dropdown.classList.contains('hidden'))return;
+  const target=event.target;
+  if(!(target instanceof Element)||target.closest('#server-dropdown,#server-header-btn'))return;
+  dropdown.classList.add('hidden');
+});
 
 $('up-profile-btn').onclick=()=>{
   if (profile) showProfile(profile);
