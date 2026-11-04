@@ -10,7 +10,7 @@ import {createAuthRecovery,isInvalidSessionError} from './auth-recovery.js';
 import {initSidebarToggle} from './sidebar-toggle.js';
 import './ui-polish.js';
 import {nicknameProblem} from './identity-rules.js';
-import {canEditServer,isSiteAdmin} from './server-permissions.js';
+import {canEditServer,canManageServerInvites,isSiteAdmin} from './server-permissions.js';
 import {initSocialLogin} from './social-login.js';
 import {initPasswordReset,parseRecovery,pendingReset} from './password-reset.js';
 // Captura o link de recuperação antes que o supabase-js limpe o hash.
@@ -1671,6 +1671,9 @@ const canEditActiveServer=()=>canEditServer({siteRoles,community:communities.fin
 const managesCommunity=()=>canEditActiveServer();
 const roleFor=id=>siteRoles.find(r=>r.user_id===id)?.role;
 const hasCommunityPermission=permission=>isAdmin()||communities.find(c=>c.id===activeCommunity)?.created_by===session?.user.id||memberRoles.some(m=>m.user_id===session?.user.id&&communityRoleList.some(r=>r.id===m.role_id&&r.permissions?.includes(permission)));
+const activeServer=()=>communities.find(c=>c.id===activeCommunity);
+// Convites de servidor fechado são exclusivos de quem criou; o banco repete a regra.
+const canManageActiveServerInvites=()=>canManageServerInvites({siteRoles,community:activeServer(),userId:session?.user.id,memberRoles,roles:communityRoleList});
 let accessRevision=0;
 async function loadCommunityAccess(){
   if(!activeCommunity||!session)return false;
@@ -1759,7 +1762,10 @@ async function openCommunity(c){
   }
   announceMessage('Abrindo servidor '+c.name+'.');
   if(!c.invite_only)await checked(db.rpc('join_public_community',{target:c.id}));
-  else if(!(await checked(db.from('community_members').select('user_id').eq('community_id',c.id).eq('user_id',session.user.id).maybeSingle())))throw Error('Este servidor exige um convite válido.');
+  else if(!(await checked(db.from('community_members').select('user_id').eq('community_id',c.id).eq('user_id',session.user.id).maybeSingle()))){
+    if(!isAdmin())throw Error('Este servidor exige um convite válido.');
+    await checked(db.rpc('join_community_as_admin',{target:c.id}));
+  }
   if(intent!==navigationEpoch)return;
   activeCommunity=c.id;if(!await loadCommunityAccess()||intent!==navigationEpoch)return;
   const found=await checked(db.from('channels').select('*').eq('community_id',c.id).order('position'));if(activeCommunity!==c.id||intent!==navigationEpoch)return;channels=found;rememberCommunity();renderCommunityRail();
@@ -1829,17 +1835,98 @@ $('server-header-btn').onclick=()=>$('server-dropdown').classList.toggle('hidden
 document.querySelectorAll('.category-header').forEach(header=>header.onclick=e=>{if(!e.target.closest('button'))header.parentElement.classList.toggle('collapsed');});
 $('dd-create-channel-btn').onclick=()=>{$('server-dropdown').classList.add('hidden');$('create-channel').click();};
 $('dd-settings-btn').onclick=()=>{$('server-dropdown').classList.add('hidden');openManagement();};
-function createCommunity(){showDialog('Criar comunidade',container=>{
-  const form=el('form'),name=inputField(form,'Nome','',60),description=inputField(form,'Descrição','',240),save=el('button','primary','Criar comunidade');save.type='submit';form.append(save);container.append(form);
-  form.onsubmit=async e=>{e.preventDefault();save.disabled=true;try{const c=await checked(db.from('communities').insert({name:name.value.trim(),description:description.value.trim()}).select().single());communities.push(c);const channel=await insertChannel({name:'geral',kind:'text',community_id:c.id,position:0});channels.push(channel);$('app-dialog').close();await openCommunity(c);}catch(error){toast(errorText(error));}finally{save.disabled=false;}};
-});}
-$('btn-add-server').onclick=createCommunity;
-$('btn-explore-servers').onclick=()=>showDialog('Explorar comunidades',container=>{
-  container.append(el('p','muted','As comunidades desta versão são abertas às contas cadastradas.'));
-  for(const c of communities){const card=el('article','community-card');card.append(el('strong','',c.name),el('p','muted',c.description||'Uma comunidade da Órbita'),button('Abrir',()=>{$('app-dialog').close();return openCommunity(c);},'primary'));container.append(card);}
+// Nomes viram o "slug" do canal (como no Discord): minúsculas, sem acentos, com hífens.
+function channelNames(value,label){
+  const names=String(value||'').split(/[\n,]+/).map(name=>name.trim().replace(/^[#🔊]\s*/u,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9_-]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'')).filter(Boolean);
+  const unique=[...new Set(names)];
+  if(!unique.length)throw Error('Inclua pelo menos um canal de '+label+'.');
+  if(unique.length>10)throw Error('Use no máximo 10 canais de '+label+'.');
+  if(unique.some(name=>name.length>40))throw Error('Cada nome de canal pode ter até 40 caracteres.');
+  return unique;
+}
+function serverInviteUrl(token){const url=new URL(location.origin);url.searchParams.set('invite',token);return url.href;}
+function serverTextArea(parent,label,value,placeholder){
+  const box=el('label','field',label),area=el('textarea');area.rows=3;area.maxLength=600;area.value=value;area.placeholder=placeholder||'';box.append(area);parent.append(box);return area;
+}
+function showServerCreated(community,invite,inviteError){
+  showDialog('Servidor criado',container=>{
+    container.append(el('p','',`“${community.name}” está pronto. ${community.invite_only?'Ele é fechado: só entra quem receber um convite seu.':'Ele é aberto, mas você também pode compartilhar um convite.'}`));
+    if(invite){
+      const url=serverInviteUrl(invite),output=el('input','invite-link');output.readOnly=true;output.value=url;output.onfocus=()=>output.select();
+      container.append(el('p','muted','Convite válido por 30 dias e até 500 entradas. Crie outros, com outro prazo, em Configurações do servidor → Convidar.'),output);
+      container.append(button('Copiar convite',async()=>{try{await navigator.clipboard.writeText(url);toast('Convite copiado.');}catch{output.select();toast('Selecione o endereço exibido e copie.');}},'primary'));
+    }else container.append(el('p','','O servidor foi criado, mas o convite não pôde ser gerado agora. Abra o servidor e use Convidar para tentar novamente.'),el('p','muted',inviteError?errorText(inviteError):''));
+    container.append(button('Abrir servidor',async()=>{$('app-dialog').close();await openCommunity(community);},invite?'soft-button':'primary'));
+  });
+}
+function serverStepChannels(setup){
+  showDialog('Canais e cargos',container=>{
+    container.append(el('p','muted',`${setup.name} · ${setup.inviteOnly?'fechado, somente por convite':'aberto para a comunidade'}`));
+    const form=el('form');
+    const text=serverTextArea(form,'Canais de texto','geral','Um por linha, por exemplo: geral, avisos, jogos');
+    const voice=serverTextArea(form,'Canais de voz','Sala de voz','Um por linha, por exemplo: Sala de voz, Reunião');
+    container.append(el('p','muted','Até 10 canais de cada tipo. Os nomes são ajustados para minúsculas e hífens. O primeiro canal de texto vira o canal padrão.'));
+    const roleBox=el('label','check-field'),roleCheck=el('input');roleCheck.type='checkbox';roleCheck.checked=true;
+    roleBox.append(roleCheck,document.createTextNode('Criar o cargo Moderador (gerencia mensagens e membros)'));
+    const colorLabel=el('label','field','Cor do cargo Moderador'),color=el('input');color.type='color';color.value='#7c5cff';colorLabel.append(color);
+    form.append(roleBox,colorLabel);
+    const actions=el('div','server-wizard-actions');
+    actions.append(button('Voltar',()=>createCommunity(setup)),el('span'));
+    const save=el('button','primary','Criar servidor');save.type='submit';actions.append(save);form.append(actions);container.append(form);
+    form.onsubmit=async event=>{
+      event.preventDefault();
+      let textNames,voiceNames;
+      try{textNames=channelNames(text.value,'texto');voiceNames=channelNames(voice.value,'voz');}
+      catch(error){return toast(errorText(error));}
+      if(textNames.some(name=>voiceNames.includes(name)))return toast('Use nomes diferentes para canais de texto e de voz.');
+      save.disabled=true;
+      try{
+        const community=await checked(db.from('communities').insert({name:setup.name,description:setup.description,invite_only:setup.inviteOnly}).select().single());
+        try{
+          let position=0;const created=[];
+          for(const [index,channelName] of textNames.entries())created.push(await insertChannel({name:channelName,kind:'text',community_id:community.id,position:position++,default_for_new_members:index===0}));
+          for(const channelName of voiceNames)created.push(await insertChannel({name:channelName,kind:'voice',community_id:community.id,position:position++}));
+          if(roleCheck.checked)await checked(db.from('community_roles').insert({community_id:community.id,name:'Moderador',color:color.value,position:1,permissions:['manage_messages','manage_members']}));
+          channels.push(...created);
+        }catch(error){await db.from('communities').delete().eq('id',community.id);throw error;}
+        communities.push(community);renderCommunityRail();
+        let invite=null,inviteError=null;
+        try{invite=await checked(db.rpc('create_community_invite',{target:community.id,expires_hours:720,uses_limit:500}));}catch(error){inviteError=error;}
+        showServerCreated(community,invite,inviteError);
+      }catch(error){toast(errorText(error));}finally{save.disabled=false;}
+    };
+  });
+}
+function createCommunity(prefill){
+  showDialog('Criar servidor',container=>{
+    container.append(el('p','muted','Monte um espaço para a sua turma conversar por texto e por voz. Você pode ajustar canais, cargos e convites depois.'));
+    const form=el('form'),name=inputField(form,'Nome do servidor',prefill?.name||'',60),description=inputField(form,'Descrição (opcional)',prefill?.description||'',240);
+    const closed=el('label','check-field'),closedCheck=el('input');closedCheck.type='checkbox';closedCheck.checked=prefill?!!prefill.inviteOnly:true;
+    closed.append(closedCheck,document.createTextNode('Servidor fechado: só entra quem receber um convite criado por você'));
+    const hint=el('p','muted','Administradores do Órbita entram sem convite para prestar suporte. O convite de um servidor fechado é sempre do criador.');
+    const next=el('button','primary','Continuar');next.type='submit';form.append(closed,hint,next);container.append(form);
+    form.onsubmit=event=>{
+      event.preventDefault();
+      const serverName=name.value.trim();
+      if(serverName.length<2)return toast('O nome precisa ter pelo menos 2 letras.');
+      serverStepChannels({name:serverName,description:description.value.trim(),inviteOnly:closedCheck.checked});
+    };
+  });
+}
+$('btn-add-server').onclick=()=>createCommunity();
+$('btn-explore-servers').onclick=()=>showDialog('Explorar servidores',container=>{
+  container.append(el('p','muted','Servidores fechados só aparecem para quem é membro ou administrador do Órbita. Quem recebeu um convite pode colar o código abaixo.'));
+  const join=el('form'),code=inputField(join,'Código ou link do convite','',500),go=el('button','primary','Entrar com convite');go.type='submit';join.append(go);container.append(join);
+  join.onsubmit=async event=>{event.preventDefault();go.disabled=true;try{
+    const raw=code.value.trim(),token=raw.includes('invite=')?new URL(raw).searchParams.get('invite'):raw;
+    if(!token)throw Error('Cole o código ou o link completo do convite.');
+    const id=await checked(db.rpc('join_community_invite',{invitation:token}));
+    const loaded=await checked(db.from('communities').select('*').order('created_at'));
+    communities=loaded;renderCommunityRail();$('app-dialog').close();await openCommunity(communities.find(c=>c.id===id));
+  }catch(error){toast(errorText(error));}finally{go.disabled=false;}};
+  container.append(el('h3','','Servidores disponíveis'));
+  for(const c of communities){const card=el('article','community-card'),meta=el('small','muted',c.invite_only?'🔒 Somente por convite':(c.description||'Servidor aberto da Órbita'));card.append(el('strong','',c.name),meta,button('Abrir',()=>{$('app-dialog').close();return openCommunity(c);},'primary'));container.append(card);}
 });
-async function copyInvitation(){const url=new URL(location.origin);url.searchParams.set('community',activeCommunity);await navigator.clipboard.writeText(url.href);toast('Link da comunidade copiado.');}
-$('dd-invite-btn').onclick=()=>copyInvitation().catch(e=>toast(errorText(e)));
 $('dm-quick-find').onclick=()=>showDialog('Busca rápida',container=>{const form=el('form'),input=inputField(form,'Canal ou @ de um amigo','',60),go=el('button','primary','Abrir');go.type='submit';form.append(go);container.append(form);form.onsubmit=async e=>{e.preventDefault();try{const text=input.value.trim().replace(/^[@#]/,'').toLowerCase(),ch=channels.find(c=>c.name.toLowerCase()===text),p=people.find(p=>p.username===text||p.display_name.toLowerCase()===text);if(ch){$('app-dialog').close();await selectChannel(ch);}else if(p){$('app-dialog').close();await startConversation(p);}else toast('Nenhum canal ou usuário encontrado.');}catch(error){toast(errorText(error));}};});
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('dm-quick-find').click();}});
 $('btn-search-toggle').onclick=()=>$('search-messages').focus();
@@ -1942,34 +2029,92 @@ async function publishVoicePresence(force=false){
 }
 
 // Community invitations, permissions, media uploads, and push-to-talk controls.
-async function createCommunityInvite(){
-  const {data:token,error}=await db.rpc('create_community_invite',{target:activeCommunity,expires_hours:168,uses_limit:100});if(error)throw error;
-  const url=new URL(location.origin);url.searchParams.set('invite',token);try{await navigator.clipboard.writeText(url.href);toast('Convite copiado. Válido por 7 dias e até 100 entradas.');}catch{toast('Link criado. Selecione e copie o endereço exibido.');}return url.href;
+async function createCommunityInvite(expiresHours=168,usesLimit=100){
+  const {data:token,error}=await db.rpc('create_community_invite',{target:activeCommunity,expires_hours:expiresHours,uses_limit:usesLimit});if(error)throw error;
+  return serverInviteUrl(token);
 }
 function showCommunityInvite(){showDialog('Convidar pessoas',container=>{
-  container.append(el('p','muted','Gere um link de convite para este servidor. Quem receber o link entra com a própria conta Órbita.'));
-  const create=button('Criar link de convite',async()=>{const url=await createCommunityInvite();const output=el('input','invite-link');output.readOnly=true;output.value=url;container.append(output);output.select();});container.append(create);
+  if(!canManageActiveServerInvites()){
+    container.append(el('p','','Só o criador deste servidor pode criar e revogar convites.'));
+    if(isAdmin())container.append(el('p','muted','Como ADM do Órbita, você pode entrar sem convite pelo botão Explorar.'));
+    return;
+  }
+  const c=activeServer();
+  container.append(el('p','muted',c?.invite_only?'Este servidor é fechado. Quem receber o link entra com a própria conta Órbita, e você pode revogar cada convite quando quiser.':'Quem receber o link entra com a própria conta Órbita. Você pode revogar cada convite quando quiser.'));
+  const form=el('form');
+  const expiryLabel=el('label','field','Validade do convite'),expiry=el('select');for(const [value,text]of[[24,'1 dia'],[168,'7 dias'],[720,'30 dias']]){const option=el('option','',text);option.value=value;expiry.append(option);}expiry.value=168;expiryLabel.append(expiry);
+  const usesLabel=el('label','field','Limite de entradas'),uses=el('select');for(const value of[10,50,100,500]){const option=el('option','',String(value));option.value=value;uses.append(option);}uses.value=100;usesLabel.append(uses);
+  const create=el('button','primary','Criar link de convite');create.type='submit';form.append(expiryLabel,usesLabel,create);container.append(form);
+  const out=el('div','server-invite-out');container.append(out,el('h3','','Convites criados'));
+  const links=el('div','invite-list');container.append(links);
+  const refresh=async()=>{
+    links.replaceChildren(el('p','muted','Carregando convites…'));
+    try{
+      const invites=await checked(db.rpc('list_community_invites',{target:activeCommunity}));
+      if(!links.isConnected)return;
+      links.replaceChildren();
+      if(!invites.length){links.append(el('p','muted','Nenhum convite criado ainda.'));return;}
+      for(const invite of invites){
+        const row=el('div','invite-row'),status=invite.active?(invite.uses+'/'+invite.max_uses+' entradas usadas'):'Expirado ou esgotado';
+        row.append(el('strong','',status),el('small','muted',`Criado em ${new Date(invite.created_at).toLocaleDateString('pt-BR')} · expira em ${new Date(invite.expires_at).toLocaleDateString('pt-BR')}`),button('Revogar',async()=>{await checked(db.rpc('revoke_community_invite',{target:activeCommunity,invitation:invite.id}));toast('Convite revogado.');await refresh();},'text-button'));
+        links.append(row);
+      }
+    }catch(error){if(links.isConnected)links.replaceChildren(el('p','muted',errorText(error)));}
+  };
+  form.onsubmit=async event=>{
+    event.preventDefault();create.disabled=true;
+    try{
+      const url=await createCommunityInvite(Number(expiry.value),Number(uses.value));
+      const output=el('input','invite-link');output.readOnly=true;output.value=url;output.onfocus=()=>output.select();
+      out.replaceChildren(output,button('Copiar link',async()=>{try{await navigator.clipboard.writeText(url);toast('Convite copiado.');}catch{output.select();toast('Selecione o endereço exibido e copie.');}}));
+      await refresh();
+    }catch(error){toast(errorText(error));}finally{create.disabled=false;}
+  };
+  refresh();
 });}
 $('dd-invite-btn').onclick=()=>showCommunityInvite();
 
 const baseOpenManagement=openManagement;
 openManagement=()=>{
   const owner=isAdmin()||communities.find(item=>item.id===activeCommunity)?.created_by===session?.user.id;
-  if(!owner){showDialog('Controles do servidor',container=>{container.append(el('p','muted','As permissões do seu cargo definem quais ferramentas você pode usar.'));if(hasCommunityPermission('manage_channels'))container.append(button('Criar canal',()=>{$('app-dialog').close();$('create-channel').click();}));if(isAdmin()||communities.find(item=>item.id===activeCommunity)?.created_by===session?.user.id)container.append(button('Cargos e membros',()=>showCommunityRoles()));if(hasCommunityPermission('create_invite'))container.append(button('Criar convite',()=>showCommunityInvite()));if(!container.children.length)container.append(el('p','','Seu cargo não permite alterar este servidor.'));});return;}
+  if(!owner){showDialog('Controles do servidor',container=>{container.append(el('p','muted','As permissões do seu cargo definem quais ferramentas você pode usar.'));if(hasCommunityPermission('manage_channels'))container.append(button('Criar canal',()=>{$('app-dialog').close();$('create-channel').click();}));if(isAdmin()||communities.find(item=>item.id===activeCommunity)?.created_by===session?.user.id)container.append(button('Cargos e membros',()=>showCommunityRoles()));if(canManageActiveServerInvites())container.append(button('Criar convite',()=>showCommunityInvite()));if(!container.children.length)container.append(el('p','','Seu cargo não permite alterar este servidor.'));});return;}
   baseOpenManagement();if(!managesCommunity())return;
   const container=$('dialog-content'),c=communities.find(item=>item.id===activeCommunity),form=container.querySelector('form');
   if(form&&c){const inviteOnly=el('label','check-field'),check=el('input');check.type='checkbox';check.checked=!!c.invite_only;inviteOnly.append(check,document.createTextNode('Servidor acessível somente por convite'));form.append(inviteOnly);
     form.onsubmit=async event=>{event.preventDefault();const fields=[...form.querySelectorAll('.field input')];try{await checked(db.from('communities').update({name:fields[0].value.trim(),description:fields[1].value.trim(),invite_only:check.checked}).eq('id',activeCommunity));c.name=fields[0].value.trim();c.description=fields[1].value.trim();c.invite_only=check.checked;renderCommunityRail();toast('Servidor atualizado.');}catch(error){toast(errorText(error));}};}
-  const actions=container.querySelector('.admin-menu');if(actions){if(isAdmin()||c?.created_by===session?.user.id)actions.append(button('Cargos e membros',()=>showCommunityRoles()));if(hasCommunityPermission('manage_roles'))actions.append(button('Emojis do servidor',()=>showCommunityEmojis()));if(hasCommunityPermission('create_invite'))actions.append(button('Criar convite',()=>showCommunityInvite()));}
+  const actions=container.querySelector('.admin-menu');if(actions){if(isAdmin()||c?.created_by===session?.user.id)actions.append(button('Cargos e membros',()=>showCommunityRoles()));if(hasCommunityPermission('manage_roles'))actions.append(button('Emojis do servidor',()=>showCommunityEmojis()));if(canManageActiveServerInvites())actions.append(button('Criar convite',()=>showCommunityInvite()));}
 };
 function showCommunityRoles(){showDialog('Cargos e membros',container=>{
+  const owner=activeServer(),manageMembers=hasCommunityPermission('manage_members');
   const list=el('div');for(const role of communityRoleList){const row=el('article','community-card'),title=el('strong','',role.name);title.style.color=role.color;row.append(title,el('small','muted',' · posição '+role.position),button('Excluir',async()=>{await checked(db.from('community_roles').delete().eq('id',role.id));await syncCommunityVoice();await loadCommunityAccess();showCommunityRoles();},'text-button'));list.append(row);}container.append(list);
   const form=el('form'),name=inputField(form,'Nome do cargo','',32),color=inputField(form,'Cor do cargo','#99aab5',7);color.type='color';const permissions=el('fieldset','role-permissions');permissions.append(el('legend','','Permissões'));
   const options=[['manage_channels','Gerenciar canais'],['manage_roles','Gerenciar cargos e emojis'],['manage_messages','Gerenciar mensagens e publicar anúncios'],['create_invite','Criar convites'],['manage_members','Gerenciar membros']];
   for(const [value,labelText]of options){const label=el('label','check-field'),input=el('input');input.type='checkbox';input.value=value;label.append(input,document.createTextNode(labelText));permissions.append(label);}form.append(permissions);const save=el('button','primary','Criar cargo');save.type='submit';form.append(save);container.append(form);
   form.onsubmit=async event=>{event.preventDefault();save.disabled=true;try{const perms=[...permissions.querySelectorAll('input:checked')].map(input=>input.value);await checked(db.from('community_roles').insert({community_id:activeCommunity,name:name.value.trim(),color:color.value,position:communityRoleList.length+1,permissions:perms}));await loadCommunityAccess();showCommunityRoles();}catch(error){toast(errorText(error));}finally{save.disabled=false;}};
-  const heading=el('h3','','Atribuir cargo');container.append(heading);
-  for(const member of communityMemberList){const p=person(member.user_id),row=el('label','role-assignment',p.display_name),select=el('select');const none=el('option','','Sem cargo');none.value='';select.append(none);for(const role of communityRoleList){const option=el('option','',role.name);option.value=role.id;option.style.color=role.color;select.append(option);}select.value=memberRoles.find(item=>item.user_id===member.user_id)?.role_id||'';select.onchange=async()=>{try{await checked(db.from('community_member_roles').delete().eq('community_id',activeCommunity).eq('user_id',member.user_id));if(select.value)await checked(db.from('community_member_roles').insert({community_id:activeCommunity,user_id:member.user_id,role_id:select.value}));await syncCommunityVoice();await loadCommunityAccess();renderMembers();}catch(error){toast(errorText(error));}};row.append(select);container.append(row);}
+  container.append(el('h3','','Cargos e moderação dos membros'));
+  const serverConfirm=(title,text,run,{danger=true,after}={})=>{showDialog(title,box=>{box.append(el('p','',text));const actions=el('div','admin-menu');actions.append(button('Cancelar',()=>$('app-dialog').close()),button('Confirmar',async()=>{await run();if($('app-dialog').open)$('app-dialog').close();if(after)await after();},danger?'danger':'primary'));box.append(actions);});};
+  const moderate=(member,action)=>{const p=person(member.user_id);serverConfirm(action==='ban'?'Banir do servidor':'Desbanir',`${action==='ban'?'Banir':'Desbanir'} @${p.username} ${action==='ban'?'de':'em'} “${owner?.name||'servidor'}”?`,async()=>{const response=await apiFetch('/api/communities/'+activeCommunity+'/moderate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({member:member.user_id,action,reason:''})});const result=await response.json().catch(()=>({}));if(result.warning)toast(result.warning);},{danger:action!=='unban',after:()=>showCommunityRoles()});};
+  const kick=member=>{const p=person(member.user_id);serverConfirm('Expulsar do servidor',`Remover @${p.username} de “${owner?.name||'servidor'}”? A pessoa pode voltar se receber outro convite.`,async()=>{await checked(db.rpc('remove_community_member',{target:activeCommunity,member:member.user_id}));},{after:async()=>{communityViews.delete(activeCommunity);await loadCommunityAccess();renderMembers();showCommunityRoles();}});};
+  const moderationRows=[];
+  for(const member of communityMemberList){
+    const p=person(member.user_id),row=el('div','role-assignment'),info=el('div','role-assignment-info');
+    info.append(el('strong','',p.display_name+(member.user_id===session?.user.id?' (você)':'')),el('small','muted','@'+(p.username||'…')));
+    const select=el('select');const none=el('option','','Sem cargo');none.value='';select.append(none);for(const role of communityRoleList){const option=el('option','',role.name);option.value=role.id;option.style.color=role.color;select.append(option);}select.value=memberRoles.find(item=>item.user_id===member.user_id)?.role_id||'';select.onchange=async()=>{try{await checked(db.from('community_member_roles').delete().eq('community_id',activeCommunity).eq('user_id',member.user_id));if(select.value)await checked(db.from('community_member_roles').insert({community_id:activeCommunity,user_id:member.user_id,role_id:select.value}));await syncCommunityVoice();await loadCommunityAccess();renderMembers();}catch(error){toast(errorText(error));}};
+    row.append(info,select);
+    const protectedMember=member.user_id===session?.user.id||roleFor(member.user_id)||owner?.created_by===member.user_id;
+    if(manageMembers&&!protectedMember){
+      const status=el('small','member-status');status.hidden=true;
+      const ban=button('Banir',()=>moderate(member,'ban'),'text-button'),unban=button('Desbanir',()=>moderate(member,'unban'),'text-button');unban.hidden=true;
+      const acts=el('div','member-manage-actions');acts.append(status,button('Expulsar',()=>kick(member),'text-button'),ban,unban);
+      row.append(acts);moderationRows.push({userId:member.user_id,status,ban,unban});
+    }
+    container.append(row);
+  }
+  if(manageMembers)checked(db.from('community_moderation').select('user_id,banned,timeout_until').eq('community_id',activeCommunity)).then(rows=>{
+    if(!container.isConnected)return;
+    for(const item of moderationRows){const state=rows.find(row=>row.user_id===item.userId),banned=!!state?.banned,muted=!banned&&state?.timeout_until&&new Date(state.timeout_until)>new Date();
+      item.status.textContent=banned?'Banido':muted?'Silenciado':'';item.status.hidden=!item.status.textContent;item.ban.hidden=banned;item.unban.hidden=!banned;}
+  }).catch(error=>{if(container.isConnected)toast(errorText(error));});
 });}
 function showCommunityEmojis(){showDialog('Emojis personalizados',container=>{
   for(const emoji of communityEmojiList){const row=el('div','emoji-admin-row'),img=el('img');img.src=communityEmojiUrls.get(':'+emoji.name+':')||'';img.alt=emoji.name;row.append(img,el('strong','',':'+emoji.name+':'),button('Remover',async()=>{await checked(db.from('community_emojis').delete().eq('id',emoji.id));await db.storage.from('orbita-files').remove([emoji.storage_path]);await loadCommunityAccess();showCommunityEmojis();},'text-button'));container.append(row);}
@@ -2007,11 +2152,6 @@ const gifButton=button('🎞 GIF ou sticker','', 'soft-button');gifButton.onclic
 $('attach-popover').append(gifButton);
 updateSelfStatus=function(){if(!profile)return;$('self-status-text').textContent=profile.custom_status||profile.presence_activity||({online:'Disponível',idle:'Ausente',dnd:'Não perturbe',invisible:'Invisível'}[profile.presence_status]||'Disponível');$('self-status-dot').style.background=({online:'var(--online)',idle:'var(--idle)',dnd:'var(--dnd)',invisible:'var(--offline)'}[profile.presence_status]);};
 
-createCommunity=()=>showDialog('Criar servidor',container=>{
-  const form=el('form'),name=inputField(form,'Nome','',60),description=inputField(form,'Descrição','',240),save=el('button','primary','Criar servidor');save.type='submit';form.append(save);container.append(form);
-  form.onsubmit=async event=>{event.preventDefault();save.disabled=true;try{const c=await checked(db.from('communities').insert({name:name.value.trim(),description:description.value.trim()}).select().single());communities.push(c);const channel=await insertChannel({name:'geral',kind:'text',position:0,community_id:c.id,default_for_new_members:true});channels.push(channel);$('app-dialog').close();await openCommunity(c);}catch(error){toast(errorText(error));}finally{save.disabled=false;}};
-});
-$('btn-add-server').onclick=createCommunity;
 const initialRenderChannels=renderChannels;
 renderChannels=()=>{initialRenderChannels();for(const node of channelNodes.values()){const channel=node.orbitaChannel;if(channel){node.title=[channel.is_private?'Canal privado':null,channel.is_announcement?'Canal de anúncios':null,channel.default_for_new_members?'Canal padrão':null].filter(Boolean).join(' · ')||channel.description||channel.name;if(channel.is_private||channel.is_announcement){let mark=node.querySelector('.channel-kind-badge');if(!mark){mark=el('span','channel-kind-badge');node.append(mark);}mark.textContent=channel.is_private?'🔒':'📣';}else node.querySelector('.channel-kind-badge')?.remove();}}};
 const priorCallUpdate=updateCallUI;
@@ -2204,7 +2344,8 @@ function openServerSettings() {
         applyServerTheme();
         $('app-dialog').close();
         toast('Tema do servidor aplicado.');
-      }, 'primary')
+      }, 'primary'),
+      button('Gerenciar canais, cargos, membros e convites', () => {$('app-dialog').close();openManagement();})
     );
   });
 }

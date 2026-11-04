@@ -10,3 +10,10 @@ export function hasServerPermission({siteRoles,community,userId,memberRoles,role
   const mine=new Set((memberRoles||[]).filter(m=>m.user_id===userId&&(!m.community_id||m.community_id===community.id)).map(m=>m.role_id));
   return (roles||[]).some(r=>mine.has(r.id)&&(!r.community_id||r.community_id===community.id)&&(r.permissions||[]).includes(permission));
 }
+// Servidor privado: só o criador cria, lista e revoga convites. Servidor público:
+// dono/ADM global ou cargo com create_invite.
+export function canManageServerInvites({siteRoles,community,userId,memberRoles,roles}){
+  if(!userId||!community)return false;
+  if(community.invite_only)return community.created_by===userId;
+  return canEditServer({siteRoles,community,userId})||hasServerPermission({siteRoles,community,userId,memberRoles,roles,permission:'create_invite'});
+}

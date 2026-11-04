@@ -1,8 +1,8 @@
 {
-  "version": "47c230bfd8a6e0f0",
-  "entry": "/static/dist/app-QTFCMGP2.js",
+  "version": "0aa67a8a1273d0f6",
+  "entry": "/static/dist/app-7YDB5Y2J.js",
   "files": [
-    "/static/dist/app-QTFCMGP2.js",
+    "/static/dist/app-7YDB5Y2J.js",
     "/static/dist/call-layout-f9f70c16e1d5a550.css",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js",
@@ -36,7 +36,7 @@
     "/static/dist/chunk-voice-chat-DLLG4XY7.js",
     "/static/dist/chunk-watch-party-F2QPLNXS.js",
     "/static/dist/chunk-youtube-W4BENIZJ.js",
-    "/static/dist/community-ux-f1d2cee68ca44291.css",
+    "/static/dist/community-ux-4e640c4ce07b9548.css",
     "/static/dist/cosmos-634b58d97740ec30.css",
     "/static/dist/enhancements-bae842f815459588.css",
     "/static/dist/fluency-e8bd643cf9fd04e1.css",
@@ -61,7 +61,7 @@
     "/static/fluency.css": "/static/dist/fluency-e8bd643cf9fd04e1.css",
     "/static/social-feed.css": "/static/dist/social-feed-3968bce45c84364b.css",
     "/static/call-layout.css": "/static/dist/call-layout-f9f70c16e1d5a550.css",
-    "/static/community-ux.css": "/static/dist/community-ux-f1d2cee68ca44291.css",
+    "/static/community-ux.css": "/static/dist/community-ux-4e640c4ce07b9548.css",
     "/static/identity.css": "/static/dist/identity-88e796ffa63422d2.css",
     "/static/polish.css": "/static/dist/polish-6f749e518969d62f.css",
     "/static/modern.css": "/static/dist/modern-dfbf9772c6bc459c.css",
@@ -75,7 +75,7 @@
     "/static/loader.css": "/static/dist/loader-2d3fc658d3944c83.css"
   },
   "integrity": {
-    "/static/dist/app-QTFCMGP2.js": "5595f5196d5592068f0bbdda4941c37f74f2c70f80c870bc953c097afb222789",
+    "/static/dist/app-7YDB5Y2J.js": "fe4762eb431661ee99f55d019f343c0c616749a8f8522627c509b2c69ed7e54d",
     "/static/dist/call-layout-f9f70c16e1d5a550.css": "f9f70c16e1d5a5509b31f2cc64049fe8efc02c7c9aadec0ce781d4bff0560355",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js": "20cfee0fc731efe53611da92202bd240b2f9d28e6b3115691ed50fc718851ee0",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js": "db2508c2c9152fbe631806e53dd148bd67a8b3695a0094caa6145d906b978027",
@@ -109,7 +109,7 @@
     "/static/dist/chunk-voice-chat-DLLG4XY7.js": "91d9b739c3598d41c1447c36651e6b483ad975be771c5d26f9538e3b855474ae",
     "/static/dist/chunk-watch-party-F2QPLNXS.js": "2264bb918cdfdffd835da516fcece89e9999740493dd61051359b60d00a36358",
     "/static/dist/chunk-youtube-W4BENIZJ.js": "a1ab148e3ed9427facf3b6dd2d14f2bed7b5bdf5a9a20a1981b662a542bfde3d",
-    "/static/dist/community-ux-f1d2cee68ca44291.css": "f1d2cee68ca44291d6840a4c9869d718e48b64f9de9e12b578689eb124b89b01",
+    "/static/dist/community-ux-4e640c4ce07b9548.css": "4e640c4ce07b95489ebef902a5e2bfa1f15e6a1cadc4a959da3b4f922705c39e",
     "/static/dist/cosmos-634b58d97740ec30.css": "634b58d97740ec30f6cdf4da9684a34e506c8a24e85fa932c7854dd02106b484",
     "/static/dist/enhancements-bae842f815459588.css": "bae842f81545958813f23a617dd8b9843815de1fc3e0f0f8ad13d6a0a0ae41f3",
     "/static/dist/fluency-e8bd643cf9fd04e1.css": "e8bd643cf9fd04e1f6d96f9f981948f6be5c4f390becdb2db5c2ee41960774ce",

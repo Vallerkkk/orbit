@@ -38,3 +38,14 @@ body.members-hidden .main{min-width:0}
 @keyframes orbita-reaction-float{0%{opacity:0;transform:translateY(35px) scale(.7)}12%,75%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-50px) scale(.9)}}
 @media(max-width:780px){body.members-hidden .app{grid-template-columns:1fr}body.members-hidden .main{grid-column:auto}.call-reaction-layer{bottom:110px}.call-reaction-bubble{padding:8px}.call-reaction-bubble>span{font-size:32px}}
 @media(prefers-reduced-motion:reduce){.call-reaction-bubble{animation:none}}
+
+/* Criação e gestão de servidores privados (assistente, convites e membros). */
+.server-wizard-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px}.server-wizard-actions>span{flex:1}
+.server-invite-out{margin:12px 0}.server-invite-out .invite-link{margin-top:0}
+.invite-list{display:grid;gap:8px;margin-top:6px}
+.invite-row{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.025)}
+.invite-row>strong{font-size:13px}.invite-row>small{grid-column:1;color:var(--text-mut);font-size:11px}.invite-row>button{grid-column:2;grid-row:1/span 2}
+.role-assignment-info{display:grid;gap:2px;min-width:0}.role-assignment-info strong{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.role-assignment-info small{font-size:10px;color:var(--text-mut)}
+.member-manage-actions{display:flex;align-items:center;gap:2px;flex-wrap:wrap;justify-content:flex-end}
+.member-status{font-size:10px;padding:2px 7px;border-radius:999px;background:#f23f4322;color:#ff9298}
+@media(max-width:780px){.role-assignment{flex-wrap:wrap}.role-assignment select{max-width:none;width:100%}.invite-row{grid-template-columns:1fr}.invite-row>button{grid-column:1;grid-row:auto;justify-self:start}}
