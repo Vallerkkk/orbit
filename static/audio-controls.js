@@ -3,7 +3,7 @@ import {createNoiseProcessor,gateThreshold} from './noise-processor.js';
 import {micErrorText} from './mic-health.js';
 
 export function initAudioControls(ctx){
-  const {el,button}=ctx,read=kind=>localStorage.getItem('orbita-audio-'+kind)||'',tracks=new WeakMap();
+  const {el,button}=ctx,read=kind=>localStorage.getItem(kind==='video'?'orbita-video-input':'orbita-audio-'+kind)||'',tracks=new WeakMap();
   const supportsOutput=()=>typeof (window.AudioContext||window.webkitAudioContext)?.prototype?.setSinkId==='function';
   let warned=false,mixContext;const mixes=new WeakMap();
   function mixOptions(){const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return false;mixContext=new Audio();return {audioContext:mixContext};}
@@ -49,7 +49,7 @@ export function initAudioControls(ctx){
     for(const pub of room.localParticipant.audioTrackPublications.values())if(pub.track)await process(pub.track,room);
   }
   async function connected(room){
-    const output=read('output');if(output&&supportsOutput())try{await switchDevice(room,'audiooutput',output);}catch{ctx.toast('Não foi possível usar a saída salva. Escolha outra em Entrada e saída de áudio.');}
+    const output=read('output');if(output&&supportsOutput())try{await switchDevice(room,'audiooutput',output);}catch{ctx.toast('Não foi possível usar a saída salva. Escolha outra em Dispositivos de áudio e vídeo.');}
     await sync(room);
   }
   // Medidor ao vivo: usa um stream próprio só enquanto o teste está ligado.
@@ -70,9 +70,9 @@ export function initAudioControls(ctx){
     node.append(bar,toggle,label);return {node,mark:paintMark,stop};
   }
   function fields(container){
-    const box=el('section','audio-settings');box.append(el('h3','','Entrada e saída de áudio'),el('p','muted','As alterações abaixo são aplicadas imediatamente neste aparelho.'));
-    const input=el('select'),output=el('select'),mode=el('select'),status=el('p','muted');
-    for(const [node,label] of [[input,'Dispositivo de entrada (microfone)'],[output,'Dispositivo de saída (fone ou alto-falante)'],[mode,'Redução de ruído adicional']]){const field=el('label','field',label);node.setAttribute('aria-label',label);field.append(node);box.append(field);}
+    const box=el('section','audio-settings');box.append(el('h3','','Dispositivos de áudio e vídeo'),el('p','muted','As alterações abaixo são aplicadas imediatamente neste aparelho.'));
+    const input=el('select'),output=el('select'),video=el('select'),mode=el('select'),status=el('p','muted');
+    for(const [node,label] of [[input,'Dispositivo de entrada (microfone)'],[output,'Dispositivo de saída (fone ou alto-falante)'],[video,'Câmera (vídeo)'],[mode,'Redução de ruído adicional']]){const field=el('label','field',label);node.setAttribute('aria-label',label);field.append(node);box.append(field);}
     mode.append(
   new Option('Padrão (navegador)','browser'),
   new Option('Aprimorada · RNNoise','enhanced'),
@@ -95,19 +95,19 @@ export function initAudioControls(ctx){
 
     async function refresh(){
       try{const devices=await navigator.mediaDevices?.enumerateDevices()||[];if(!box.isConnected)return;
-        for(const [node,kind,key] of [[input,'audioinput','input'],[output,'audiooutput','output']]){node.replaceChildren(new Option('Padrão do sistema',''));const saved=read(key),choices=devices.filter(d=>d.kind===kind&&d.deviceId&&d.deviceId!=='default'&&d.deviceId!=='communications');for(const [index,d] of choices.entries())node.append(new Option(d.label||(key==='input'?'Microfone ':'Saída ')+(index+1),d.deviceId));if(saved&&!choices.some(d=>d.deviceId===saved))node.append(new Option('Dispositivo salvo · reconecte ou escolha outro',saved));node.value=saved;}
-        input.disabled=!navigator.mediaDevices;output.disabled=!supportsOutput();if(output.disabled)output.title='Neste navegador, escolha a saída nas configurações do sistema.';
-      }catch{status.textContent='Não foi possível listar os dispositivos. Verifique as permissões do microfone.';}
+        for(const [node,kind,key] of [[input,'audioinput','input'],[output,'audiooutput','output'],[video,'videoinput','video']]){node.replaceChildren(new Option('Padrão do sistema',''));const saved=read(key),choices=devices.filter(d=>d.kind===kind&&d.deviceId&&d.deviceId!=='default'&&d.deviceId!=='communications'),fallback={input:'Microfone ',output:'Saída ',video:'Câmera '}[key];for(const [index,d] of choices.entries())node.append(new Option(d.label||fallback+(index+1),d.deviceId));if(saved&&!choices.some(d=>d.deviceId===saved))node.append(new Option('Dispositivo salvo · reconecte ou escolha outro',saved));node.value=saved;}
+        input.disabled=!navigator.mediaDevices;output.disabled=!supportsOutput();video.disabled=!navigator.mediaDevices;if(output.disabled)output.title='Neste navegador, escolha a saída nas configurações do sistema.';
+      }catch{status.textContent='Não foi possível listar os dispositivos. Verifique as permissões do microfone e da câmera.';}
     }
-    for(const [node,key,kind] of [[input,'input','audioinput'],[output,'output','audiooutput']])node.onchange=async()=>{
-      const value=node.value,previous=read(key),room=ctx.room();node.disabled=true;
-      try{if(room){await switchDevice(room,kind,value);if(ctx.room()!==room)throw Error('A chamada mudou. Escolha o dispositivo novamente.');}if(key==='output')await ctx.output(value);localStorage.setItem('orbita-audio-'+key,value);if(room)await sync(room);ctx.toast('Dispositivo de áudio atualizado.');}
-      catch{if(room&&ctx.room()===room)await switchDevice(room,kind,previous).catch(()=>{});if(key==='output')await ctx.output(previous).catch(()=>{});node.value=previous;ctx.toast('Não foi possível usar esse dispositivo. Verifique a conexão e a permissão do navegador.');}
+    for(const [node,key,kind] of [[input,'input','audioinput'],[output,'output','audiooutput'],[video,'video','videoinput']])node.onchange=async()=>{
+      const value=node.value,previous=read(key),room=ctx.room(),activeCamera=kind==='videoinput'&&room?.localParticipant.isCameraEnabled;node.disabled=true;
+      try{if(room&&(kind!=='videoinput'||activeCamera)){await switchDevice(room,kind,value);if(ctx.room()!==room)throw Error('A chamada mudou. Escolha o dispositivo novamente.');}if(key==='output')await ctx.output(value);localStorage.setItem(key==='video'?'orbita-video-input':'orbita-audio-'+key,value);if(room&&kind!=='videoinput')await sync(room);ctx.toast(key==='video'?'Câmera atualizada.':'Dispositivo de áudio atualizado.');}
+      catch{if(room&&ctx.room()===room&&(kind!=='videoinput'||activeCamera))await switchDevice(room,kind,previous).catch(()=>{});if(key==='output')await ctx.output(previous).catch(()=>{});node.value=previous;ctx.toast(key==='video'?'Não foi possível usar essa câmera. Verifique se outro aplicativo está usando o dispositivo.':'Não foi possível usar esse dispositivo. Verifique a conexão e a permissão do navegador.');}
       finally{node.disabled=false;}
     };
     box.append(status);setStatus();if(!supportsOutput())box.append(el('p','muted','Este navegador usa a saída de áudio definida no sistema.'));
     box.append(button('Atualizar dispositivos',async()=>{let stream;try{if(!ctx.liveMic?.())stream=await navigator.mediaDevices.getUserMedia({audio:true});}catch(error){status.textContent=micErrorText(error);}finally{stream?.getTracks().forEach(t=>t.stop());}await refresh();}));
     container.append(box);refresh();const devicesAbort=new AbortController();navigator.mediaDevices?.addEventListener?.('devicechange',refresh,{signal:devicesAbort.signal});document.getElementById('app-dialog')?.addEventListener('close',()=>devicesAbort.abort(),{once:true});
   }
-  return {fields,sync,connected,mixOptions,bind,ended,mixStuck,resumeMix,capture:()=>read('input')?{deviceId:{ideal:read('input')}}:{},open:()=>ctx.dialog('Entrada e saída de áudio',fields)};
+  return {fields,sync,connected,mixOptions,bind,ended,mixStuck,resumeMix,capture:()=>read('input')?{deviceId:{ideal:read('input')}}:{},open:()=>ctx.dialog('Dispositivos de áudio e vídeo',fields)};
 }

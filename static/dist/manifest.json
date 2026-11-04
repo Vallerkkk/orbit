@@ -1,8 +1,8 @@
 {
-  "version": "ba6cb288d18aec8c",
-  "entry": "/static/dist/app-EHEZLIX3.js",
+  "version": "47c230bfd8a6e0f0",
+  "entry": "/static/dist/app-QTFCMGP2.js",
   "files": [
-    "/static/dist/app-EHEZLIX3.js",
+    "/static/dist/app-QTFCMGP2.js",
     "/static/dist/call-layout-f9f70c16e1d5a550.css",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js",
@@ -75,7 +75,7 @@
     "/static/loader.css": "/static/dist/loader-2d3fc658d3944c83.css"
   },
   "integrity": {
-    "/static/dist/app-EHEZLIX3.js": "103705a6cbbe20bc8e04ac67bece2528c8bc983af69bcf1e146484fb542ee0de",
+    "/static/dist/app-QTFCMGP2.js": "5595f5196d5592068f0bbdda4941c37f74f2c70f80c870bc953c097afb222789",
     "/static/dist/call-layout-f9f70c16e1d5a550.css": "f9f70c16e1d5a5509b31f2cc64049fe8efc02c7c9aadec0ce781d4bff0560355",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js": "20cfee0fc731efe53611da92202bd240b2f9d28e6b3115691ed50fc718851ee0",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js": "db2508c2c9152fbe631806e53dd148bd67a8b3695a0094caa6145d906b978027",

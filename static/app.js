@@ -1,6 +1,6 @@
 import {initCloe} from './astro-call.js';
 import {initMicHealth,micErrorText,forgetMissingInput,liveMicTrack} from './mic-health.js';
-import {screenSupport,screenCaptureOptions,screenErrorText} from './screen-share.js';
+import {screenSupport,screenCaptureOptions,screenErrorText,installScreenAudioGuard} from './screen-share.js';
 import {initScreenWatch} from './screen-watch.js';
 import {initMusicChannel} from './music-channel.js';
 import {configureUiSounds,uiSoundsEnabled,setUiSoundsEnabled,uiSound} from './ui-sounds.js';
@@ -66,6 +66,7 @@ const mobileCamera=()=>matchMedia('(max-width:780px), (pointer:coarse)').matches
 let pushToTalk=localStorage.getItem('orbita-push-to-talk')==='true',talkHeld=false,pttButton;
 // Metas de qualidade: o navegador e o LiveKit podem reduzir conforme o dispositivo e a rede.
 const screenInfo=screenSupport(),canShareScreen=screenInfo.supported;
+installScreenAudioGuard();
 function mediaMode(){
   const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
   const slow=/^(slow-2g|2g|3g)$/.test(connection?.effectiveType||'');
@@ -75,15 +76,16 @@ function mediaMode(){
   return 'alta';
 }
 function mediaSettings(){
-  const mode=mediaMode(),screenAudio=localStorage.getItem('orbita-screen-audio')==='true';
+  const mode=mediaMode(),screenAudio=localStorage.getItem('orbita-screen-audio')!=='false';
   const profile=mode==='economia'
     ? {camera:[640,360,20,650_000],screen:[1280,720,15,1_400_000]}
     : mode==='equilibrada'
       ? {camera:[1280,720,24,1_600_000],screen:[1600,900,24,2_500_000]}
       : {camera:[1280,720,30,2_500_000],screen:[1920,1080,30,4_000_000]};
   const [cw,ch,cf,cb]=profile.camera,[sw,sh,sf,sb]=profile.screen;
+  const cameraDevice=mobileCamera()?'':(localStorage.getItem('orbita-video-input')||'');
   return {
-    cameraCapture:{resolution:{width:cw,height:ch,frameRate:cf},facingMode:mobileCamera()?{exact:cameraFacing}:{ideal:cameraFacing}},
+    cameraCapture:{resolution:{width:cw,height:ch,frameRate:cf},...(cameraDevice?{deviceId:{ideal:cameraDevice}}:{}),facingMode:mobileCamera()?{exact:cameraFacing}:{ideal:cameraFacing}},
     cameraPublish:{videoEncoding:{maxBitrate:cb,maxFramerate:cf},degradationPreference:'balanced'},
     screenCapture:screenCaptureOptions({mobile:screenInfo.mobile,audio:screenAudio,resolution:{width:sw,height:sh,frameRate:sf}}),
     screenPublish:{screenShareEncoding:{maxBitrate:sb,maxFramerate:sf},degradationPreference:'maintain-resolution'},
@@ -110,7 +112,7 @@ function errorText(error) {
   if (error?.name === 'NotAllowedError') return 'Permissão recusada. Autorize o dispositivo no navegador.';
   if (error?.name === 'NotFoundError') return 'Nenhum dispositivo compatível foi encontrado.';
   if (error?.name === 'NotReadableError'||error?.name==='TrackStartError') return 'O dispositivo está em uso por outro aplicativo. Feche-o e tente novamente.';
-  if (error?.name === 'OverconstrainedError') return 'O dispositivo escolhido não está disponível. Escolha outro em Entrada e saída de áudio.';
+  if (error?.name === 'OverconstrainedError') return 'O dispositivo escolhido não está disponível. Escolha outro em Dispositivos de áudio e vídeo.';
   if(error?.code==='42501'||/permission denied/i.test(error?.message||'')){console.info('[orbita] 42501',error);return /exclusivo dos administradores/i.test(error?.message||'')?error.message:'Você não tem permissão para fazer essa alteração. Se o problema continuar, avise um administrador.';}
   if (error?.message === 'Invalid login credentials') return 'E-mail ou senha incorretos.';
   if(error?.message==='Database error saving new user')return 'Não foi possível criar a conta. Tente outro nickname; ele pode já estar em uso.';
@@ -778,6 +780,8 @@ async function leaveCall({preserveJoin=false}={}) {
   if(!preserveJoin)cancelCallJoin();
   cameraTask=null;const previous = room,leftTarget=callChannel;if(previous)microphoneSwitch.set(previous.localParticipant,false);room = null;callChannel = null;talkHeld=false;
   screenWatch.reset();micHealth?.stop();
+  // Solta a câmera antes de sair: sem isso, a faixa pode continuar com o dispositivo preso e a próxima chamada falha.
+  if(previous)stopLocalCameraTracks(previous);
   enhancements?.callEnded(previous);callReactions?.clear();
   if (previous) previous.removeAllListeners();
   for(const entry of [...callMedia.values()])disposeMedia(entry);
@@ -869,21 +873,65 @@ $('join-call').onclick = async () => {
 $('leave-call').onclick = () => leaveCall();
 if(!canShareScreen){const mobileMsg='Seu navegador no celular não permite compartilhar a tela; use o app no PC.',msg=screenInfo.mobile?mobileMsg:screenInfo.reason;$('screen').dataset.unsupported=msg;$('screen').title=msg;$('screen').setAttribute('aria-label',msg);
   if(screenInfo.mobile){$('screen').classList.add('unsupported');$('screen').addEventListener('click',e=>{e.stopImmediatePropagation();e.preventDefault();toast(mobileMsg);},true);}else $('screen').disabled=true;}
+const cameraBusy=error=>['NotReadableError','TrackStartError','AbortError'].includes(error?.name);
+// Um getUserMedia que falhou pode deixar a faixa antiga presa no dispositivo: solta antes de tentar de novo.
+function stopLocalCameraTracks(target){
+  if(!target)return;
+  for(const publication of target.localParticipant.videoTrackPublications.values()){
+    if((publication.source||publication.track?.source)!=='camera')continue;
+    try{publication.track?.mediaStreamTrack?.stop();}catch{}
+    try{publication.track?.stop();}catch{}
+  }
+  const identity=target.localParticipant.identity;
+  for(const entry of [...callMedia.values()])if(entry.participantId===identity&&entry.source==='camera')disposeMedia(entry);
+}
+async function setCameraEnabledWithRetry(target,enabled,media){
+  for(let attempt=0;;attempt++){
+    try{await target.localParticipant.setCameraEnabled(enabled,media.cameraCapture,media.cameraPublish);return;}
+    catch(error){
+      if(!enabled||!cameraBusy(error)||attempt>=1||room!==target)throw error;
+      await target.localParticipant.setCameraEnabled(false).catch(()=>{});
+      stopLocalCameraTracks(target);
+      await new Promise(resolve=>setTimeout(resolve,700));
+      if(room!==target)throw error;
+    }
+  }
+}
+function showCameraBusyHelp(){
+  showDialog('Câmera em uso',box=>{
+    box.append(el('p','','Outro aplicativo está usando a câmera. Feche Zoom, Teams, OBS, o navegador ou qualquer programa com a câmera aberta e tente de novo.'));
+    box.append(el('p','muted',mobileCamera()?'Se a câmera estiver livre, tente novamente. Você também pode trocar entre frontal e traseira durante a chamada.':'Se o computador tem mais de uma câmera, você pode escolher outra sem fechar o aplicativo.'));
+    box.append(button('Tentar novamente',()=>{$('app-dialog').close();setTimeout(()=>$('camera').click(),150);}));
+    if(!mobileCamera())box.append(button('Escolher outra câmera',()=>{$('app-dialog').close();audioTools?.open();}));
+    box.append(button('Fechar',()=>$('app-dialog').close(),'soft-button'));
+  });
+}
+function showScreenAudioHelp(){
+  showDialog('Transmissão sem áudio',box=>{
+    box.append(el('p','','A tela está sendo compartilhada, mas nenhum áudio foi capturado.'));
+    box.append(el('p','muted','Na janela de compartilhamento, escolha uma aba e marque “Compartilhar áudio”. Para a tela inteira no Windows, marque “Compartilhar áudio do sistema”. O som das vozes desta chamada fica de fora.'));
+    box.append(button('Compartilhar de novo com áudio',async()=>{$('app-dialog').close();try{await room?.localParticipant.setScreenShareEnabled(false);}catch{}setTimeout(()=>$('screen').click(),150);}));
+    box.append(button('Continuar sem áudio',()=>$('app-dialog').close(),'soft-button'));
+  });
+}
 for (const [id, property, method] of [['mic','isMicrophoneEnabled','setMicrophoneEnabled'],['camera','isCameraEnabled','setCameraEnabled'],['screen','isScreenShareEnabled','setScreenShareEnabled']]) {
   $(id).onclick = async () => {
     if (!room||id==='camera'&&cameraTask) return;const target=room,cameraWasEnabled=target.localParticipant.isCameraEnabled,operation=id==='camera'?{room:target}:null;if(operation)cameraTask=operation;$(id).disabled = true;
     try {
       const enabled = !room.localParticipant[property];
-      if (id === 'camera') {const media=mediaSettings();await target.localParticipant.setCameraEnabled(enabled,media.cameraCapture,media.cameraPublish);if(enabled&&room===target){const track=[...target.localParticipant.videoTrackPublications.values()].find(p=>(p.source||p.track?.source)==='camera')?.track;if(track){const facing=track.mediaStreamTrack?.getSettings?.().facingMode||cameraTrackFacing.get(track);if(facing&&facing!==cameraFacing)await track.restartTrack({...media.cameraCapture,deviceId:undefined,facingMode:{exact:cameraFacing}});cameraTrackFacing.set(track,cameraFacing);}}}
+      if (id === 'camera') {const media=mediaSettings();await setCameraEnabledWithRetry(target,enabled,media);if(enabled&&room===target){const track=[...target.localParticipant.videoTrackPublications.values()].find(p=>(p.source||p.track?.source)==='camera')?.track;if(track){const facing=track.mediaStreamTrack?.getSettings?.().facingMode||cameraTrackFacing.get(track);if(facing&&facing!==cameraFacing)await track.restartTrack({...media.cameraCapture,deviceId:undefined,facingMode:{exact:cameraFacing}});cameraTrackFacing.set(track,cameraFacing);}}}
       else if (id === 'screen') {
         if(!canShareScreen)throw Error(screenInfo.reason);
         const media=mediaSettings();try{await room.localParticipant.setScreenShareEnabled(enabled,media.screenCapture,media.screenPublish);}catch(e){if(enabled)await room.localParticipant.setScreenShareEnabled(false).catch(()=>{});throw Error(screenErrorText(e,screenInfo.mobile));}
-        if(enabled&&media.screenCapture.audio&&![...room.localParticipant.audioTrackPublications.values()].some(p=>p.source==='screen_share_audio'))toast('A tela foi compartilhada sem áudio. Escolha uma aba e marque Compartilhar áudio na janela do navegador.');
+        if(enabled&&media.screenCapture.audio)setTimeout(()=>{
+          if(room!==target||!target.localParticipant.isScreenShareEnabled)return;
+          if(![...target.localParticipant.audioTrackPublications.values()].some(p=>p.source==='screen_share_audio'))showScreenAudioHelp();
+        },400);
       }
       else if(id==='mic'&&pushToTalk){toast('Segure o botão “Falar” ou a tecla Espaço para abrir o microfone.');}
       else if(deafened&&enabled)toast('Ative o áudio antes de abrir o microfone.');else await microphoneSwitch.set(room.localParticipant,enabled);
     }
-    catch (error) { if(id==='camera'&&!cameraWasEnabled&&room===target){await target.localParticipant.setCameraEnabled(false).catch(()=>{});toast(['OverconstrainedError','ConstraintNotSatisfiedError'].includes(error?.name)?'Não foi possível ativar a câmera escolhida. Selecione outra câmera e tente novamente.':errorText(error));}else toast(errorText(error)); }
+    catch (error) { if(id==='camera'&&!cameraWasEnabled&&room===target){await target.localParticipant.setCameraEnabled(false).catch(()=>{});stopLocalCameraTracks(target);if(cameraBusy(error))showCameraBusyHelp();else toast(['OverconstrainedError','ConstraintNotSatisfiedError'].includes(error?.name)?'Não foi possível ativar a câmera escolhida. Selecione outra câmera e tente novamente.':errorText(error));}else toast(errorText(error)); }
     finally { if(operation&&cameraTask===operation)cameraTask=null;$(id).disabled = id==='screen'&&!canShareScreen;updateCallUI();syncLocalCameraPreview(); }
   };
 }
@@ -1491,7 +1539,7 @@ function openAudioPanel(){showDialog('Configurações de Áudio',container=>{
   const ptt=audioRow('Pressionar para Falar','Microfone fechado até você segurar Espaço ou o botão Falar.',pushToTalk,'Pressionar para falar');
   const sfxCheck=audioRow('Efeitos Sonoros','Sons bem discretos na interface: canais, abas, janelas, envio, reações, curtidas, chamadas e decorações.',uiSoundsEnabled(),'Efeitos sonoros');
   const sensWrap=el('div','audio-sensitivity'),sensHead=el('strong','audio-row-title','Sensibilidade do Microfone'),info=el('span','audio-row-info','i'),sensRow=el('span','audio-sens-row'),sens=el('input'),sensOut=el('output','audio-sens-value');info.setAttribute('aria-hidden','true');sensHead.append(info);sens.type='range';sens.min='10';sens.max='100';sens.value=localStorage.getItem('orbita-mic-sensitivity')||'50';sens.setAttribute('aria-label','Sensibilidade do microfone');const paint=()=>{sensOut.value=sens.value+'%';sens.style.setProperty('--fill',((sens.value-10)/90*100)+'%');};paint();sens.oninput=paint;sensRow.append(sens,sensOut);sensWrap.append(sensHead,sensRow,el('small','audio-row-desc','Arraste para ajustar a sensibilidade do seu microfone.'));form.append(sensWrap);
-  const more=el('button','audio-devices-link','Entrada, saída e redução de ruído avançada');more.type='button';more.onclick=()=>audioTools?.open();form.append(more);
+  const more=el('button','audio-devices-link','Câmera, entrada, saída e redução de ruído avançada');more.type='button';more.onclick=()=>audioTools?.open();form.append(more);
   const actions=el('div','audio-actions'),reset=el('button','audio-reset','Redefinir'),apply=el('button','primary audio-apply','Aplicar');reset.type='button';apply.type='submit';reset.onclick=()=>{noiseCheck.checked=true;echoCheck.checked=true;agcCheck.checked=true;ptt.checked=false;sfxCheck.checked=true;sens.value='50';paint();};actions.append(reset,apply);form.append(actions);
   form.onsubmit=async event=>{event.preventDefault();apply.disabled=true;try{
     noise=noiseCheck.checked;localStorage.setItem('orbita-noise',String(noise));
@@ -1876,7 +1924,9 @@ function paintViewers(){for(const tile of document.querySelectorAll('#voice-stag
   if(!n){b?.remove();continue;}if(!b){b=el('span','sp-viewers');tile.append(b);}b.innerHTML='<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M12 5c-5 0-9 4.5-10 7 1 2.5 5 7 10 7s9-4.5 10-7c-1-2.5-5-7-10-7zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"/></svg>';b.append(String(n));
   const names=[...set].map(id=>person(id)?.display_name||'Alguém').join(', ');b.title='Assistindo: '+names;b.setAttribute('aria-label',n+' assistindo: '+names);}}
 function receiveCallData(payload,participant,kind,topic){if(topic==='orbita-watch'){try{const m=JSON.parse(new TextDecoder().decode(payload));if(m?.type==='watching'&&participant)setViewer(String(m.target),participant.identity,!!m.on);}catch{}return;}callReactions?.receive(payload,participant,kind,topic);}
-const screenLabel=el('label','screen-option'),screenCheck=el('input');screenCheck.type='checkbox';screenCheck.id='share-screen-audio';screenCheck.checked=localStorage.getItem('orbita-screen-audio')==='true';screenLabel.title='Só o áudio de uma aba ou janela; as vozes da chamada nunca entram. Áudio do sistema da tela inteira fica desligado para não duplicar vozes.';screenLabel.append(screenCheck,document.createTextNode('Compartilhar áudio da aba (opcional; as vozes da chamada não são incluídas)'));if(screenInfo.mobile)screenLabel.hidden=true;$('active-controls').before(screenLabel);
+// A opção nasceu desligada e escondida no menu; liga uma vez para quem já usava o app.
+try{if(localStorage.getItem('orbita-screen-audio-reset')!=='2026-11'){localStorage.removeItem('orbita-screen-audio');localStorage.setItem('orbita-screen-audio-reset','2026-11');}}catch{}
+const screenLabel=el('label','screen-option'),screenCheck=el('input');screenCheck.type='checkbox';screenCheck.id='share-screen-audio';screenCheck.checked=localStorage.getItem('orbita-screen-audio')!=='false';screenLabel.title='Envia o áudio da aba ou do sistema junto com a tela. As vozes desta chamada ficam de fora.';screenLabel.append(screenCheck,document.createTextNode('Compartilhar áudio da tela (recomendado; as vozes da chamada ficam de fora)'));if(screenInfo.mobile)screenLabel.hidden=true;$('active-controls').before(screenLabel);
 function updateScreenAudio(){localStorage.setItem('orbita-screen-audio',String(screenCheck.checked));}
 screenCheck.onchange=updateScreenAudio;updateScreenAudio();
 $('btn-notif-toggle').onclick=async()=>{if(!('Notification'in window))return toast('Este navegador não oferece notificações.');const permission=await Notification.requestPermission();toast(permission==='granted'?'Notificações ativadas neste navegador.':'Notificações não autorizadas.');};
@@ -2317,7 +2367,7 @@ document.addEventListener('keydown', e => {
 
 
 const settingsBeforeBigPicture=$('settings').onclick;
-$('settings').onclick=function(event){settingsBeforeBigPicture.call(this,event);const box=$('dialog-content').querySelector('.dialog-body');if(!box)return;box.append(el('p','muted','A redução de ruído, o cancelamento de eco e o ganho automático são aplicados pelos controles de Áudio acima. O filtro adicional de voz pode ser escolhido em Entrada e saída de áudio.'),button('Alternar Big Picture (Alt+Enter)',()=>{$('app-dialog').close();toggleBigPicture();}));};
+$('settings').onclick=function(event){settingsBeforeBigPicture.call(this,event);const box=$('dialog-content').querySelector('.dialog-body');if(!box)return;box.append(el('p','muted','A redução de ruído, o cancelamento de eco e o ganho automático são aplicados pelos controles de Áudio acima. O filtro adicional de voz pode ser escolhido em Dispositivos de áudio e vídeo.'),button('Alternar Big Picture (Alt+Enter)',()=>{$('app-dialog').close();toggleBigPicture();}));};
 
 communityUX=initCommunityUX({
  state:()=>({session,selected,channels,activeCommunity,room,home}),invite:()=>showCommunityInvite(),communityName:()=>communities.find(c=>c.id===activeCommunity)?.name||'Seu servidor',el,button,dialog:showDialog,report:error=>toast(errorText(error)),

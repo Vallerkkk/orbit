@@ -13,7 +13,7 @@ const RULES=[
   ['conexoes',n=>n.matches('.spotify-connect')],
   ['perfil',n=>n.matches('.profile-edit-card')],
   ['voz',n=>n.matches('.settings-audio-link')],
-  ['voz',n=>/Entrada e saída de áudio|A redução de ruído|Manter a tela acesa|Big Picture/.test(n.textContent)],
+  ['voz',n=>/Dispositivos de áudio e vídeo|Entrada e saída de áudio|A redução de ruído|Manter a tela acesa|Big Picture/.test(n.textContent)],
   ['sons',n=>/Sons do aplicativo|Sons de avisos|Testar som/.test(n.textContent)],
   ['avisos',n=>/notificações|push|Instalar Órbita/i.test(n.textContent)],
   ['aparencia',n=>/^(Tema|Densidade|Aparência|Tamanho das mensagens|Reduzir animações|Conforto e acessibilidade)/.test(n.textContent.trim())],
@@ -35,7 +35,7 @@ function segment(select){
 function decorate(panel){
   for(const l of panel.querySelectorAll('label.check-field'))l.classList.add('st-toggle');
   for(const s of panel.querySelectorAll('select'))
-    if(/Dispositivo de (entrada|saída)/.test(s.closest('label')?.textContent||'')){const l=s.closest('label');if(!l.classList.contains('st-device')){l.classList.add('st-device');l.prepend(svgIcon(/entrada/.test(l.textContent)?'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Zm-7 9a7 7 0 0 0 14 0M12 19v2':'M4 14v-2a8 8 0 0 1 16 0v2M4 14h3v6H4zM17 14h3v6h-3z'));}}
+    if(/Dispositivo de (entrada|saída)|Câmera/.test(s.closest('label')?.textContent||'')){const l=s.closest('label');if(!l.classList.contains('st-device')){l.classList.add('st-device');const text=l.textContent,icon=/entrada/.test(text)?'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Zm-7 9a7 7 0 0 0 14 0M12 19v2':/Câmera/.test(text)?'M4 7h3l2-2h6l2 2h3v10H4z M12 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7':'M4 14v-2a8 8 0 0 1 16 0v2M4 14h3v6H4zM17 14h3v6h-3z';l.prepend(svgIcon(icon));}}
     else segment(s);
   for(const r of panel.querySelectorAll('input[type=range]')){const f=()=>{const min=+r.min||0,max=+r.max||100;r.style.setProperty('--st-fill',((r.value-min)/(max-min)*100)+'%');};if(!r.dataset.stFill){r.dataset.stFill='1';r.addEventListener('input',f);}f();}
   for(const b of panel.querySelectorAll(':scope > button.soft-button, :scope > button.primary, :scope > button.danger'))b.classList.add('st-action');

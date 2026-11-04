@@ -28,10 +28,19 @@ function fakeYouTube(){window.YT={Player:class{constructor(id,o){this.options=o;
    const cam=window.qaTrack('cam','camera');window.__qaRoom.emit('TrackSubscribed',cam.t,cam.pub,window.qaRemote);
    const scr=window.qaTrack('scr','screen_share');window.qaScr=scr;window.__qaRoom.emit('TrackSubscribed',scr.t,scr.pub,window.qaRemote);
   });
-  // Compartilhar tela: no iPhone o botão some; no desktop o áudio é opt-in e nunca inclui as vozes da chamada.
+  // Compartilhar tela: no iPhone o botão some; no desktop o áudio vem ligado e libera aba ou sistema.
   if(mobile){assert.equal(await page.locator('#screen').isVisible(),false);assert.match(await page.locator('#screen').getAttribute('title'),/não permite compartilhar a tela/);}
-  else{const opts=await page.evaluate(async()=>{const lp=window.__qaRoom.localParticipant;let got;lp.setScreenShareEnabled=async(on,capture)=>{got=capture;};document.getElementById('screen').click();await new Promise(r=>setTimeout(r,50));localStorage.setItem('orbita-screen-audio','true');document.getElementById('screen').click();await new Promise(r=>setTimeout(r,50));const second=got;return {second};});
-   assert.equal(opts.second.systemAudio,'exclude');assert.equal(opts.second.audio.restrictOwnAudio,true);assert.equal(opts.second.selfBrowserSurface,'exclude');await page.evaluate(()=>localStorage.removeItem('orbita-screen-audio'));}
+  else{
+   await page.evaluate(()=>{const lp=window.__qaRoom.localParticipant;window.qaScreenCalls=[];lp.setScreenShareEnabled=async(on,capture)=>{window.qaScreenCalls.push({on,capture});lp.isScreenShareEnabled=on;};document.getElementById('screen').click();});
+   await page.waitForFunction(()=>window.qaScreenCalls.length===1);
+   const onDefault=await page.evaluate(()=>window.qaScreenCalls[0].capture);
+   assert.equal(onDefault.systemAudio,'include');assert.equal(onDefault.selfBrowserSurface,'exclude');assert.equal(onDefault.audio.echoCancellation,false);
+   // Sem faixa de áudio publicada, a pessoa recebe instruções e pode tentar de novo em vez de um aviso que some.
+   await page.waitForFunction(()=>document.getElementById('dialog-title').textContent==='Transmissão sem áudio');
+   await page.locator('#app-dialog .dialog-body').getByRole('button',{name:'Continuar sem áudio',exact:true}).click();
+   const off=await page.evaluate(async()=>{localStorage.setItem('orbita-screen-audio','false');document.getElementById('screen').click();await new Promise(r=>setTimeout(r,50));document.getElementById('screen').click();await new Promise(r=>setTimeout(r,50));localStorage.setItem('orbita-screen-audio','true');return window.qaScreenCalls.at(-1).capture;});
+   assert.equal(off.systemAudio,'exclude');assert.equal(off.audio,false);
+  }
   // Tela não assinada por padrão: placeholder com "Assistir".
   const ph=page.locator('.screen-placeholder');await ph.waitFor();assert.match(await ph.textContent(),/está compartilhando a tela/);
   assert.deepEqual(await page.evaluate(()=>window.qaSubs),[['scr',false]]);

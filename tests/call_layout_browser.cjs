@@ -29,7 +29,7 @@ const viaMore=async id=>{await page.locator('#call-more').click();await page.loc
   const close=()=>page.locator('#dialog-close').click(),closeMenu=()=>page.keyboard.press('Escape');
   await page.locator('#mic').click();await page.waitForFunction(()=>!window.__qaRoom.localParticipant.isMicrophoneEnabled);await page.locator('#mic').click();await page.waitForFunction(()=>window.__qaRoom.localParticipant.isMicrophoneEnabled);
   await page.locator('#camera').click();assert.equal(await page.evaluate(()=>window.__qaRoom.localParticipant.isCameraEnabled),true);await page.locator('#camera').click();
-  if(await page.locator('#screen').isEnabled()){await page.locator('#screen').click();assert.equal(await page.evaluate(()=>window.__qaRoom.localParticipant.isScreenShareEnabled),true);await page.locator('#screen').click();}
+  if(await page.locator('#screen').isEnabled()){await page.evaluate(()=>localStorage.setItem('orbita-screen-audio','false'));await page.locator('#screen').click();assert.equal(await page.evaluate(()=>window.__qaRoom.localParticipant.isScreenShareEnabled),true);await page.locator('#screen').click();}
   await viaMore('deafen');await page.waitForFunction(()=>document.querySelector('#deafen').getAttribute('aria-pressed')==='true');
   await viaMore('deafen');await page.waitForFunction(()=>document.querySelector('#deafen').getAttribute('aria-pressed')==='false');
   await page.locator('#call-audio').click();await page.getByRole('button',{name:'Microfone, sensibilidade e pressionar para falar',exact:true}).click();assert.equal(await page.locator('#app-dialog').evaluate(n=>n.open),true);await close();

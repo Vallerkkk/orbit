@@ -253,7 +253,7 @@ export function initCloe(ctx){
   if(!target)return;if(queue.length&&Date.now()>=retryAt)drain();if(Date.now()-lastPoll>=pollEvery())poll();
   const pub=[...state.room.localParticipant.audioTrackPublications.values()].find(p=>p.source==='microphone'),media=pub?.track?.mediaStreamTrack;
   const active=enabled&&configured&&!state.deafened&&state.room.localParticipant.isMicrophoneEnabled&&!pub?.isMuted&&Date.now()>nextAttempt;
-  if(media&&media.readyState==='live'&&Date.now()>nextAttempt)capture(media);else if(track){stopAudio();if(enabled&&configured&&target&&!lastProblem)defaultStatus('O microfone foi desconectado: escolha outro em Entrada e saída de áudio.');}
+  if(media&&media.readyState==='live'&&Date.now()>nextAttempt)capture(media);else if(track){stopAudio();if(enabled&&configured&&target&&!lastProblem)defaultStatus('O microfone foi desconectado: escolha outro em Dispositivos de áudio e vídeo.');}
   if(listenCopy&&media&&listenCopy.enabled!==media.enabled)listenCopy.enabled=media.enabled;
   // Durante a fala o microfone segue aberto só para o comando de parar; o modo rápido
   // fecha o trecho após ~0,6 s de silêncio para a interrupção chegar logo.
