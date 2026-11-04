@@ -3739,3 +3739,12 @@ returns boolean language sql stable security definer set search_path='' as $$ se
  or exists(select 1 from public.channel_members m where m.channel_id=c.id and m.user_id=member)
  or exists(select 1 from public.community_member_roles mr join public.community_roles r on r.id=mr.role_id and r.community_id=mr.community_id where mr.community_id=c.community_id and mr.user_id=member and 'manage_channels'=any(r.permissions)))
  from public.channels c join public.communities co on co.id=c.community_id where c.id=target $$;
+
+-- Migration: 20261104000000_remove_dead_database_objects.sql
+-- Remove objetos sem chamada depois da aposentadoria da transcrição.
+drop function if exists public.reserve_luladroid(text,text);
+drop function if exists orbita_private.reserve_luladroid(text,text);
+
+-- (community_id,user_id) é prefixo exato da chave primária
+-- (community_id,user_id,role_id); o índice extra só custa escrita.
+drop index if exists public.community_member_roles_user;

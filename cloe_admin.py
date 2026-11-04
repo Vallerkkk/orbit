@@ -546,11 +546,6 @@ class OwnerAdmin:
             rows = [row for row in rows if str(row.get('id')) in ids]
         return self._pick_person(rows, name)
 
-    async def _member_by_id(self, member_id, headers):
-        rows = await self._get('profiles', headers, {
-            'id': 'eq.' + str(member_id), 'select': 'id,username,display_name'})
-        return rows[0] if rows else {'id': member_id, 'username': '', 'display_name': 'essa pessoa'}
-
     def _pick_named(self, rows, name, label):
         wanted = normalize(name)
         exact = [row for row in rows if normalize(row.get('name', '')) == wanted]
