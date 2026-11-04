@@ -816,12 +816,12 @@ $('join-call').onclick = async () => {
     await authRecovery.get(account);
     if(!current())return;
     const result=await requestWithDeadline(async signal=>{
-      const response=await apiFetch(`/api/${target.private?'conversations':'channels'}/${target.id}/join`,{method:'POST',signal});
+      const response=await apiFetch(`/api/${target.private?'conversations':'channels'}/${target.id}/join`,{method:'POST',signal,timeout:60000});
       const data=await response.json().catch(()=>{throw Error('O servidor não respondeu corretamente. Tente novamente.');});
       if(!response.ok)throw Error(typeof data.detail==='string'?data.detail:'Não foi possível entrar.');return data;
-    },{signal:operation.signal,timeout:30000});
+    },{signal:operation.signal,timeout:60000});
     if(!current())return;
-    const {Room, RoomEvent, VideoPresets, ScreenSharePresets, DisconnectReason} = await requestWithDeadline(()=>import('https://cdn.jsdelivr.net/npm/livekit-client@2.15.6/+esm'),{signal:operation.signal,timeout:30000});
+    const {Room, RoomEvent, VideoPresets, ScreenSharePresets, DisconnectReason} = await requestWithDeadline(()=>import('https://cdn.jsdelivr.net/npm/livekit-client@2.15.6/+esm'),{signal:operation.signal,timeout:60000});
     if (!current()) return;
     await leaveCall({preserveJoin:true});
     if(!current())return;
@@ -1065,19 +1065,19 @@ function showQuickOnboarding(){
 async function boot(){
   if(booting)return;booting=true;setEntryBusy(true);startupRetry.hidden=true;$('auth-status').textContent='';
   try {
-    config=await requestWithDeadline(async signal=>{const response=await fetch('/api/config',{signal});if(!response.ok)throw Error('O servidor está indisponível. Aguarde e tente novamente.');return response.json();},{timeout:30000});
+    config=await requestWithDeadline(async signal=>{const response=await fetch('/api/config',{signal});if(!response.ok)throw Error('O servidor está indisponível. Aguarde e tente novamente.');return response.json();},{timeout:60000});
     if(config.diagnosticsEnabled)import('./app-diagnostics.js').then(module=>{diagnostics=module.initAppDiagnostics({account:()=>session?.user.id,send:async(events,user)=>{if(session?.user.id!==user)return;await apiFetch('/api/diagnostics/events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({events})});}});}).catch(()=>{});
     if(config.sentryDsn||config.umamiScript)import('./telemetry.js').then(module=>module.configureTelemetry(config)).catch(()=>{});
     if (!config.configured) { $('setup').hidden = false; $('auth-submit').disabled = true; return; }
-    const {createClient} = await requestWithDeadline(()=>import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm'),{timeout:30000});
+    const {createClient} = await requestWithDeadline(()=>import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm'),{timeout:60000});
     if(!db){db=createClient(config.supabaseUrl,config.supabaseKey,{realtime:{worker:true}});
     // Supabase calls run outside the Auth callback to avoid locking the session.
     passwordReset=initPasswordReset({$,el,db,enter:next=>showSession(next).catch(error=>toast(errorText(error)))});
-    db.auth.onAuthStateChange((event,next)=>{if(event==='PASSWORD_RECOVERY'){setTimeout(()=>{if(!passwordReset.active()||!document.getElementById('reset-form'))passwordReset.showNewPassword();},0);return;}if(passwordReset.active())return;setTimeout(()=>showSession(next).catch(error=>toast(errorText(error))),0);});}
+    db.auth.onAuthStateChange((event,next)=>{if(event==='PASSWORD_RECOVERY'){setTimeout(()=>{if(!passwordReset.active()||!document.getElementById('reset-form'))passwordReset.showNewPassword();},0);return;}if(event==='TOKEN_REFRESHED'&&next?.access_token)setTimeout(()=>{db.realtime.setAuth(next.access_token).catch(()=>{});},0);if(passwordReset.active())return;setTimeout(()=>showSession(next).catch(error=>toast(errorText(error))),0);});}
     await socialLogin.ready(db,config);
     if(initialRecovery&&!passwordReset.active()&&await passwordReset.begin(initialRecovery)){$('auth-submit').disabled=false;return;}
     if(passwordReset.active()){$('auth-submit').disabled=false;return;}
-    const {data, error} = await requestWithDeadline(()=>db.auth.getSession(),{timeout:30000}); if(error){if(isInvalidSessionError(error)){await showSession(null);$('auth-status').textContent='Sua sessão expirou. Entre novamente para continuar.';$('auth-submit').disabled=false;return;}throw error;}
+    const {data, error} = await requestWithDeadline(()=>db.auth.getSession(),{timeout:60000}); if(error){if(isInvalidSessionError(error)){await showSession(null);$('auth-status').textContent='Sua sessão expirou. Entre novamente para continuar.';$('auth-submit').disabled=false;return;}throw error;}
     await showSession(data.session);$('auth-submit').disabled=false;
   }catch(error){$('auth-status').textContent='Não foi possível conectar. '+errorText(error);$('auth-submit').disabled=true;startupRetry.hidden=false;}finally{booting=false;if(!sessionInitializing)setEntryBusy(false);}
 }
@@ -1110,8 +1110,9 @@ function button(label, action, css = 'soft-button') { const b=el('button',css,la
 async function checked(query) { const result=await query; if(result.error) throw result.error; return result.data; }
 async function apiFetch(path, options={}) {
   const account=session?.user.id;if(!account)throw Error('Entre novamente na sua conta.');
+  const {timeout=30000,...init}=options;
   let fresh=await authRecovery.get(account);
-  const send=()=>requestWithDeadline(signal=>fetch(path,{...options,signal,headers:{...options.headers,Authorization:`Bearer ${fresh.access_token}`}}),{signal:options.signal,timeout:30000});
+  const send=()=>requestWithDeadline(signal=>fetch(path,{...init,signal,headers:{...init.headers,Authorization:`Bearer ${fresh.access_token}`}}),{signal:init.signal,timeout});
   let response=await send();
   if(response.status===401){fresh=await authRecovery.refresh(account);if(session?.user.id!==account)throw new DOMException('A conta mudou.','AbortError');response=await send();if(response.status===401)await authRecovery.expire(account);}
   if(!response.ok) {if(!path.startsWith('/api/diagnostics')&&!path.startsWith('/api/admin/diagnostics'))window.dispatchEvent(new CustomEvent('orbita:technical-signal',{detail:'api_error'}));const error=await response.json().catch(()=>({}));const failure=Error(error.detail||'Não foi possível concluir.');failure.status=response.status;throw failure;}
@@ -1227,9 +1228,21 @@ async function initSocial() {
     .subscribe(status=>{if(status==='SUBSCRIBED')dmCalls?.poll();});dmUnread?.refresh();dmCalls?.watch();
   if(presenceChannel) await db.removeChannel(presenceChannel);
   if(!current())return;
+  let presenceRetries=0,presenceRetryTimer=0;
   presenceChannel=db.channel('community:main',{config:{private:true,presence:{key:uid}}});
   presenceChannel.on('presence',{event:'sync'},()=>{publicVoicePresence=Object.entries(presenceChannel.presenceState()).flatMap(([id,metas])=>metas.map(meta=>({...meta,id})));window.dispatchEvent(new Event('orbita:presence'));online=new Set(Object.keys(presenceChannel.presenceState()));renderMembers();renderChannels();if(home)renderFriends();requestAnimationFrame(applyDecorations);});
-  presenceChannel.subscribe(async status=>{if(status==='SUBSCRIBED')await publishVoicePresence(true);});
+  presenceChannel.subscribe(async status=>{
+    if(status==='SUBSCRIBED'){presenceRetries=0;clearTimeout(presenceRetryTimer);await publishVoicePresence(true);return;}
+    // O socket guarda o token do momento da conexão; depois de uma renovação ele pode ser recusado.
+    if((status==='CHANNEL_ERROR'||status==='TIMED_OUT')&&current()&&presenceRetries<3){
+      const delay=[2000,5000,10000][presenceRetries++];
+      clearTimeout(presenceRetryTimer);
+      presenceRetryTimer=setTimeout(async()=>{
+        if(!current()||!presenceChannel||!session?.access_token)return;
+        try{await db.realtime.setAuth(session.access_token);await presenceChannel.subscribe();}catch{}
+      },delay);
+    }
+  });
 }
 // ===== Membros v2: coluna direita dos canais de texto (painel sobreposto em telas estreitas) e perfil compacto nas DMs =====
 const memberNodes=new Map(),memberHeads=new Map(),MEMBER_CAP=200;let memberExpand=new Set();

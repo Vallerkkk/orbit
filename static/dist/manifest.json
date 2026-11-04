@@ -1,8 +1,8 @@
 {
-  "version": "28006a68a46f407f",
-  "entry": "/static/dist/app-I46LNIDR.js",
+  "version": "7755c2d77d8e6229",
+  "entry": "/static/dist/app-FNMAZTGE.js",
   "files": [
-    "/static/dist/app-I46LNIDR.js",
+    "/static/dist/app-FNMAZTGE.js",
     "/static/dist/call-layout-f9f70c16e1d5a550.css",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js",
@@ -77,7 +77,7 @@
     "/static/mobile-fixes.css": "/static/dist/mobile-fixes-134f0f1e61912050.css"
   },
   "integrity": {
-    "/static/dist/app-I46LNIDR.js": "518873bd3a31f2396ac495d8e1e3c410bcfe75d4a9d45eed3bdae31f9dfd3714",
+    "/static/dist/app-FNMAZTGE.js": "35d43f3b055cd981facc329e22930b465e6b1e4ddb1533b600e90b7c9b3352f7",
     "/static/dist/call-layout-f9f70c16e1d5a550.css": "f9f70c16e1d5a5509b31f2cc64049fe8efc02c7c9aadec0ce781d4bff0560355",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js": "20cfee0fc731efe53611da92202bd240b2f9d28e6b3115691ed50fc718851ee0",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js": "db2508c2c9152fbe631806e53dd148bd67a8b3695a0094caa6145d906b978027",
