@@ -173,8 +173,8 @@ async function showSession(next) {
   if(next){const pending=sessionStorage.getItem('orbita-oauth-return');if(pending){const target=new URL(location.href);for(const [key,value]of new URLSearchParams(pending))if(['invite','post','profile','channel','dm','message','story'].includes(key))target.searchParams.set(key,value);history.replaceState(null,'',target);sessionStorage.removeItem('orbita-oauth-return');}}
   conversationCache.clear();outbox.clear();communityViews.clear();channelNodes.clear();voiceTrees.clear();memberNodes.clear();communityNodes.clear();lastViewport=null;
   welcomeAccess.clear();drafts.useAccount(next?.user.id,localStorage);pendingSends.clear();$('message-input').value='';
-  people=[];peopleById.clear();peopleByUsername.clear();profileMediaUrls.clear();friendships=[];conversations=[];profile=null;selected=null;channels=[];messages.clear();communities=[];siteRoles=[];communityRoleList=[];memberRoles=[];communityMemberList=[];communityEmojiList=[];communityEmojiUrls.clear();online.clear();publicVoicePresence=[];lastPresenceSignature='';home=false;voiceChat?.update();
-  for(const id of ['message-list','text-channels','voice-channels','member-list','dm-channels','rail-servers-list'])$(id).replaceChildren();
+  people=[];peopleById.clear();peopleByUsername.clear();profileMediaUrls.clear();friendships=[];conversations=[];profile=null;selected=null;channels=[];channelCategories=[];communityEvents=[];messages.clear();communities=[];siteRoles=[];communityRoleList=[];memberRoles=[];communityMemberList=[];communityEmojiList=[];communityEmojiUrls.clear();online.clear();publicVoicePresence=[];lastPresenceSignature='';home=false;voiceChat?.update();
+  for(const id of ['message-list','text-channels','voice-channels','custom-channel-groups','member-list','dm-channels','rail-servers-list'])$(id).replaceChildren();
   attachmentUrls.clear();messageRows.clear();renderedScope='';
   $('auth-view').hidden = !!next; $('app-view').hidden = !next;
   if (!next) {
@@ -182,7 +182,7 @@ async function showSession(next) {
     generation++; if (subscription) { db.removeChannel(subscription); subscription = null; }
     await leaveCall();
     for(const channel of [socialSubscription,presenceChannel,extraSubscription])if(channel)db.removeChannel(channel);
-    people=[];peopleById.clear();peopleByUsername.clear();profileMediaUrls.clear();friendships=[];conversations=[];profile=null;selected=null;channels=[];messages.clear();$('message-list').replaceChildren();sessionInitializing=false;await enhancements?.sessionChanged();return;
+    people=[];peopleById.clear();peopleByUsername.clear();profileMediaUrls.clear();friendships=[];conversations=[];profile=null;selected=null;channels=[];channelCategories=[];communityEvents=[];messages.clear();$('message-list').replaceChildren();sessionInitializing=false;await enhancements?.sessionChanged();return;
   }
   const name = next.user.user_metadata?.display_name || 'Participante';
   $('user-name').textContent = name;setAvatar($('user-avatar'),{id:next.user.id,display_name:name,avatar_color:'#8b80ff'});
@@ -192,8 +192,8 @@ async function showSession(next) {
     if (!session || session.user.id !== next.user.id||transition!==sessionTransition) return;
     await chooseOAuthNickname(next);if(transition!==sessionTransition)return;
     if(!await ensureCommunityWelcome(activeCommunity)){showFriends();sessionReady=true;return;}
-    const loadedChannels = await checked(db.from('channels').select('*').order('position'));
-    if(transition!==sessionTransition||session?.user.id!==next.user.id)return;channels=loadedChannels;
+    const [loadedChannels, loadedCategories] = await Promise.all([checked(db.from('channels').select('*').order('position')),checked(db.from('channel_categories').select('*').order('position'))]);
+    if(transition!==sessionTransition||session?.user.id!==next.user.id)return;channels=loadedChannels;channelCategories=loadedCategories;
     if (!channels.length) {renderCommunityRail();showFriends();sessionReady=true;await enhancements.sessionChanged();return;}
     renderChannels();await loadCommunityAccess();
     if(transition!==sessionTransition||session?.user.id!==next.user.id)return;
@@ -208,9 +208,12 @@ $('logout').onclick = async () => {
   const {error} = await db.auth.signOut(); if (error) toast(errorText(error));
 };
 const channelNodes = new Map(), voiceTrees = new Map();
+let channelCategories = [], communityEvents = [];
+const orderChannels = list => [...list].sort((a,b)=>(a.position??0)-(b.position??0)||a.name.localeCompare(b.name,'pt-BR'));
+const orderCategories = list => [...list].sort((a,b)=>(a.position??0)-(b.position??0)||a.name.localeCompare(b.name,'pt-BR'));
 function renderChannels() {
-  const text = [], voice = [], keep = new Set();
-  for (const channel of channels.filter(c => c.community_id === activeCommunity)) {
+  const mine = channels.filter(c => c.community_id === activeCommunity), keep = new Set(), built = new Map();
+  for (const channel of mine) {
     keep.add(channel.id); let node = channelNodes.get(channel.id);
     if (!node) {
       node = el('button', 'channel'); node.dataset.channelId = channel.id;
@@ -223,10 +226,10 @@ function renderChannels() {
     node.classList.toggle('active', selected?.id === channel.id && !home); node.classList.toggle('connected', callChannel?.id === channel.id);
     node.setAttribute('aria-label', channel.name + ' · ' + (channel.kind === 'voice' ? 'Sala de voz' : 'Canal de texto'));
     node.setAttribute('aria-pressed', String(selected?.id === channel.id && !home));
-    (channel.kind === 'text' ? text : voice).push(node);
+    let tree = null;
     if (channel.kind === 'voice') {
       const peers = voicePeers(channel.id), signature = JSON.stringify(peers.map(info => [info.id, person(info.id).display_name, person(info.id).avatar_src]));
-      let tree = voiceTrees.get(channel.id);
+      tree = voiceTrees.get(channel.id);
       if (!tree || tree.dataset.signature !== signature) {
         tree = el('div', 'voice-tree-live'); tree.dataset.signature = signature;
         for (const info of peers) { const p = person(info.id), row = el('div', 'voice-tree-person'), avatar = el('span', 'avatar'); row.dataset.uid = info.id; setAvatar(avatar, p); row.append(avatar, el('span', 'vt-name', p.display_name), el('span', 'vt-icons')); tree.append(row); }
@@ -234,11 +237,24 @@ function renderChannels() {
       }
       paintVoiceTree(tree, channel.id);
       node.classList.toggle('has-peers', tree.children.length > 0);
-      if (tree.children.length) voice.push(tree);
+      if (!tree.children.length) tree = null;
     }
+    built.set(channel.id, {node, tree});
   }
   for (const key of channelNodes.keys()) if (!keep.has(key)) { channelNodes.delete(key); voiceTrees.delete(key); }
-  reconcileNodes($('text-channels'), text); reconcileNodes($('voice-channels'), voice);
+  const fill = (list, rows) => { for (const channel of orderChannels(rows)) { const item = built.get(channel.id); list.append(item.node); if (item.tree) list.append(item.tree); } };
+  const categories = orderCategories(channelCategories.filter(c => c.community_id === activeCommunity)), categoryIds = new Set(categories.map(c => c.id));
+  fill($('text-channels'), mine.filter(c => (!c.category_id || !categoryIds.has(c.category_id)) && c.kind === 'text'));
+  fill($('voice-channels'), mine.filter(c => (!c.category_id || !categoryIds.has(c.category_id)) && c.kind === 'voice'));
+  const groups = [];
+  for (const category of categories) {
+    const group = el('div', 'category'); group.dataset.categoryId = category.id;
+    const header = el('div', 'category-header'); header.append(el('span', '', category.name));
+    const list = el('div', 'channel-list'); list.id = 'category-channels-' + category.id; list.dataset.categoryId = category.id;
+    fill(list, mine.filter(c => c.category_id === category.id));
+    group.append(header, list); groups.push(group);
+  }
+  reconcileNodes($('custom-channel-groups'), groups);
 }
 
 const conversationCache = new ConversationCache(), outbox = new MessageOutbox();
@@ -1558,13 +1574,21 @@ function channelEditFields(form,channel){
   const memberLabel=el('label','field','Membros autorizados'),memberSelect=el('select');memberSelect.multiple=true;memberSelect.size=Math.min(6,Math.max(3,communityMemberList.length));memberSelect.setAttribute('aria-label','Membros autorizados no canal privado');
   for(const item of communityMemberList){const p=person(item.user_id),option=el('option','',p.display_name+' · @'+p.username);option.value=item.user_id;memberSelect.append(option);}
   if(channel?.id)checked(db.from('channel_members').select('user_id').eq('channel_id',channel.id)).then(rows=>{for(const option of memberSelect.options)option.selected=rows.some(row=>row.user_id===option.value);}).catch(error=>toast(errorText(error)));
-  memberLabel.append(memberSelect);form.append(memberLabel,el('small','muted','Use Ctrl ou ⌘ para selecionar várias pessoas.'));const stageLabel=el('label','check-field'),stageBox=el('input');stageBox.type='checkbox';stageBox.checked=!!channel?.is_stage;stageLabel.append(stageBox,document.createTextNode('Sala de palco: novos participantes entram na plateia'));form.append(stageLabel);return {privateBox,announceBox,defaultBox,memberSelect,stageBox};
+  memberLabel.append(memberSelect);form.append(memberLabel,el('small','muted','Use Ctrl ou ⌘ para selecionar várias pessoas.'));const stageLabel=el('label','check-field'),stageBox=el('input');stageBox.type='checkbox';stageBox.checked=!!channel?.is_stage;stageLabel.append(stageBox,document.createTextNode('Sala de palco: novos participantes entram na plateia'));form.append(stageLabel);
+  const categoryLabel=el('label','field','Categoria'),categorySelect=el('select'),noCategory=el('option','','Sem categoria');noCategory.value='';categorySelect.append(noCategory);
+  for(const category of orderCategories(channelCategories.filter(c=>c.community_id===activeCommunity))){const option=el('option','',category.name);option.value=category.id;categorySelect.append(option);}
+  categorySelect.value=channel?.category_id||'';categoryLabel.append(categorySelect);form.append(categoryLabel);
+  const slowLabel=el('label','field','Modo lento'),slow=el('select');
+  for(const seconds of [0,5,10,15,30,60,120,300,600,900,1800,3600]){const option=el('option','',seconds?seconds<60?seconds+' segundos':seconds/60+' minuto'+(seconds>60?'s':''):'Sem modo lento');option.value=String(seconds);slow.append(option);}
+  slow.value=String(channel?.slowmode_seconds||0);slowLabel.append(slow);if(channel?.kind==='voice')slowLabel.hidden=true;form.append(slowLabel,el('small','muted','O modo lento limita uma mensagem por pessoa no intervalo escolhido. Moderadores não são afetados.'));
+  return {privateBox,announceBox,defaultBox,memberSelect,stageBox,categorySelect,slow,slowLabel};
 }
 $('create-channel').onclick=()=>showDialog('Novo canal',container=>{
   const form=el('form'),name=inputField(form,'Nome do canal','',40),type=el('select');
   for(const [value,text]of[['text','Canal de texto'],['music','Canal do Ouvir juntos (só comandos)'],['voice','Sala de voz e vídeo']]){const opt=el('option','',text);opt.value=value;type.append(opt);}form.append(type);
   const options=channelEditFields(form,null),save=el('button','primary','Criar canal');save.type='submit';form.append(save);container.append(form);
-  form.onsubmit=async e=>{e.preventDefault();save.disabled=true;try{if(type.value==='text'&&options.defaultBox.checked)await checked(db.from('channels').update({default_for_new_members:false}).eq('community_id',activeCommunity).eq('kind','text').eq('default_for_new_members',true));const c=await insertChannel({name:name.value.trim(),kind:type.value==='music'?'text':type.value,is_music:type.value==='music',position:channels.length+1,community_id:activeCommunity,is_stage:type.value==='voice'&&options.stageBox.checked,is_private:options.privateBox.checked,is_announcement:type.value!=='voice'&&type.value!=='music'&&options.announceBox.checked,default_for_new_members:type.value!=='voice'&&options.defaultBox.checked});
+  type.onchange=()=>{options.slowLabel.hidden=type.value==='voice';if(type.value==='voice')options.slow.value='0';};
+  form.onsubmit=async e=>{e.preventDefault();save.disabled=true;try{if(type.value==='text'&&options.defaultBox.checked)await checked(db.from('channels').update({default_for_new_members:false}).eq('community_id',activeCommunity).eq('kind','text').eq('default_for_new_members',true));const c=await insertChannel({name:name.value.trim(),kind:type.value==='music'?'text':type.value,is_music:type.value==='music',position:channels.length+1,community_id:activeCommunity,category_id:options.categorySelect.value||null,slowmode_seconds:type.value==='text'?Number(options.slow.value)||0:0,is_stage:type.value==='voice'&&options.stageBox.checked,is_private:options.privateBox.checked,is_announcement:type.value!=='voice'&&type.value!=='music'&&options.announceBox.checked,default_for_new_members:type.value!=='voice'&&options.defaultBox.checked});
     if(c.is_private){const ids=[...new Set([session.user.id,...[...options.memberSelect.selectedOptions].map(o=>o.value)])];await checked(db.from('channel_members').insert(ids.map(user_id=>({channel_id:c.id,user_id,added_by:session.user.id}))).select());}
     if(c.default_for_new_members)channels=channels.map(old=>old.community_id===c.community_id&&old.kind==='text'?{...old,default_for_new_members:false}:old);
     channels.push(c);$('app-dialog').close();await selectChannel(c);
@@ -1665,7 +1689,7 @@ $('file-input').onchange=async()=>{
 };
 let navigationEpoch=0;
 const communityViews=new Map(),communityNodes=new Map();
-function rememberCommunity(){if(!activeCommunity||!session)return;communityViews.delete(activeCommunity);communityViews.set(activeCommunity,{roles:communityRoleList,memberRoles,members:communityMemberList,emojis:communityEmojiList,emojiUrls:communityEmojiUrls,channels:channels.filter(c=>c.community_id===activeCommunity),lastChannel:selected?.community_id===activeCommunity?selected.id:null,expires:Date.now()+300000});while(communityViews.size>8)communityViews.delete(communityViews.keys().next().value);}
+function rememberCommunity(){if(!activeCommunity||!session)return;communityViews.delete(activeCommunity);communityViews.set(activeCommunity,{roles:communityRoleList,memberRoles,members:communityMemberList,emojis:communityEmojiList,emojiUrls:communityEmojiUrls,channels:channels.filter(c=>c.community_id===activeCommunity),categories:channelCategories.filter(c=>c.community_id===activeCommunity),lastChannel:selected?.community_id===activeCommunity?selected.id:null,expires:Date.now()+300000});while(communityViews.size>8)communityViews.delete(communityViews.keys().next().value);}
 let communities=[],activeCommunity='00000000-0000-4000-8000-000000000001',siteRoles=[],replyTarget=null,friendsFilter='online',extraSubscription;
 const isAdmin=()=>isSiteAdmin(siteRoles,session?.user.id);
 const canEditActiveServer=()=>canEditServer({siteRoles,community:communities.find(c=>c.id===activeCommunity),userId:session?.user.id});
@@ -1683,14 +1707,15 @@ async function loadCommunityAccess(){
     checked(db.from('community_roles').select('*').eq('community_id',target).order('position',{ascending:false})),
     checked(db.from('community_member_roles').select('*').eq('community_id',target)),
     checked(db.from('community_members').select('user_id').eq('community_id',target)),
-    checked(db.from('community_emojis').select('*').eq('community_id',target))
+    checked(db.from('community_emojis').select('*').eq('community_id',target)),
+    checked(db.from('channel_categories').select('*').eq('community_id',target).order('position'))
   ]);
   if(revision!==accessRevision||activeCommunity!==target||session?.user.id!==uid)return false;
-  [communityRoleList,memberRoles,communityMemberList,communityEmojiList]=loaded;
+  [communityRoleList,memberRoles,communityMemberList,communityEmojiList]=loaded;channelCategories=loaded[4];
   const urls=new Map();
   if(communityEmojiList.length){const result=await db.storage.from('orbita-files').createSignedUrls(communityEmojiList.map(emoji=>emoji.storage_path),3600);if(!result.error)for(const item of result.data||[]){const emoji=communityEmojiList.find(emoji=>emoji.storage_path===item.path);if(emoji&&item.signedUrl)urls.set(':'+emoji.name+':',item.signedUrl);}}
   if(revision!==accessRevision||activeCommunity!==target||session?.user.id!==uid)return false;
-  communityEmojiUrls=urls;renderCustomEmojiPicker();rememberCommunity();return true;
+  communityEmojiUrls=urls;renderCustomEmojiPicker();renderChannels();rememberCommunity();loadCommunityEvents().catch(()=>{});return true;
 }
 function renderCustomEmojiPicker(){
   document.querySelectorAll('.community-emoji-option').forEach(node=>node.remove());
@@ -1775,7 +1800,7 @@ async function openCommunity(c){
   const intent=++navigationEpoch;saveComposerDraft();saveConversation();rememberCommunity();
   const cached=communityViews.get(c.id);
   if(cached&&cached.expires>Date.now()&&cached.channels.length){
-    activeCommunity=c.id;[communityRoleList,memberRoles,communityMemberList,communityEmojiList,communityEmojiUrls]=[cached.roles,cached.memberRoles,cached.members,cached.emojis,cached.emojiUrls];channels=cached.channels;
+    activeCommunity=c.id;[communityRoleList,memberRoles,communityMemberList,communityEmojiList,communityEmojiUrls]=[cached.roles,cached.memberRoles,cached.members,cached.emojis,cached.emojiUrls];channels=cached.channels;channelCategories=cached.categories||[];
     const target=channels.find(ch=>ch.id===cached.lastChannel)||channels.find(ch=>ch.default_for_new_members&&ch.kind==='text')||channels[0];
     const selection=selectChannel(target),ticket=navigationEpoch;refreshCommunity(c,ticket).catch(error=>{if(ticket===navigationEpoch)toast(errorText(error));});return selection;
   }
@@ -1798,7 +1823,7 @@ selectChannel=async channel=>{
   if(intent!==navigationEpoch||channel.community_id&&activeCommunity!==channel.community_id)return;
   replyTarget=null;$('reply-banner').classList.add('hidden');
   await baseSelect(channel);syncVoiceChat().catch(error=>toast(errorText(error)));navigation(!!channel.private);renderCommunityRail();rememberCommunity();
-  $('message-input').placeholder=channel.private?'Mensagem para '+channel.name:'Conversar em #'+channel.name;
+  $('message-input').placeholder=(channel.private?'Mensagem para '+channel.name:'Conversar em #'+channel.name)+(channel.slowmode_seconds>0?' · modo lento':'');
   syncDmHeader(channel);if(channel.private&&channel.kind==='text')dmUnread?.markRead(channel.id);
   $('message-form').hidden=!!channel.is_announcement&&!hasCommunityPermission('manage_messages');
 };
@@ -1853,6 +1878,7 @@ document.querySelectorAll('[data-ftab]').forEach(tab=>tab.onclick=()=>setFriends
 $('server-header-btn').onclick=()=>$('server-dropdown').classList.toggle('hidden');
 document.querySelectorAll('.category-header').forEach(header=>header.onclick=e=>{if(!e.target.closest('button'))header.parentElement.classList.toggle('collapsed');});
 $('dd-create-channel-btn').onclick=()=>{$('server-dropdown').classList.add('hidden');$('create-channel').click();};
+$('dd-events-btn').onclick=()=>{$('server-dropdown').classList.add('hidden');openEvents();};
 $('dd-settings-btn').onclick=()=>{$('server-dropdown').classList.add('hidden');openManagement();};
 // Nomes viram o "slug" do canal (como no Discord): minúsculas, sem acentos, com hífens.
 function channelNames(value,label){
@@ -2015,8 +2041,106 @@ function openManagement(){showDialog(isAdmin()?'Administração do site':'Config
   if(!managesCommunity()){container.append(el('p','','Você não tem permissão para alterar esta comunidade.'));return;}
   const form=el('form'),name=inputField(form,'Nome',c?.name,60),description=inputField(form,'Descrição',c?.description,240),save=el('button','primary','Salvar comunidade');save.type='submit';form.append(save);container.append(form);
   form.onsubmit=async e=>{e.preventDefault();try{await checked(db.from('communities').update({name:name.value.trim(),description:description.value.trim()}).eq('id',activeCommunity));c.name=name.value.trim();c.description=description.value.trim();renderCommunityRail();toast('Comunidade atualizada.');}catch(error){toast(errorText(error));}};
-  const actions=el('div','admin-menu');actions.append(button('Criar canal',()=>{$('app-dialog').close();$('create-channel').click();}),button('Sobre esta versão',()=>openCloud()));container.append(actions);
+  const actions=el('div','admin-menu');actions.append(button('Criar canal',()=>{$('app-dialog').close();$('create-channel').click();}),button('Organizar canais',()=>openChannelOrganizer()),button('Eventos do servidor',()=>openEvents()),button('Sobre esta versão',()=>openCloud()));container.append(actions);
+  const automod=el('form','community-card'),automodTitle=el('h3','','Automoderação'),automodBoxes={};automod.append(automodTitle,el('p','muted','Bloqueios automáticos para mensagens de membros. Moderadores com permissão de mensagens e webhooks não são afetados.'));
+  for(const [key,text]of[['automod_links','Bloquear links (http, https e www)'],['automod_caps','Bloquear mensagens escritas em MAIÚSCULAS'],['automod_spam','Bloquear a mesma mensagem repetida em 30 segundos']]){const label=el('label','check-field'),box=el('input');box.type='checkbox';label.append(box,document.createTextNode(text));automod.append(label);automodBoxes[key]=box;}
+  const saveAutomod=el('button','primary','Salvar automoderação');saveAutomod.type='submit';automod.append(saveAutomod);container.append(automod);
+  checked(db.from('communities').select('automod_links,automod_caps,automod_spam').eq('id',activeCommunity).single()).then(settings=>{if(!container.isConnected)return;for(const key of Object.keys(automodBoxes))automodBoxes[key].checked=!!settings?.[key];}).catch(error=>{if(container.isConnected)toast(errorText(error));});
+  automod.onsubmit=async event=>{event.preventDefault();saveAutomod.disabled=true;try{const values={};for(const [key,box]of Object.entries(automodBoxes))values[key]=box.checked;await checked(db.from('communities').update(values).eq('id',activeCommunity));const local=communities.find(c=>c.id===activeCommunity);if(local)Object.assign(local,values);toast('Automoderação atualizada.');}catch(error){toast(errorText(error));}finally{saveAutomod.disabled=false;}};
   for(const channel of channels.filter(ch=>ch.community_id===activeCommunity)){const row=el('div','community-card');row.append(el('strong','',channel.name),button('Editar',()=>editChannel(channel)));container.append(row);}
+});}
+async function reloadChannelData(){
+  const target=activeCommunity,account=session?.user.id;
+  const [found,categories]=await Promise.all([
+    checked(db.from('channels').select('*').eq('community_id',target).order('position')),
+    checked(db.from('channel_categories').select('*').eq('community_id',target).order('position'))
+  ]);
+  if(activeCommunity!==target||session?.user.id!==account)return false;
+  channels=found;channelCategories=categories;communityViews.delete(target);renderChannels();return true;
+}
+function channelGroupKey(channel){return (channel.category_id||'')+'|'+(channel.category_id?'':channel.kind);}
+function openChannelOrganizer(){showDialog('Organizar canais',async container=>{
+  if(!hasCommunityPermission('manage_channels')){container.append(el('p','','Você não tem permissão para organizar os canais deste servidor.'));return;}
+  try{await reloadChannelData();}catch(error){toast(errorText(error));}
+  const body=el('div');container.append(el('p','muted','Categorias agrupam canais de texto e voz. Use as setas para mudar a ordem exibida na barra lateral.'),body);
+  const moveCategory=async(category,delta)=>{
+    const list=orderCategories(channelCategories.filter(c=>c.community_id===activeCommunity)),index=list.findIndex(c=>c.id===category.id),other=list[index+delta];
+    if(!other)return;
+    const a=category.position??index,b=other.position??(index+delta),nextA=a===b?index+delta:a,nextB=a===b?index:b;
+    await checked(db.from('channel_categories').update({position:nextA}).eq('id',category.id));
+    await checked(db.from('channel_categories').update({position:nextB}).eq('id',other.id));
+    await reloadChannelData();paint();
+  };
+  const moveChannel=async(channel,delta)=>{
+    const siblings=orderChannels(channels.filter(c=>c.community_id===activeCommunity&&channelGroupKey(c)===channelGroupKey(channel))),index=siblings.findIndex(c=>c.id===channel.id),other=siblings[index+delta];
+    if(!other)return;
+    const a=channel.position??index,b=other.position??(index+delta),nextA=a===b?index+delta:a,nextB=a===b?index:b;
+    await checked(db.from('channels').update({position:nextA}).eq('id',channel.id));
+    await checked(db.from('channels').update({position:nextB}).eq('id',other.id));
+    await reloadChannelData();paint();
+  };
+  const paint=()=>{
+    body.replaceChildren();
+    const categories=orderCategories(channelCategories.filter(c=>c.community_id===activeCommunity));
+    body.append(el('h3','','Categorias'));
+    for(const category of categories){const row=el('div','community-card organizer-row'),field=el('label','field','Nome da categoria'),input=el('input');input.value=category.name;input.maxLength=40;field.append(input);row.append(field,button('Renomear',async()=>{const name=input.value.trim();if(!name)return toast('Dê um nome à categoria.');await checked(db.from('channel_categories').update({name}).eq('id',category.id));await reloadChannelData();paint();toast('Categoria renomeada.');}),button('↑',()=>moveCategory(category,-1),'tiny-button'),button('↓',()=>moveCategory(category,1),'tiny-button'),button('Excluir',()=>{showDialog('Excluir categoria',box=>{box.append(el('p','','Os canais de “'+category.name+'” continuam existindo, mas ficam sem categoria.'),el('div','admin-menu'));const actions=box.querySelector('.admin-menu');actions.append(button('Cancelar',()=>openChannelOrganizer()),button('Excluir categoria',async()=>{await checked(db.from('channel_categories').delete().eq('id',category.id));await reloadChannelData();openChannelOrganizer();},'danger'));});},'danger'));body.append(row);}
+    const create=el('form','community-card'),name=inputField(create,'Nova categoria','',40),add=el('button','primary','Criar categoria');add.type='submit';create.append(add);create.onsubmit=async event=>{event.preventDefault();add.disabled=true;try{const value=name.value.trim();if(!value)throw Error('Dê um nome à categoria.');const position=categories.reduce((max,c)=>Math.max(max,c.position??0),0)+1;await checked(db.from('channel_categories').insert({community_id:activeCommunity,name:value,position}));await reloadChannelData();paint();toast('Categoria criada.');}catch(error){toast(errorText(error));}finally{add.disabled=false;}};body.append(create);
+    body.append(el('h3','','Canais'));
+    for(const channel of orderChannels(channels.filter(c=>c.community_id===activeCommunity))){const row=el('div','community-card organizer-row'),select=el('select'),none=el('option','','Sem categoria');none.value='';select.append(none);for(const category of categories){const option=el('option','',category.name);option.value=category.id;select.append(option);}select.value=channel.category_id||'';select.onchange=async()=>{try{await checked(db.from('channels').update({category_id:select.value||null}).eq('id',channel.id));await reloadChannelData();paint();}catch(error){toast(errorText(error));}};row.append(el('strong','',(channel.kind==='voice'?'🔊 ':'# ')+channel.name),select,button('↑',()=>moveChannel(channel,-1),'tiny-button'),button('↓',()=>moveChannel(channel,1),'tiny-button'));body.append(row);}
+  };
+  paint();
+});}
+function eventsRsvps(event){return Array.isArray(event.community_event_rsvps)?event.community_event_rsvps:[];}
+async function loadCommunityEvents(){
+  if(!activeCommunity||!session)return;
+  const target=activeCommunity,account=session.user.id;
+  const rows=await checked(db.from('community_events').select('*, community_event_rsvps(user_id,status)').eq('community_id',target).order('starts_at'));
+  if(activeCommunity!==target||session?.user.id!==account)return;
+  communityEvents=rows;checkEventReminders();
+}
+const remindedEvents=new Set();
+function eventTime(value){const date=new Date(value);return Number.isNaN(date.getTime())?'':date.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});}
+function localDateValue(date){return date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');}
+function localTimeValue(date){return String(date.getHours()).padStart(2,'0')+':'+String(date.getMinutes()).padStart(2,'0');}
+function checkEventReminders(){
+  const account=session?.user.id;if(!account)return;
+  const now=Date.now();
+  for(const event of communityEvents){
+    if(event.community_id!==activeCommunity)continue;
+    const mine=eventsRsvps(event).find(row=>row.user_id===account);if(!mine||!['going','interested'].includes(mine.status))continue;
+    const start=Date.parse(event.starts_at);if(!start||start<=now||start>now+600000)continue;
+    const key=event.id+':'+event.starts_at;if(remindedEvents.has(key))continue;remindedEvents.add(key);
+    const channel=channels.find(c=>c.id===event.channel_id),title='Evento em breve: '+event.title,body='Começa às '+new Date(start).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+(channel?' em #'+channel.name:'')+'.';
+    toast(title);
+    try{if('Notification'in window&&Notification.permission==='granted'&&(document.hidden||!document.hasFocus()))new Notification(title,{body,tag:'orbita-event-'+event.id,icon:'/static/icons/icon-192.png'});}catch{}
+  }
+}
+setInterval(checkEventReminders,60000);
+setInterval(()=>{if(session&&!home)loadCommunityEvents().catch(()=>{});},300000);
+function openEventEditor(event){showDialog(event?'Editar evento':'Novo evento',container=>{
+  if(!hasCommunityPermission('manage_channels')){container.append(el('p','','Somente quem administra canais pode criar eventos.'));return;}
+  const form=el('form'),title=inputField(form,'Título do evento',event?.title||'',80),description=el('label','field','Descrição'),descriptionInput=el('textarea');descriptionInput.rows=3;descriptionInput.maxLength=500;descriptionInput.value=event?.description||'';description.append(descriptionInput);form.append(description);
+  const dateLabel=el('label','field','Data'),date=el('input');date.type='date';dateLabel.append(date);const timeLabel=el('label','field','Hora'),time=el('input');time.type='time';timeLabel.append(time);const whenRow=el('div','event-when');whenRow.append(dateLabel,timeLabel);form.append(whenRow);
+  const channelLabel=el('label','field','Canal (opcional)'),channelSelect=el('select'),none=el('option','','Nenhum canal');none.value='';channelSelect.append(none);for(const channel of orderChannels(channels.filter(c=>c.community_id===activeCommunity))){const option=el('option','',channel.name);option.value=channel.id;channelSelect.append(option);}channelSelect.value=event?.channel_id||'';channelLabel.append(channelSelect);form.append(channelLabel);
+  const start=event?new Date(event.starts_at):new Date(Date.now()+3600000);date.value=localDateValue(start);time.value=localTimeValue(start);
+  const save=el('button','primary',event?'Salvar evento':'Criar evento');save.type='submit';form.append(save);container.append(form);
+  form.onsubmit=async submit=>{submit.preventDefault();save.disabled=true;try{const name=title.value.trim();if(!name)throw Error('Dê um título ao evento.');if(!date.value||!time.value)throw Error('Escolha a data e a hora.');const startsAt=new Date(date.value+'T'+time.value+':00');if(Number.isNaN(startsAt.getTime()))throw Error('Data ou hora inválida.');if(startsAt.getTime()<Date.now())throw Error('Escolha uma data futura para o evento.');const values={title:name,description:descriptionInput.value.trim(),starts_at:startsAt.toISOString(),channel_id:channelSelect.value||null};if(event)await checked(db.from('community_events').update(values).eq('id',event.id));else await checked(db.from('community_events').insert({...values,community_id:activeCommunity}));await loadCommunityEvents();openEvents();toast(event?'Evento atualizado.':'Evento criado.');}catch(error){toast(errorText(error));}finally{save.disabled=false;}};
+  if(event)container.append(button('Excluir evento',async()=>{await checked(db.from('community_events').delete().eq('id',event.id));await loadCommunityEvents();openEvents();toast('Evento excluído.');},'danger'));
+});}
+function openEvents(){showDialog('Eventos do servidor',async container=>{
+  container.append(el('p','muted','Confirme presença para receber um lembrete enquanto o Órbita estiver aberto.'));
+  const list=el('div'),status=el('p','muted','Carregando eventos…');container.append(status,list);
+  if(hasCommunityPermission('manage_channels'))container.append(button('Criar evento',()=>openEventEditor(null),'primary'));
+  const setRsvp=(event,statusValue)=>async()=>{const own=eventsRsvps(event).find(row=>row.user_id===session.user.id);if(own?.status===statusValue)await checked(db.from('community_event_rsvps').delete().eq('event_id',event.id).eq('user_id',session.user.id));else await checked(db.from('community_event_rsvps').upsert({event_id:event.id,user_id:session.user.id,status:statusValue,updated_at:new Date().toISOString()},{onConflict:'event_id,user_id'}));await loadCommunityEvents();paint();};
+  const paint=()=>{
+    list.replaceChildren();const rows=communityEvents;status.textContent=rows.length?'':'Nenhum evento agendado.';
+    for(const event of rows){const card=el('article','community-card'),rsvps=eventsRsvps(event),own=rsvps.find(row=>row.user_id===session.user.id)?.status,going=rsvps.filter(row=>row.status==='going').length,interested=rsvps.filter(row=>row.status==='interested').length,channel=channels.find(c=>c.id===event.channel_id),creator=peopleById.get(event.created_by);
+      card.append(el('strong','',eventTime(event.starts_at)),el('h3','',event.title));if(event.description)card.append(el('p','',event.description));card.append(el('p','muted',[channel?'#'+channel.name:null,creator?'por '+creator.display_name:null].filter(Boolean).join(' · ')),el('p','muted',going+' vão · '+interested+' com interesse'));
+      if(Date.parse(event.starts_at)>Date.now()){const actions=el('div','admin-menu');actions.append(button(own==='going'?'Cancelar presença':'Vou participar',setRsvp(event,'going')),button(own==='interested'?'Remover interesse':'Tenho interesse',setRsvp(event,'interested')));card.append(actions);}else card.append(el('p','muted','Evento encerrado.'));
+      if(hasCommunityPermission('manage_channels'))card.append(button('Editar evento',()=>openEventEditor(event),'text-button'));list.append(card);}
+  };
+  try{await loadCommunityEvents();}catch(error){status.textContent=errorText(error);return;}
+  paint();
 });}
 function editChannel(channel){showDialog('Editar canal',container=>{const form=el('form'),name=inputField(form,'Nome',channel.name,40),description=inputField(form,'Descrição',channel.description,240),save=el('button','primary','Salvar');save.type='submit';form.append(save);container.append(form);form.onsubmit=async e=>{e.preventDefault();try{await checked(db.from('channels').update({name:name.value.trim(),description:description.value.trim()}).eq('id',channel.id));channel.name=name.value.trim();channel.description=description.value.trim();renderChannels();if(selected?.id===channel.id)await selectChannel(channel);$('app-dialog').close();}catch(error){toast(errorText(error));}};
 container.append(button('Excluir canal e seu histórico',()=>showDialog('Excluir canal',box=>{box.append(el('p','','A exclusão remove permanentemente o histórico deste canal. Confirme somente se desejar apagar esses dados.'),button('Excluir permanentemente',async()=>{if(channel.kind==='voice'&&config.callsConfigured)await apiFetch(`/api/channels/${channel.id}/live-room`,{method:'DELETE'});await checked(db.from('channels').delete().eq('id',channel.id));channels=channels.filter(ch=>ch.id!==channel.id);$('app-dialog').close();renderChannels();if(selected?.id===channel.id)showFriends();},'danger'));}),'danger'));});}
@@ -2165,8 +2289,8 @@ editChannel=channel=>showDialog('Editar canal',container=>{
   const form=el('form'),name=inputField(form,'Nome',channel.name,40),description=inputField(form,'Descrição',channel.description,240),options=channelEditFields(form,channel),save=el('button','primary','Salvar canal');save.type='submit';form.append(save);container.append(form);
   form.onsubmit=async event=>{event.preventDefault();save.disabled=true;try{
     if(options.defaultBox.checked)await checked(db.from('channels').update({default_for_new_members:false}).eq('community_id',activeCommunity).eq('kind','text').eq('default_for_new_members',true));
-    await checked(db.from('channels').update({name:name.value.trim(),description:description.value.trim(),is_stage:channel.kind==='voice'&&options.stageBox.checked,is_private:options.privateBox.checked,is_announcement:channel.kind==='text'&&options.announceBox.checked,default_for_new_members:channel.kind==='text'&&options.defaultBox.checked}).eq('id',channel.id));
-    channel.name=name.value.trim();channel.description=description.value.trim();channel.is_stage=channel.kind==='voice'&&options.stageBox.checked;channel.is_private=options.privateBox.checked;channel.is_announcement=channel.kind==='text'&&options.announceBox.checked;channel.default_for_new_members=channel.kind==='text'&&options.defaultBox.checked;
+    await checked(db.from('channels').update({name:name.value.trim(),description:description.value.trim(),category_id:options.categorySelect.value||null,slowmode_seconds:channel.kind==='text'?Number(options.slow.value)||0:0,is_stage:channel.kind==='voice'&&options.stageBox.checked,is_private:options.privateBox.checked,is_announcement:channel.kind==='text'&&options.announceBox.checked,default_for_new_members:channel.kind==='text'&&options.defaultBox.checked}).eq('id',channel.id));
+    channel.name=name.value.trim();channel.description=description.value.trim();channel.category_id=options.categorySelect.value||null;channel.slowmode_seconds=channel.kind==='text'?Number(options.slow.value)||0:0;channel.is_stage=channel.kind==='voice'&&options.stageBox.checked;channel.is_private=options.privateBox.checked;channel.is_announcement=channel.kind==='text'&&options.announceBox.checked;channel.default_for_new_members=channel.kind==='text'&&options.defaultBox.checked;
     if(channel.is_private){await checked(db.from('channel_members').delete().eq('channel_id',channel.id));const ids=[...new Set([session.user.id,...[...options.memberSelect.selectedOptions].map(o=>o.value)])];await checked(db.from('channel_members').insert(ids.map(user_id=>({channel_id:channel.id,user_id,added_by:session.user.id}))).select());}
     let voiceWarning=false;try{await syncChannelVoice(channel);}catch{voiceWarning=true;}
     renderChannels();if(selected?.id===channel.id)await selectChannel(channel);$('app-dialog').close();toast(voiceWarning?'Canal salvo. Salve novamente para tentar sincronizar os participantes da chamada.':'Canal atualizado.');

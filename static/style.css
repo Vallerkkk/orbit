@@ -3088,3 +3088,9 @@ dialog[open] { animation: dialog-in .2s ease; }
   outline: 2px solid #fff;
   outline-offset: 2px;
 }
+.organizer-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.organizer-row>.field{flex:1 1 160px;margin:0}
+.organizer-row>select{max-width:240px}
+.event-when{display:flex;gap:12px;flex-wrap:wrap}
+.event-when>.field{flex:1 1 150px;margin:0}
+.event-card h3{margin:6px 0}
