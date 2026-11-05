@@ -1,0 +1,242 @@
+/* Palco de chamada no padrão Discord: superfícies neutras, nome sobreposto,
+   destaque verde de fala e barra de controles circular. Escopo: #voice-view. */
+#voice-view{
+  --call-bg:#1e1f22;
+  --call-surface:#2b2d31;
+  --call-raised:#313338;
+  --call-hover:#3f4147;
+  --call-line:#232428;
+  --call-text:#f2f3f5;
+  --call-muted:#b5bac1;
+  --call-green:#23a55a;
+  --call-red:#f23f43;
+  background:var(--call-bg);
+  color:var(--call-text);
+}
+
+/* Cabeçalho */
+#voice-view .chat-header{
+  background:var(--call-bg);
+  border-bottom:1px solid var(--call-line);
+  box-shadow:0 1px 0 #0006;
+  padding:8px 20px;
+}
+#voice-view .chat-header h2{font-size:16px;font-weight:650;color:var(--call-text);letter-spacing:-.01em}
+#voice-view .ch-icon{color:var(--call-muted)}
+#voice-view .ch-desc{color:var(--call-muted);font-size:12px}
+#voice-view .chat-actions button{color:var(--call-muted);border-radius:8px}
+#voice-view .chat-actions button:hover{background:var(--call-hover);color:var(--call-text)}
+/* Navegação do cabeçalho é neutra, sem o acento da marca */
+#voice-view .chat-header>#call-navigation.sidebar-shown,
+#voice-view .chat-actions .mobile-nav-btn{
+  background:transparent!important;color:var(--call-muted)!important;box-shadow:none!important;
+}
+#voice-view .chat-header>#call-navigation.sidebar-shown:hover,
+#voice-view .chat-actions .mobile-nav-btn:hover{
+  background:var(--call-hover)!important;color:var(--call-text)!important;
+}
+#voice-view .call-live-pill{
+  background:var(--call-surface);border-color:var(--call-line);color:var(--call-text);
+  font-weight:600;font-size:12px;letter-spacing:0;padding:4px 10px;box-shadow:none;
+}
+#voice-view .call-live-pill::before{background:var(--call-green);box-shadow:none;width:7px;height:7px}
+#voice-view .call-timer{color:var(--call-text);border-left-color:var(--call-line)}
+
+/* Palco e tiles */
+#voice-view .voice-stage{background:var(--call-bg);padding:16px 24px}
+#voice-view .call-grid{gap:10px}
+#voice-view .participant,#voice-view .media-tile{
+  background:var(--call-surface);
+  border:2px solid transparent;
+  border-radius:8px;
+  box-shadow:none;
+}
+#voice-view .participant{
+  background:radial-gradient(120% 100% at 50% 0,#35373c 0%,#2b2d31 58%);
+}
+#voice-view .participant:nth-child(even){
+  background:radial-gradient(120% 100% at 50% 100%,#35373c 0%,#2b2d31 58%);
+}
+#voice-view .participant:hover,#voice-view .media-tile:hover{
+  border-color:transparent;box-shadow:none;transform:none;
+}
+#voice-view .participant .avatar{
+  width:80px;height:80px;min-width:80px;font-size:26px;
+  border-radius:50%;box-shadow:0 4px 14px #0004;filter:none;
+}
+/* Vence as regras de acento das camadas anteriores (grafite/orbita-v2) */
+#voice-view .participant.speaking,#voice-view .media-tile.speaking{
+  border-color:var(--call-green)!important;
+  box-shadow:none!important;
+}
+#voice-view .participant.speaking .avatar{
+  box-shadow:0 0 0 3px var(--call-green),0 4px 14px #0004!important;
+}
+#voice-view .media-screen.speaking{border-color:var(--call-green)!important}
+
+/* Nome sobreposto, como no Discord */
+#voice-view .participant .participant-name,
+#voice-view .media-tile figcaption>span:first-child{
+  left:8px;bottom:8px;display:inline-flex;align-items:center;gap:6px;
+  max-width:calc(100% - 56px);padding:3px 7px;border-radius:4px;
+  background:#000000a6;backdrop-filter:none;border:0;
+  color:#fff;font-size:13px;font-weight:600;line-height:18px;
+}
+#voice-view .participant .participant-name::after,
+#voice-view .media-tile figcaption>span:first-child::after{content:none;display:none}
+#voice-view .participant.speaking .participant-name{
+  flex-direction:row;align-items:center;gap:6px;padding-bottom:3px;
+}
+#voice-view .participant.speaking .participant-name::before{content:none;display:none}
+#voice-view .participant[data-mic="off"]::after{
+  right:8px;bottom:8px;width:24px;height:24px;border-radius:50%;
+  background:#000000a6 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M9 9v3a3 3 0 0 0 5.1 2.1M15 9.3V5a3 3 0 0 0-5.9-.6M19 10v2a7 7 0 0 1-.6 2.8M5 10v2a7 7 0 0 0 11.6 5.3M12 19v3M3 3l18 18'/%3E%3C/svg%3E") center/14px no-repeat;
+}
+#voice-view .call-tile-menu{
+  top:8px;right:8px;width:32px;height:32px;min-width:32px;min-height:32px;
+  border-radius:50%;background:#000000a6;color:#dbdee1;
+}
+#voice-view .call-tile-menu:hover{background:#000000d9;color:#fff}
+#voice-view .call-live{
+  top:8px;right:auto;left:8px;border-radius:4px;background:var(--call-red);
+  font-size:10px;font-weight:700;letter-spacing:.03em;padding:2px 6px;
+}
+
+/* Barra inferior */
+#voice-view .call-footer{
+  margin:0;padding:10px 20px calc(16px + env(safe-area-inset-bottom));
+  background:var(--call-bg);border:0;border-radius:0;box-shadow:none;
+}
+#voice-view .call-footer-side .call-icon{
+  width:44px;height:44px;border-radius:50%;background:transparent;color:var(--call-muted);
+}
+#voice-view .call-footer-side .call-icon:hover{background:var(--call-hover);color:var(--call-text)}
+
+#voice-view#voice-view #active-controls#active-controls{
+  gap:8px;padding:8px;border:1px solid var(--call-line);border-radius:999px;
+  background:var(--call-surface);box-shadow:0 8px 24px -14px #000c;backdrop-filter:none;
+}
+#voice-view#voice-view #active-controls#active-controls :is(.vc-btn,.call-icon){
+  width:48px;height:48px;min-width:48px;border-radius:50%;
+  background:var(--call-raised)!important;color:#dbdee1!important;
+  border:0!important;box-shadow:none;
+}
+#voice-view#voice-view #active-controls#active-controls :is(.vc-btn,.call-icon):hover{
+  background:var(--call-hover)!important;color:#fff!important;transform:none;
+}
+#voice-view#voice-view #active-controls#active-controls :is(.vc-btn,.call-icon):focus-visible{
+  outline:3px solid #98b6ff;outline-offset:2px;
+}
+#voice-view#voice-view #active-controls#active-controls :is(.vc-btn,.call-icon)[aria-pressed="true"],
+#voice-view#voice-view #active-controls #call-more[aria-expanded="true"]{
+  background:var(--call-green)!important;color:#fff!important;box-shadow:none;
+}
+#voice-view .call-control-group{
+  display:inline-flex;align-items:center;gap:0;padding:0;
+  border-radius:999px;background:var(--call-raised);box-shadow:none;
+}
+#voice-view .call-control-group .vc-btn{background:transparent!important}
+#voice-view .call-control-group .call-icon[id$="-options"]{
+  width:28px;min-width:28px;height:48px;padding:0;border-radius:0 999px 999px 0;
+  background:transparent!important;color:var(--call-muted)!important;
+}
+#voice-view .call-control-group .call-icon[id$="-options"]:hover{
+  background:#0000001f!important;color:#fff!important;
+}
+#voice-view .call-control-group .call-icon[id$="-options"] svg{width:15px;height:15px}
+/* Microfone mutado fica vermelho, inclusive o chevron */
+#voice-view .call-control-group:has(#mic){background:var(--call-raised);padding-right:0}
+#voice-view .call-control-group:has(#mic[aria-pressed="false"]){background:var(--call-red)}
+#voice-view .call-control-group:has(#mic[aria-pressed="false"]) :is(#mic,#mic-options){
+  color:#fff!important;
+}
+#voice-view #mic,#voice-view #active-controls #mic,
+#voice-view #active-controls #mic[aria-pressed="true"]{background:transparent!important;color:#dbdee1!important}
+#voice-view .vc-btn[aria-pressed="true"]{background:var(--call-green);color:#fff}
+
+/* Sair: círculo vermelho com o ícone do telefone */
+#voice-view #leave-call.leave-pill,
+#voice-view#voice-view #active-controls#active-controls #leave-call{
+  width:48px!important;min-width:48px!important;height:48px!important;min-height:48px!important;
+  padding:0!important;border-radius:50%!important;background:var(--call-red)!important;
+  color:#fff!important;display:inline-flex!important;align-items:center;justify-content:center;
+  box-shadow:none!important;margin-left:4px;
+}
+#voice-view #leave-call.leave-pill:hover,
+#voice-view#voice-view #active-controls#active-controls #leave-call:hover{
+  background:#d83c3e!important;
+}
+#voice-view #leave-call.leave-pill svg{display:block!important;width:22px;height:22px}
+#voice-view #leave-call .leave-label{display:none!important}
+
+/* Popover "Mais" no mesmo tom */
+.call-more-pop{background:var(--call-surface);border-color:var(--call-line);border-radius:12px;box-shadow:0 16px 40px -14px #000d}
+.cm-item{background:var(--call-raised);color:#dbdee1;border-radius:8px}
+.cm-item:hover,.cm-item:focus-visible{background:var(--call-hover);border-color:transparent;color:#fff;box-shadow:none}
+.cm-item.on{background:#23a55a1f;color:#7ee2a3}
+
+/* Chat lateral da sala */
+#voice-view .voice-room-chat{
+  background:var(--call-surface);border-left:1px solid var(--call-line);box-shadow:-8px 0 24px #0004;
+}
+#voice-view .voice-chat-header{border-bottom:1px solid var(--call-line)}
+#voice-view .voice-chat-header h3{font-size:14px;font-weight:650}
+#voice-view .voice-chat-message{border-bottom-color:var(--call-line)}
+#voice-view .voice-chat-form{border-top-color:var(--call-line)}
+#voice-view .voice-chat-form textarea{background:var(--call-bg);border-color:var(--call-line);border-radius:8px}
+
+/* Entrar / sala vazia */
+#voice-view .join-wrap{background:var(--call-bg);padding:0 16px 28px}
+#voice-view .empty-call{color:var(--call-text)}
+#voice-view .empty-call p{color:var(--call-muted)}
+
+/* Celular: mantém a grade, troca só a pele roxa pela neutra */
+@media (max-width:800px){
+  #voice-view .voice-stage{padding:8px 10px!important}
+  #voice-view .call-grid .participant{
+    background:radial-gradient(120% 100% at 50% 0,#35373c 0%,#2b2d31 62%)!important;
+    border:2px solid transparent!important;
+    border-radius:10px!important;
+    box-shadow:none!important;
+  }
+  #voice-view .call-grid .participant .avatar{
+    box-shadow:0 4px 14px #0004!important;
+  }
+  #voice-view .call-grid .participant.speaking .avatar{
+    box-shadow:0 0 0 2px var(--call-bg),0 0 0 4px var(--call-green)!important;
+  }
+  #voice-view .call-grid .participant .participant-name{
+    background:#000000a6!important;border-radius:4px!important;
+    font-size:12.5px!important;line-height:17px!important;padding:3px 7px!important;
+  }
+  #voice-view .call-grid .participant .call-tile-menu{
+    width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;
+    border-radius:50%!important;background:#000000a6!important;
+  }
+  /* O botão de destaque ocupa o canto superior esquerdo no celular: o selo entra ao lado */
+  #voice-view .media-screen .call-live{left:60px!important}
+  #voice-view #active-controls #leave-call,
+  #voice-view#voice-view #active-controls#active-controls #leave-call{
+    width:48px!important;min-width:48px!important;height:48px!important;min-height:48px!important;
+    border-radius:50%!important;
+  }
+  #voice-view #active-controls #leave-call .leave-label{display:none!important}
+  #voice-view .call-footer{padding:8px 8px calc(12px + env(safe-area-inset-bottom));background:var(--call-bg)}
+  #voice-view#voice-view #active-controls#active-controls{gap:6px;padding:6px;border-radius:999px}
+  /* No celular, só ícones — como no app do Discord */
+  #voice-view #active-controls :is(#mic,#camera,#screen,#call-watch,#call-audio,#call-more)::after{
+    content:none!important;
+  }
+  #voice-view #active-controls :is(.vc-btn,.call-icon){
+    width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;
+    padding:0!important;border-radius:50%!important;flex-direction:row!important;
+  }
+  #voice-view #active-controls .call-control-group > .call-icon{
+    width:26px!important;min-width:26px!important;height:44px!important;min-height:44px!important;
+    border-radius:0 999px 999px 0!important;
+  }
+}
+
+@media (prefers-reduced-motion:reduce){
+  #voice-view *,#voice-view *::before{transition:none!important;animation:none!important}
+}

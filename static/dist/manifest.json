@@ -1,8 +1,9 @@
 {
-  "version": "d689387c6c707eec",
+  "version": "b8ccd4c58d3a65cf",
   "entry": "/static/dist/app-Y6DRR4CP.js",
   "files": [
     "/static/dist/app-Y6DRR4CP.js",
+    "/static/dist/call-discord-86fbff2e5e1dd111.css",
     "/static/dist/call-layout-f9f70c16e1d5a550.css",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js",
@@ -74,10 +75,12 @@
     "/static/refino.css": "/static/dist/refino-57c8642015d02336.css",
     "/static/cosmos.css": "/static/dist/cosmos-634b58d97740ec30.css",
     "/static/loader.css": "/static/dist/loader-2d3fc658d3944c83.css",
-    "/static/mobile-fixes.css": "/static/dist/mobile-fixes-5a7ff2ee79484797.css"
+    "/static/mobile-fixes.css": "/static/dist/mobile-fixes-5a7ff2ee79484797.css",
+    "/static/call-discord.css": "/static/dist/call-discord-86fbff2e5e1dd111.css"
   },
   "integrity": {
     "/static/dist/app-Y6DRR4CP.js": "5e516efcc93d31e7f9801d9d44608d038b3b6b73b2509003cbf0bdce3483d9d1",
+    "/static/dist/call-discord-86fbff2e5e1dd111.css": "86fbff2e5e1dd11126e951e97b777a6438cdb42f31f4eab19b88cd9674545d82",
     "/static/dist/call-layout-f9f70c16e1d5a550.css": "f9f70c16e1d5a5509b31f2cc64049fe8efc02c7c9aadec0ce781d4bff0560355",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js": "20cfee0fc731efe53611da92202bd240b2f9d28e6b3115691ed50fc718851ee0",
     "/static/dist/chunk-admin-diagnostics-O5UZQ5HT.js": "db2508c2c9152fbe631806e53dd148bd67a8b3695a0094caa6145d906b978027",

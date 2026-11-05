@@ -17,11 +17,11 @@
   <main>
     <section class="hero" aria-labelledby="install-title">
       <div class="copy reveal">
-        <span class="eyebrow"><i></i>ÓRBITA · DESKTOP 1.0.2 · MOBILE 1.0.1</span>
+        <span class="eyebrow"><i></i>ÓRBITA · DESKTOP 2.0.0 · MOBILE 1.0.1</span>
         <h1 id="install-title">Sua comunidade,<br><span>em qualquer tela.</span></h1>
         <p class="lead">Texto, voz e vídeo no mesmo lugar. Instale a Órbita no computador ou no celular e continue a conversa de onde parou.</p>
         <div class="actions">
-          <a id="desktop-download" class="cta" data-platform="windows" href="/baixar/Orbita-Setup.exe"><span>Baixar para Windows</span><small>Instalador · Windows 10/11 · 64 bits · ~107 MB</small></a>
+          <a id="desktop-download" class="cta" data-platform="windows" href="/baixar/Orbita-Setup.exe"><span>Baixar o Orbita.exe</span><small>App nativo · Windows 10/11 · 64 bits · ~67 MB</small></a>
           <a id="android-download" class="cta" data-platform="android" href="/baixar/Orbita.apk" hidden><span>Baixar para Android</span><small>APK · Android 7 ou mais novo · leve</small></a>
           <a id="ios-guide" class="cta" data-platform="ios" href="#iphone" hidden><span>Instalar no iPhone</span><small>Pelo Safari · 3 passos</small></a>
           <a class="ghost" href="#plataformas">Outras plataformas</a>
@@ -40,9 +40,9 @@
       <div class="cards">
         <article class="card reveal" data-card="windows">
           <div class="card-top"><span class="os">⊞</span><span class="tag">Recomendado para PC</span></div>
-          <h3>Windows</h3><p>Janela própria, bandeja do sistema, compartilhamento de tela com áudio e atualizações automáticas.</p>
-          <ul><li>Windows 10 ou 11 · 64 bits</li><li>Versão 1.0.2 · ~107 MB</li></ul>
-          <div class="card-actions"><a class="btn primary" href="/baixar/Orbita-Setup.exe">Baixar instalador .exe ↓</a><a class="btn" href="/baixar/Orbita-Windows.zip">Baixar versão ZIP (~147 MB)</a></div>
+          <h3>Windows</h3><p>App nativo em .NET + WebView2: janela própria, bandeja do sistema e compartilhamento de tela, sem Electron.</p>
+          <ul><li>Windows 10 (1809+) ou 11 · 64 bits</li><li>Versão 2.0.0 · arquivo único · ~67 MB</li></ul>
+          <div class="card-actions"><a class="btn primary" href="/baixar/Orbita-Setup.exe">Baixar Orbita.exe ↓</a><a class="btn" href="/baixar/Orbita-Windows.zip">Baixar versão ZIP (~67 MB)</a></div>
         </article>
         <article class="card reveal" data-card="android">
           <div class="card-top"><span class="os">▲</span><span class="tag">Novo · Órbita Mobile</span></div>
@@ -70,7 +70,7 @@
         <article class="feat wide reveal"><img src="/static/install/shot-perfil.webp" width="1200" height="750" alt="Tela de configurações de perfil da Órbita" loading="lazy"><div><h3>Seu perfil, seu estilo</h3><p>Banner, decorações e aparência sincronizados entre computador e celular.</p></div></article>
         <article class="feat reveal"><span class="ico">◖</span><h3>Voz e vídeo</h3><p>Salas de voz, chamadas com câmera e compartilhamento de tela.</p></article>
         <article class="feat reveal"><span class="ico">#</span><h3>Canais e feed</h3><p>Conversas organizadas por canais e um feed para acompanhar a comunidade.</p></article>
-        <article class="feat reveal"><span class="ico">↻</span><h3>Sempre atualizado</h3><p>O app desktop se atualiza sozinho. No celular, as novidades chegam ao abrir.</p></article>
+        <article class="feat reveal"><span class="ico">↻</span><h3>Leve por dentro</h3><p>Sem Electron: o app usa o WebView2 já instalado no Windows e consome menos memória.</p></article>
         <article class="feat reveal"><span class="ico">◉</span><h3>Privacidade</h3><p>Câmera e microfone só são ativados com a sua permissão.</p></article>
       </div>
     </section>
@@ -84,9 +84,9 @@
     <section class="faq" id="perguntas" aria-labelledby="faq-title">
       <div class="head reveal"><span class="eyebrow">PERGUNTAS</span><h2 id="faq-title">Requisitos e dúvidas</h2></div>
       <div class="qa reveal">
-        <details><summary>Quais são os requisitos?</summary><p>Windows 10 ou 11 de 64 bits; Android 7 ou mais novo; iPhone com iOS 16.4 ou mais novo usando o Safari. Mensagens e chamadas precisam de internet.</p></details>
-        <details><summary>O Windows mostrou um aviso do SmartScreen. É seguro?</summary><p>O instalador desta versão ainda não possui assinatura digital comercial, então o Windows pode exibir um aviso. Clique em “Mais informações” → “Executar assim mesmo”. A Órbita nunca pede para desativar o antivírus. <a href="https://github.com/Vallerkkk/calldojoao/releases/tag/v1.0.2" target="_blank" rel="noopener noreferrer">Notas da versão e verificação dos arquivos ↗</a></p></details>
-        <details><summary>Como atualizo o app do Windows?</summary><p>A partir da 1.0.2 as atualizações são baixadas em segundo plano e instaladas ao encerrar pela bandeja. Quem usa 1.0.0 ou 1.0.1 precisa instalar esta versão uma vez; seus dados são preservados.</p></details>
+        <details><summary>Quais são os requisitos?</summary><p>Windows 10 (1809 ou superior) ou Windows 11 de 64 bits, com o Microsoft Edge WebView2 Runtime (ele acompanha o Edge atualizado); Android 7 ou mais novo; iPhone com iOS 16.4 ou mais novo usando o Safari. Mensagens e chamadas precisam de internet.</p></details>
+        <details><summary>O Windows mostrou um aviso do SmartScreen. É seguro?</summary><p>O Orbita.exe desta versão ainda não possui assinatura digital comercial, então o Windows pode exibir um aviso. Clique em “Mais informações” → “Executar assim mesmo”. A Órbita nunca pede para desativar o antivírus. <a href="https://github.com/Vallerkkk/orbit/releases/tag/v2.0.0" target="_blank" rel="noopener noreferrer">Notas da versão e verificação dos arquivos ↗</a></p></details>
+        <details><summary>Como atualizo o app do Windows?</summary><p>Baixe o Orbita.exe novo, encerre o aplicativo pela bandeja e substitua o arquivo. Não há atualização automática nesta versão; sua sessão e suas permissões ficam em %LOCALAPPDATA%\OrbitaNative e são preservadas.</p></details>
         <details><summary>Qual a diferença entre o APK e instalar pelo navegador no Android?</summary><p>Os dois abrem a mesma Órbita em tela cheia. O APK aparece como um app normal na lista de aplicativos; a instalação pelo navegador é mais rápida e não exige permitir fontes externas.</p></details>
         <details><summary>Preciso criar outra conta no celular?</summary><p>Não. Entre com a mesma conta e suas comunidades, mensagens e perfil estarão lá.</p></details>
         <details><summary>Posso usar sem instalar?</summary><p>Sim. A Órbita funciona inteira no navegador: <a href="/">abrir no navegador ↗</a>.</p></details>
