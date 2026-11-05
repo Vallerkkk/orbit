@@ -297,7 +297,7 @@ export function initEnhancements(context) {
   // Imagens coladas não são mais enviadas na hora: ficam numa bandeja de pré-visualização e saem junto com o Enter.
   let pasted=[],pastedFor=null;const tray=el('div','paste-tray');tray.hidden=true;tray.setAttribute('aria-label','Imagens coladas');
   $('message-form').before(tray);
-  function renderTray(){tray.replaceChildren();tray.hidden=!pasted.length;pasted.forEach((item,index)=>{const card=el('div','paste-item'),img=document.createElement('img');img.src=item.url;img.alt=item.file.name;
+  function renderTray(){tray.replaceChildren();tray.hidden=!pasted.length;pasted.forEach((item,index)=>{const card=el('div','paste-item'),img=document.createElement('img');img.src=item.url;img.alt=item.file.name;img.decoding='async';
     const remove=el('button','paste-remove','×');remove.type='button';remove.onclick=()=>{URL.revokeObjectURL(item.url);pasted.splice(index,1);renderTray();$('message-input').focus();};remove.setAttribute('aria-label','Remover '+item.file.name);card.append(img,remove);tray.append(card);});
     if(pasted.length){const hint=el('small','paste-hint','Enter para enviar · Esc para descartar');tray.append(hint);}}
   function clearTray(){pasted.forEach(item=>URL.revokeObjectURL(item.url));pasted=[];pastedFor=null;renderTray();}

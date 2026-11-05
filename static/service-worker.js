@@ -1,5 +1,5 @@
 importScripts('/static/share-worker.js');
-const CACHE = 'orbita-shell-20261103-v131';
+const CACHE = 'orbita-shell-20261105-v132';
 const SHELL = ['/static/offline.html', '/static/icons/icon-192.png', '/static/icons/icon-512.png',
   '/static/manifest.webmanifest', '/static/vendor/fonts/inter-latin-wght.woff2',
   '/static/vendor/fonts/space-grotesk-latin-wght.woff2'];

@@ -841,11 +841,47 @@ body #app-view .user-panel .up-name,body #app-view .user-panel .up-handle{max-wi
 .update-notice button:hover{background:#5d6069!important}
 .update-notice button:first-of-type:hover{background:var(--ac-h)!important}
 
-/* Invariantes de chat: o corpo da mensagem nunca escapa da coluna do conteúdo */
-#message-list .message>.message-content{display:block!important;min-width:0!important;text-indent:0!important}
-#message-list .message>.message-content>p,
-#message-list .message>.message-content>.message-text{display:block!important;width:auto!important;margin:0!important;text-indent:0!important}
-#message-list .message>.avatar{flex-shrink:0!important}
+/* Invariantes de chat: o corpo da mensagem nunca escapa da coluna do conteúdo.
+   Qualquer folha externa (extensão, injeção ou build antiga) que tente transformar
+   a linha em bloco, flutuar o avatar ou recuar só as continuações é neutralizada. */
+html body #message-list .message{
+  display:flex!important;
+  flex-direction:row!important;
+  flex-wrap:nowrap!important;
+  align-items:flex-start!important;
+  text-indent:0!important;
+}
+html body #message-list .message>.avatar{
+  float:none!important;
+  position:relative!important;
+  flex:0 0 40px!important;
+  order:0!important;
+  margin-left:0!important;
+  margin-right:0!important;
+}
+html body #message-list .message>.message-content{
+  display:block!important;
+  position:static!important;
+  float:none!important;
+  flex:1 1 auto!important;
+  width:auto!important;
+  min-width:0!important;
+  margin-left:0!important;
+  padding-left:0!important;
+  text-indent:0!important;
+  order:1!important;
+}
+html body #message-list .message>.message-content>p,
+html body #message-list .message>.message-content>.message-text{
+  display:block!important;
+  position:static!important;
+  float:none!important;
+  width:auto!important;
+  max-width:100%!important;
+  margin:0!important;
+  padding-left:0!important;
+  text-indent:0!important;
+}
 /* Divisor de data sempre centralizado, com linhas simétricas */
 #message-list>.ux-day-divider,#message-list>.date-divider{justify-content:center!important}
 #message-list>.ux-day-divider::before,#message-list>.ux-day-divider::after,

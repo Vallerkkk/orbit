@@ -17,7 +17,7 @@ const files=[...outputs.map(p=>'/'+p),...Object.values(cssMap)].sort();
 let html=await readFile(path.join(staticDir,'index.html'),'utf8');const version=hash(JSON.stringify(files)+hash(html)+hash(await readFile(path.join(staticDir,'manifest.webmanifest'))));
 html=html.replace(/src="\/static\/app\.js(?:\?[^\"]*)?"/,'src="/'+entry+'"');
 for(const [original,url]of Object.entries(cssMap))html=html.replaceAll(new RegExp(original.replaceAll('.','\\.')+'(?:\\?[^" ]*)?','g'),url);
-html=html.replace('</head>',`<meta name="orbita-version" content="${version}"></head>`);
+html=html.replace('</head>',`<link rel="modulepreload" href="/${entry}"><meta name="orbita-version" content="${version}"></head>`);
 await writeFile(path.join(dist,'index.html'),html);
 const integrity={};for(const url of files)integrity[url]=createHash('sha256').update(await readFile(path.join(root,url.slice(1)))).digest('hex');
 const manifest={version,entry:'/'+entry,files,css:cssMap,integrity};

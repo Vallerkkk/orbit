@@ -2539,7 +2539,7 @@ setTimeout(() => {
   syncServerSettingsButton();
 }, 2000);
 function syncServerSettingsButton(){const btn=document.getElementById('server-settings-btn');if(btn)btn.hidden=!canEditActiveServer();}
-setInterval(syncServerSettingsButton,1500);
+setInterval(()=>{if(!document.hidden)syncServerSettingsButton();},5000);
 applyServerTheme();
 
 let preferencesFrame;
