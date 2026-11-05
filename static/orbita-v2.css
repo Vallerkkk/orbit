@@ -1166,7 +1166,7 @@ body[data-color-mode=light] #app-dialog.st-dialog .st-panel>button.danger.st-act
 .pseudo-fullscreen{position:fixed!important;inset:0!important;z-index:2147483000!important;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;margin:0!important;border-radius:0!important;aspect-ratio:auto!important;background:#000!important;grid-column:auto!important}
 .pseudo-fullscreen video{width:100%;height:100%;object-fit:contain}
 html.has-pseudo-fullscreen,html.has-pseudo-fullscreen body{overflow:hidden}
-@media(max-width:800px){#voice-view .call-grid .participant button.call-tile-menu.call-icon{height:22px!important;max-height:22px!important;min-height:0!important;width:22px!important;inset:0 calc(50% - 36px) auto auto!important}}
+@media(max-width:800px){#voice-view .call-grid .participant button.call-tile-menu.call-icon{height:44px!important;max-height:44px!important;min-height:44px!important;width:44px!important;min-width:44px!important;inset:8px 8px auto auto!important}}
 
 /* Celular: sem o rótulo, a pílula "Sair" mostrava um retângulo vermelho vazio. */
 @media(max-width:640px){

@@ -3,6 +3,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import httpx
+
 import cloe_admin as admin
 from cloe_admin import AdminProblem, OwnerAdmin, Plan
 
@@ -161,40 +163,146 @@ class OwnerGateTests(unittest.TestCase):
         self.assertIn('Não posso excluir canais', str(caught.exception))
         self.assertEqual(self.gets, [])
 
-    def test_plan_for_uses_the_owner_jwt_and_current_room(self):
+    def assert_delete_message_plan(self, text, who, author_id=None):
         calls = []
+        channels = [
+            {'id': OTHER, 'name': 'geral', 'kind': 'text', 'community_id': OTHER,
+             'position': 1, 'description': '', 'is_private': False},
+            {'id': CHANNEL, 'name': 'geral', 'kind': 'text', 'community_id': COMM,
+             'position': 1, 'description': '', 'is_private': False},
+            {'id': VOICE, 'name': 'voz', 'kind': 'voice', 'community_id': COMM,
+             'position': 2, 'description': '', 'is_private': False},
+        ]
 
-        async def fake_get(self, path, headers, params):
-            calls.append((path, headers, params))
-            rows = {
-                'channels': [
-                    {'id': CHANNEL, 'name': 'geral', 'kind': 'text', 'community_id': COMM,
-                     'position': 1, 'description': '', 'is_private': False},
-                    {'id': VOICE, 'name': 'voz', 'kind': 'voice', 'community_id': COMM,
-                     'position': 2, 'description': '', 'is_private': False}],
-                'communities': [{'id': COMM, 'name': 'Servidor', 'created_by': OWNER}],
-                'profiles': [{'id': MEMBER, 'username': 'joao', 'display_name': 'João'}],
-                'community_members': [{'user_id': MEMBER}],
-                'messages': [{'id': MESSAGE, 'content': 'mensagem antiga', 'author_id': MEMBER,
-                              'created_at': '2026-11-01T12:00:00Z'}],
-            }
-            return rows.get(path, [])
+        def handle_request(request):
+            calls.append(request)
+            self.assertEqual(request.method, 'GET', 'Não deve executar DELETE antes de confirmar.')
+            self.assertEqual(request.headers['Authorization'], HEADERS['Authorization'])
+            self.assertEqual(request.url.host, 'exemplo.supabase.co')
+            params = dict(request.url.params)
+            path = request.url.path
+            if path == '/rest/v1/channels':
+                if 'id' in params:
+                    self.assertEqual(params, {
+                        'id': 'eq.' + VOICE, 'select': 'id,name,kind,community_id'})
+                    rows = [row for row in channels if row['id'] == VOICE]
+                else:
+                    self.assertEqual(params, {
+                        'community_id': 'eq.' + COMM,
+                        'select': 'id,name,kind,position,is_private,description',
+                        'order': 'position.asc'})
+                    rows = [row for row in channels if row['community_id'] == COMM]
+            elif path == '/rest/v1/communities':
+                self.assertEqual(params, {'id': 'eq.' + COMM, 'select': 'id,name,created_by'})
+                rows = [{'id': COMM, 'name': 'Servidor', 'created_by': OWNER}]
+            elif path == '/rest/v1/profiles':
+                self.assertIsNotNone(author_id)
+                self.assertEqual(params, {
+                    'select': 'id,username,display_name', 'limit': '50',
+                    'or': '(display_name.ilike.*João*,username.ilike.*João*)'})
+                rows = [{'id': MEMBER, 'username': 'joao', 'display_name': 'João'}]
+            elif path == '/rest/v1/community_members':
+                self.assertIsNotNone(author_id)
+                self.assertEqual(params, {'community_id': 'eq.' + COMM, 'select': 'user_id'})
+                rows = [{'user_id': MEMBER}]
+            elif path == '/rest/v1/messages':
+                self.assertEqual(params.get('channel_id'), 'eq.' + CHANNEL)
+                self.assertNotIn('channel_name', params)
+                expected = {'channel_id': 'eq.' + CHANNEL,
+                            'select': 'id,content,author_id,created_at',
+                            'order': 'created_at.desc', 'limit': '1'}
+                if author_id is not None:
+                    expected['author_id'] = 'eq.' + author_id
+                self.assertEqual(params, expected)
+                rows = [{'id': MESSAGE, 'content': 'mensagem antiga', 'author_id': MEMBER,
+                         'created_at': '2026-11-01T12:00:00Z'}]
+            else:
+                self.fail(f'Requisição inesperada: {request.method} {path}')
+            return httpx.Response(200, json=rows)
 
         async def run():
-            with patch.object(OwnerAdmin, '_get', fake_get):
-                return await self.owner.plan_for('apaga a última mensagem do canal geral',
-                                                 ROOM, HEADERS, OWNER)
+            async with httpx.AsyncClient(transport=httpx.MockTransport(handle_request)) as client:
+                self.owner.app = SimpleNamespace(state=SimpleNamespace(upstream=client))
+                return await self.owner.plan_for(text, 'channel-' + VOICE, HEADERS, OWNER)
 
         import asyncio
         plan = asyncio.run(run())
         self.assertEqual(plan.kind, 'delete_message')
-        self.assertEqual(plan.params['message'], MESSAGE)
-        self.assertEqual(plan.context['community'], 'Servidor')
-        self.assertTrue(all(headers is HEADERS for path, headers, params in calls
-                            if path == 'messages'))
-        message_params = next(params for path, headers, params in calls if path == 'messages')
-        self.assertEqual(message_params['channel_id'], CHANNEL)
-        self.assertEqual(message_params['order'], 'created_at.desc')
+        self.assertEqual(plan.params, {'message': MESSAGE, 'channel_name': 'geral', 'author': who})
+        self.assertEqual(plan.context, {
+            'community_id': COMM, 'community': 'Servidor', 'channel_id': VOICE, 'channel': 'voz'})
+        self.assertEqual(plan.preview,
+                         f'Vou apagar a última mensagem de {who} no canal geral: “mensagem antiga”.'
+                         ' Para confirmar, diga a sua frase de confirmação.')
+        self.assertEqual(plan.result,
+                         f'Pronto. Apaguei a última mensagem de {who} no canal geral.')
+        self.assertEqual([request.url.path for request in calls], [
+            '/rest/v1/channels', '/rest/v1/communities', '/rest/v1/channels',
+            *(['/rest/v1/profiles', '/rest/v1/community_members'] if author_id else []),
+            '/rest/v1/messages'])
+
+    def test_plan_for_uses_the_owner_jwt_and_current_room(self):
+        self.assert_delete_message_plan(
+            'apaga a última mensagem do canal geral', 'alguém')
+
+    def test_plan_for_delete_message_filters_optional_author(self):
+        self.assert_delete_message_plan(
+            'apaga a última mensagem do João no canal geral', 'João', MEMBER)
+
+    def assert_moderation_plan(self, text, kind, summary, result, hours=None):
+        async def fake_get(self, path, headers, params):
+            rows = {
+                'channels': [{'id': CHANNEL, 'name': 'geral', 'kind': 'text',
+                              'community_id': COMM}],
+                'communities': [{'id': COMM, 'name': 'Servidor', 'created_by': OWNER}],
+                'profiles': [{'id': MEMBER, 'username': 'joao', 'display_name': 'João'}],
+                'community_members': [{'user_id': MEMBER}],
+            }
+            return rows[path]
+
+        intent = admin.parse_intent(text)
+        if kind == 'suspend':
+            self.assertEqual(intent.args['duration'], '2 dias')
+        else:
+            self.assertNotIn('duration', intent.args)
+
+        import asyncio
+        with patch.object(OwnerAdmin, '_get', fake_get), \
+                patch.object(OwnerAdmin, '_request', side_effect=AssertionError(
+                    'O planejamento não deve executar ações ou chamar serviços reais.')):
+            plan = asyncio.run(self.owner.plan_for(text, ROOM, HEADERS, OWNER))
+
+        self.assertEqual(plan, Plan(kind, summary, {
+            'community_id': COMM, 'member': MEMBER, 'username': 'joao',
+            'label': 'João', 'hours': hours}, result, {
+                'community_id': COMM, 'community': 'Servidor',
+                'channel_id': CHANNEL, 'channel': 'geral'}))
+        self.assertEqual(plan.preview,
+                         summary + ' Para confirmar, diga a sua frase de confirmação.')
+
+    def test_plan_for_ban_without_duration(self):
+        self.assert_moderation_plan(
+            'bane o João do servidor', 'ban',
+            'Vou banir João do servidor Servidor.',
+            'Pronto. João foi banido do servidor Servidor.')
+
+    def test_plan_for_unban_without_duration(self):
+        self.assert_moderation_plan(
+            'desbane o João', 'unban',
+            'Vou desbanir João no servidor Servidor.',
+            'Pronto. João foi desbanido e pode voltar ao servidor Servidor.')
+
+    def test_plan_for_remove_without_duration(self):
+        self.assert_moderation_plan(
+            'remove o João do servidor', 'remove',
+            'Vou remover João do servidor Servidor.',
+            'Pronto. João foi removido do servidor Servidor.')
+
+    def test_plan_for_suspend_with_duration(self):
+        self.assert_moderation_plan(
+            'suspende a conta do João por 2 dias', 'suspend',
+            'Vou suspender a conta de João por 2 dias.',
+            'Pronto. A conta de João ficou suspensa por 2 dias.', hours=48)
 
 
 class ExecuteTests(unittest.TestCase):

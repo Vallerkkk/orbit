@@ -121,9 +121,6 @@ def stt_models():
 def gemini_model():
     raw = os.getenv('CLOE_GEMINI_MODEL')
     return 'gemini-2.5-flash-lite' if raw is None else raw.strip()
-# Presença e permissão mudam pouco em poucos segundos: o cache evita uma ida ao LiveKit
-# a cada trecho de áudio e a cada consulta de eventos.
-MEMBER_CACHE_SECONDS = _float_env('CLOE_MEMBER_CACHE_SECONDS', 5)
 _daily_usage = {}
 
 
@@ -461,31 +458,44 @@ def _calculate(expression):
     except SyntaxError:
         return None
 
+    def checked(value):
+        if isinstance(value, int):
+            if value.bit_length() > 4096:
+                raise ValueError()
+        elif isinstance(value, float):
+            if value != value or value in (float('inf'), float('-inf')):
+                raise ValueError()
+        else:
+            raise ValueError()
+        return value
+
     def evaluate(item):
         if isinstance(item, ast.Expression):
             return evaluate(item.body)
         if isinstance(item, ast.Constant) and isinstance(item.value, (int, float)):
-            return item.value
+            return checked(item.value)
         if isinstance(item, ast.BinOp) and type(item.op) in _MATH_BIN:
             left, right = evaluate(item.left), evaluate(item.right)
-            if isinstance(item.op, ast.Pow) and abs(right) > 100:
-                raise ValueError()
-            return _MATH_BIN[type(item.op)](left, right)
+            if isinstance(item.op, ast.Pow):
+                if abs(right) > 100:
+                    raise ValueError()
+                if (isinstance(left, int) and isinstance(right, int) and right > 0
+                        and abs(left).bit_length() * right > 4096):
+                    raise ValueError()
+            return checked(_MATH_BIN[type(item.op)](left, right))
         if isinstance(item, ast.UnaryOp) and type(item.op) in _MATH_UNARY:
-            return _MATH_UNARY[type(item.op)](evaluate(item.operand))
+            return checked(_MATH_UNARY[type(item.op)](evaluate(item.operand)))
         raise ValueError()
 
     try:
         value = evaluate(node)
+        if isinstance(value, float):
+            value = round(value, 6)
+            if value.is_integer():
+                value = int(value)
+        return str(value).replace('.', ',')
     except (ValueError, ZeroDivisionError, OverflowError, TypeError):
         return None
-    if isinstance(value, float):
-        if value != value or value in (float('inf'), float('-inf')):
-            return None
-        value = round(value, 6)
-        if value.is_integer():
-            value = int(value)
-    return str(value).replace('.', ',')
 
 
 def direct_answer(text):
@@ -759,10 +769,8 @@ async def answer_model(app, messages):
 
 def install_astro(app, current_user, settings):
     calls = {}
-    members = {}
     admin = OwnerAdmin(app, settings)
     app.state.astro_calls = calls
-    app.state.astro_members = members
 
     def get_call(name):
         now = time.time()
@@ -917,10 +925,6 @@ def install_astro(app, current_user, settings):
         # The server checks actual LiveKit presence, not a room ID provided by a client.
         if not re.fullmatch(r'(?:channel|direct)-[0-9a-f-]{36}', room):
             raise HTTPException(400, 'Sala inválida.')
-        key = (room, str(user['id']))
-        cached = members.get(key)
-        if cached and cached[0] > time.time():
-            return cached[1]
         s = settings()
         if not all(s[k] for k in ('LIVEKIT_URL', 'LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET')):
             # Sem LiveKit o erro é de configuração, não da presença da pessoa na call.
@@ -930,13 +934,7 @@ def install_astro(app, current_user, settings):
             async with api.LiveKitAPI(s['LIVEKIT_URL'], s['LIVEKIT_API_KEY'], s['LIVEKIT_API_SECRET']) as lk:
                 participant = await lk.room.get_participant(api.RoomParticipantIdentity(room=room, identity=user['id']))
         except Exception:
-            # Resultado negativo não entra no cache: quem sair da call perde o acesso na hora.
-            members.pop(key, None)
             raise HTTPException(403, 'Entre nesta call para acessar a Cloe.')
-        now = time.time()
-        for stale in [k for k, v in members.items() if v[0] < now]:
-            members.pop(stale, None)
-        members[key] = (now + MEMBER_CACHE_SECONDS, participant)
         return participant
 
     @app.get('/api/astro/{room}')
@@ -1058,6 +1056,8 @@ def install_astro(app, current_user, settings):
                 return {'transcribed': True}
             event = call.add('transcript', speaker, redacted)
             event['wake'] = True
+            if kind == 'pending':
+                return {'transcribed': True, 'cursor': call.sequence}
             if kind == 'stop':
                 # A pessoa pediu para parar: interrompe no cliente sem acionar o modelo.
                 call.add('stop', 'Cloe', '')

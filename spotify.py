@@ -105,8 +105,11 @@ def install_spotify(app, current_user):
 
     async def load(c, user_id):
         url, h = rest(c)
-        async with client_for(app) as client:
-            r = await client.get(url, headers=h, params={'user_id': 'eq.' + user_id, 'select': '*'})
+        try:
+            async with client_for(app) as client:
+                r = await client.get(url, headers=h, params={'user_id': 'eq.' + user_id, 'select': '*'})
+        except httpx.HTTPError:
+            raise HTTPException(503, 'Spotify indisponível no momento.') from None
         if r.status_code != 200:
             raise HTTPException(503, 'Spotify indisponível no momento.')
         rows = read_json(r, list)
@@ -136,11 +139,29 @@ def install_spotify(app, current_user):
         t = await token_call(c, {'grant_type': 'refresh_token', 'refresh_token': row['refresh_token'], 'client_id': c['client_id']})
         if not t or not t.get('access_token'):
             return None
-        row = {'user_id': row['user_id'], 'access_token': t['access_token'],
-               'refresh_token': t.get('refresh_token') or row['refresh_token'],
-               'expires_at': datetime.fromtimestamp(time.time() + int(t.get('expires_in', 3600)), timezone.utc).isoformat()}
-        await save(c, row)
-        return row['access_token']
+        updated = {'access_token': t['access_token'],
+                   'refresh_token': t.get('refresh_token') or row['refresh_token'],
+                   'expires_at': datetime.fromtimestamp(time.time() + int(t.get('expires_in', 3600)), timezone.utc).isoformat()}
+        # Compare com a conexão carregada: refresh não pode recriar um DELETE nem sobrescrever outro OAuth.
+        params = {'user_id': 'eq.' + row['user_id'], 'refresh_token': 'eq.' + row['refresh_token'],
+                  'expires_at': 'eq.' + row['expires_at'] if row.get('expires_at') is not None else 'is.null'}
+        url, h = rest(c)
+        try:
+            async with client_for(app) as client:
+                r = await client.patch(url, headers={**h, 'Prefer': 'return=representation'},
+                                       params=params, json=updated)
+        except httpx.HTTPError:
+            raise HTTPException(503, 'Não foi possível salvar a conexão com o Spotify.') from None
+        if r.status_code != 200:
+            raise HTTPException(503, 'Não foi possível salvar a conexão com o Spotify.')
+        rows = read_json(r, list)
+        if not rows:
+            return None
+        if (len(rows) != 1 or not isinstance(rows[0], dict) or rows[0].get('user_id') != row['user_id']
+                or rows[0].get('access_token') != updated['access_token']
+                or rows[0].get('refresh_token') != updated['refresh_token']):
+            raise HTTPException(503, 'O serviço de dados retornou uma resposta inválida.')
+        return rows[0]['access_token']
 
     @app.get('/api/spotify/status')
     async def spotify_status(identity=Depends(current_user)):
@@ -220,8 +241,13 @@ def install_spotify(app, current_user):
         if not await load(c, uid):
             raise HTTPException(404, 'Spotify não conectado.')
         url, h = rest(c)
-        async with client_for(app) as client:
-            await client.patch(url, headers=h, params={'user_id': 'eq.' + uid}, json={'show_on_profile': body.get('showOnProfile') is True})
+        try:
+            async with client_for(app) as client:
+                response = await client.patch(url, headers=h, params={'user_id': 'eq.' + uid}, json={'show_on_profile': body.get('showOnProfile') is True})
+        except httpx.HTTPError:
+            raise HTTPException(503, 'Não foi possível atualizar a privacidade do Spotify.') from None
+        if not response.is_success:
+            raise HTTPException(503, 'Não foi possível atualizar a privacidade do Spotify.')
         cache.pop(uid, None)
         return {'ok': True}
 
@@ -231,8 +257,13 @@ def install_spotify(app, current_user):
         if not enabled(c):
             return {'ok': True}
         url, h = rest(c)
-        async with client_for(app) as client:
-            await client.delete(url, headers=h, params={'user_id': 'eq.' + identity[0]['id']})
+        try:
+            async with client_for(app) as client:
+                response = await client.delete(url, headers=h, params={'user_id': 'eq.' + identity[0]['id']})
+        except httpx.HTTPError:
+            raise HTTPException(503, 'Não foi possível desconectar o Spotify.') from None
+        if not response.is_success:
+            raise HTTPException(503, 'Não foi possível desconectar o Spotify.')
         cache.pop(identity[0]['id'], None)
         return {'ok': True}
 

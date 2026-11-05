@@ -87,6 +87,71 @@ class CloeTests(unittest.TestCase):
         self.assertEqual(len(requests),2)
         self.assertEqual(self.client.get('/api/astro/direct-44444444-4444-4444-8444-444444444444').json()['events'],[])
 
+    def test_audio_wake_only_preserves_pending_and_answers_the_next_chunk(self):
+        texts = iter(['Ei Cloe', 'qual é a capital da França?'])
+        questions = []
+
+        async def groq(app, path, **kwargs):
+            if path == 'audio/transcriptions':
+                return {'text': next(texts)}
+            questions.append(kwargs['json']['messages'][1]['content'])
+            return {'choices': [{'message': {'content': 'É Paris.'}}]}
+
+        client = TestClient(self.app, raise_server_exceptions=False)
+        with patch.object(astro, 'groq_json', groq):
+            first = client.post(f'/api/astro/{ROOM}/audio?chunk_id={CHUNK}',
+                                content=wav(), headers={'Content-Type': 'audio/wav'})
+            self.assertEqual(first.status_code, 200)
+            self.assertEqual(first.json(), {'transcribed': True, 'cursor': 1})
+            call = self.app.state.astro_calls[ROOM]
+            self.assertGreater(call.pending[UID], time.time())
+            self.assertEqual(questions, [])
+            self.assertEqual(astro._usage_for(UID)['asks'], 0)
+            self.assertEqual([e['kind'] for e in call.events], ['transcript'])
+            self.assertEqual(call.events[0]['text'], 'Ei Cloe')
+            self.assertTrue(call.events[0]['wake'])
+            self.assertNotIn(UID, call.uploading)
+            call.last_upload[UID] = 0
+            second = self.audio(chunk='77777777-7777-4777-8777-777777777709')
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(second.json()['answer']['text'], 'É Paris.')
+        self.assertEqual(second.json()['cursor'], 3)
+        self.assertNotIn(UID, call.pending)
+        self.assertEqual([e['kind'] for e in call.events], ['transcript', 'transcript', 'answer'])
+        self.assertTrue(call.events[1]['wake'])
+        self.assertEqual(len(questions), 1)
+        self.assertIn('Pergunta de João: qual é a capital da França?', questions[0])
+
+    def test_direct_audio_wake_only_does_not_leave_pending(self):
+        async def groq(app, path, **kwargs):
+            if path == 'audio/transcriptions':
+                return {'text': 'Ei Cloe'}
+            raise AssertionError('wake sem pergunta não deve acionar o modelo')
+
+        with patch.object(astro, 'groq_json', groq):
+            response = self.client.post(f'/api/astro/{ROOM}/audio?chunk_id={CHUNK}&direct=1',
+                                        content=wav(), headers={'Content-Type': 'audio/wav'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'transcribed': True})
+        call = self.app.state.astro_calls[ROOM]
+        self.assertNotIn(UID, call.pending)
+        self.assertEqual(list(call.events), [])
+
+    def test_normal_audio_stop_keeps_wake_transcript_without_answering(self):
+        async def groq(app, path, **kwargs):
+            if path == 'audio/transcriptions':
+                return {'text': 'Ei Cloe, para de falar'}
+            raise AssertionError('parada não deve acionar o modelo')
+
+        with patch.object(astro, 'groq_json', groq):
+            response = self.audio()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'transcribed': True, 'stop': True})
+        call = self.app.state.astro_calls[ROOM]
+        self.assertEqual([e['kind'] for e in call.events], ['transcript', 'stop'])
+        self.assertTrue(call.events[0]['wake'])
+        self.assertNotIn(UID, call.pending)
+
     def test_direct_audio_accepts_question_without_wake(self):
         requests=[]
         async def groq(app,path,**kwargs):
@@ -402,6 +467,95 @@ class CloeTests(unittest.TestCase):
         self.assertIsNone(astro.direct_answer('quanto é a multa?'))
         self.assertIsNone(astro.direct_answer('qual é a capital da França?'))
 
+    def test_calculate_nested_power_is_rejected_without_conversion_error(self):
+        try:
+            result = astro._calculate('(10^100)^100')
+        except ValueError as exc:
+            self.fail(f'cálculo deve retornar None, não lançar erro de conversão: {exc}')
+        self.assertIsNone(result)
+
+    def test_calculate_rejects_oversized_intermediate_integers(self):
+        expressions = (
+            '(2^100)^41',
+            '((2^100)^41) % 2',
+            '((2^100)^40 * 2^96) - ((2^100)^40 * 2^96)',
+            '((2^100)^40 * 2^95 + (2^100)^40 * 2^95) % 2',
+            '((-(2^100)^40 * 2^95) * 2) % 2',
+        )
+        for expression in expressions:
+            with self.subTest(expression=expression):
+                self.assertIsNone(astro._calculate(expression))
+
+    def test_calculate_rejects_unsafe_power_before_executing_it(self):
+        power = astro._MATH_BIN[astro.ast.Pow]
+
+        def bounded_power(left, right):
+            if isinstance(left, int) and isinstance(right, int) and right > 0:
+                if abs(left).bit_length() * right > 4096:
+                    self.fail('exponenciação expansiva foi executada antes da rejeição')
+            return power(left, right)
+
+        with patch.dict(astro._MATH_BIN, {astro.ast.Pow: bounded_power}):
+            self.assertIsNone(astro._calculate('(10^100)^100'))
+            self.assertIsNone(astro._calculate('(-(10^100))^100'))
+
+    def test_calculate_rejects_complex_and_nonfinite_intermediates(self):
+        expressions = (
+            '(-1)^0.5',
+            '((-1)^0.5)^0',
+            '(10.0^100)^3 * 10.0^100',
+            '1 / ((10.0^100)^3 * 10.0^100)',
+            '((10.0^100)^3 * 10.0^100) % 2',
+        )
+        for expression in expressions:
+            with self.subTest(expression=expression):
+                self.assertIsNone(astro._calculate(expression))
+
+    def test_calculate_catches_final_string_conversion_failure(self):
+        with patch.object(astro, 'str', side_effect=ValueError('limite de dígitos'), create=True):
+            try:
+                result = astro._calculate('2 + 2')
+            except ValueError as exc:
+                self.fail(f'erro da conversão final escapou: {exc}')
+        self.assertIsNone(result)
+
+    def test_calculate_preserves_normal_numbers_and_integer_bit_boundary(self):
+        cases = {
+            '12 * 7 + 3': '87',
+            '10 / 4': '2,5',
+            '1,5 + 2,25': '3,75',
+            '1 / 3': '0,333333',
+            '-2^3': '-8',
+            '(-2)^4': '16',
+            '2^-3': '0,125',
+            '2^-100': '0',
+            '2^100': '1267650600228229401496703205376',
+            '1^100': '1',
+            '(-1)^99': '-1',
+            '0^100': '0',
+            '(2^100)^40 * 2^95': str(1 << 4095),
+            '-((2^100)^40 * 2^95)': str(-(1 << 4095)),
+        }
+        for expression, expected in cases.items():
+            with self.subTest(expression=expression):
+                self.assertEqual(astro._calculate(expression), expected)
+        for expression in ('2^101', '2^-101', '1 / 0'):
+            with self.subTest(expression=expression):
+                self.assertIsNone(astro._calculate(expression))
+
+    def test_ask_oversized_calculation_falls_back_without_server_error(self):
+        async def groq(app, path, **kwargs):
+            return {'choices': [{'message': {'content': 'Essa conta é grande demais.'}}]}
+
+        client = TestClient(self.app, raise_server_exceptions=False)
+        with patch.object(astro, 'groq_json', groq):
+            response = client.post(f'/api/astro/{ROOM}/ask',
+                                   json={'text': 'calcula (10^100)^100'})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['ok'])
+        self.assertEqual(response.json()['answer']['text'], 'Essa conta é grande demais.')
+        self.assertEqual(response.json()['cursor'], 2)
+
     def test_music_request_is_executed_by_the_asker_without_the_model(self):
         calls=[]
         async def groq(app,path,**kwargs):
@@ -457,7 +611,7 @@ class CloeTests(unittest.TestCase):
         self.assertEqual(speech(text='oi',voice='voz-desconhecida').status_code,400)
         self.assertEqual(speech(text='x',voice='pt-BR-FranciscaNeural').status_code,400)
         self.assertEqual(speech(text='x'*601,voice='pt-BR-FranciscaNeural').status_code,400)
-        FakeLiveKit.allowed=False;self.app.state.astro_members.clear()
+        FakeLiveKit.allowed=False
         self.assertEqual(speech(text='oi',voice='pt-BR-FranciscaNeural').status_code,403)
 
     def test_natural_voice_failure_is_reported_to_the_panel(self):
@@ -501,15 +655,12 @@ class CloeTests(unittest.TestCase):
         self.assertEqual(len(text),60)
         self.assertTrue(text.endswith('x'*60))
 
-    def test_repeated_polls_reuse_the_presence_check(self):
+    def test_repeated_polls_revalidate_presence(self):
         self.assertEqual(self.client.get('/api/astro/'+ROOM).status_code,200)
         self.assertEqual(self.client.get('/api/astro/'+ROOM).status_code,200)
-        self.assertEqual(FakeLiveKit.checks,1)
-        # Presença negativa não fica no cache: quem sai da call perde o acesso na hora.
-        self.app.state.astro_members.clear();FakeLiveKit.allowed=False
+        FakeLiveKit.allowed=False
         self.assertEqual(self.client.get('/api/astro/'+ROOM).status_code,403)
         self.assertEqual(self.client.get('/api/astro/'+ROOM).status_code,403)
-        self.assertEqual(FakeLiveKit.checks,3)
 
     def owner_plan(self, kind='delete_message', result='Pronto. Apaguei a mensagem.'):
         from cloe_admin import Plan

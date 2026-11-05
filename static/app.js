@@ -5,7 +5,7 @@ import {initScreenWatch} from './screen-watch.js';
 import {initMusicChannel} from './music-channel.js';
 import {configureUiSounds,uiSoundsEnabled,setUiSoundsEnabled,uiSound} from './ui-sounds.js';
 import {chatMedia,renderChatMedia} from './chat-media.js';
-import {attachmentMedia} from './media-viewer.js';
+import {attachmentMedia,closeMediaViewer} from './media-viewer.js';
 import {createAuthRecovery,isInvalidSessionError} from './auth-recovery.js';
 import {initSidebarToggle} from './sidebar-toggle.js';
 import './ui-polish.js';
@@ -34,7 +34,7 @@ import {initAudioControls} from './audio-controls.js';
 import {initCallReactions} from './call-reactions.js';
 import { initCommunityUX } from './community-ux.js';
 import { initCallLayout } from './call-layout.js';
-import { watchUploadedVideo,setUploadedVideoOutput } from './uploaded-video.js';
+import { watchUploadedVideo,setUploadedVideoOutput,closeUploadedVideoPreviews } from './uploaded-video.js';
 import { compressImage, relativeTime, safeLink, stickerNames } from './media-utils.js';
 import { initEnhancements } from './enhancements.js';
 import { DraftStore, serialToggle } from './runtime-utils.js';
@@ -163,10 +163,12 @@ async function showSession(next) {
   stopConversation();generation++;
   if(previousUser&&previousUser!==next?.user.id){
     // Close old-account dialogs before any asynchronous cleanup or profile loading.
-    $('app-dialog').close();closeMobileMenu();
+    $('app-dialog').close();closeMobileMenu();closeMediaViewer();closeUploadedVideoPreviews();
     session=null;$('app-view').hidden=true;$('message-list').replaceChildren();
+    // revoga as prévias antes que a limpeza assíncrona suspenda a transição.
+    const enhancementCleanup=enhancements?.sessionChanged();
     const old=[socialSubscription,presenceChannel,extraSubscription];socialSubscription=presenceChannel=extraSubscription=null;
-    await leaveCall();await Promise.all(old.filter(Boolean).map(channel=>db.removeChannel(channel).catch(()=>{})));await enhancements?.sessionChanged();
+    await leaveCall();await Promise.all(old.filter(Boolean).map(channel=>db.removeChannel(channel).catch(()=>{})));await enhancementCleanup;
     if(transition!==sessionTransition)return;
   }
   session = next;
@@ -242,7 +244,7 @@ function renderChannels() {
     built.set(channel.id, {node, tree});
   }
   for (const key of channelNodes.keys()) if (!keep.has(key)) { channelNodes.delete(key); voiceTrees.delete(key); }
-  const fill = (list, rows) => { for (const channel of orderChannels(rows)) { const item = built.get(channel.id); list.append(item.node); if (item.tree) list.append(item.tree); } };
+  const fill = (list, rows) => { const nodes=[]; for (const channel of orderChannels(rows)) { const item = built.get(channel.id); nodes.push(item.node); if (item.tree) nodes.push(item.tree); } reconcileNodes(list,nodes); };
   const categories = orderCategories(channelCategories.filter(c => c.community_id === activeCommunity)), categoryIds = new Set(categories.map(c => c.id));
   fill($('text-channels'), mine.filter(c => (!c.category_id || !categoryIds.has(c.category_id)) && c.kind === 'text'));
   fill($('voice-channels'), mine.filter(c => (!c.category_id || !categoryIds.has(c.category_id)) && c.kind === 'voice'));
@@ -361,6 +363,7 @@ function subscribeMessages(channel, version) {
     if (!current()) return;
     if (status === 'SUBSCRIBED') { clearTimeout(reconnectTimer); reconnectAttempt = 0; setRealtimeState('connected'); refreshHistory(version); }
     else if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status)) {
+      historyReady = 0;
       setRealtimeState('reconnecting');
       // O SDK tenta reconectar; só substituímos uma assinatura que permaneça parada.
       clearTimeout(reconnectTimer);
@@ -371,10 +374,9 @@ function subscribeMessages(channel, version) {
 window.addEventListener('offline', () => { clearTimeout(reconnectTimer); if (!home && selected?.kind === 'text') setRealtimeState('offline'); });
 window.addEventListener('online', () => { if (session && !home && selected?.kind === 'text') { reconnectAttempt = 0; historyReady = 0; subscribeMessages(selected, generation); } });
 
-// Uma atualização por vez: o SUBSCRIBED chega logo após abrir o canal, quando a primeira
-// página já está a caminho; refazer a busca ali era o segundo pedido idêntico.
+// evita a busca inicial duplicada sem descartar reconexões durante uma leitura.
 function refreshHistory(version) {
-  if (version !== generation || loading || historyReady === version) return;
+  if (version !== generation || historyReady === version) return;
   loadMessages(version, true);
 }
 
@@ -1674,9 +1676,17 @@ async function downloadAttachment(a,play=false){
   if(play)return url;
   const link=el('a');link.href=url;link.download=a.name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
+// o cliente compartilhado acompanha a sessão; a limpeza não pode usar outra conta.
+async function discardUpload(attachment,owner){
+  if(!owner||session?.user.id!==owner)return;
+  if(attachment.id)await db.from('attachments').delete().eq('id',attachment.id).eq('owner_id',owner);
+  if(session?.user.id!==owner)return;
+  if(attachment.storage_path)await db.storage.from('orbita-files').remove([attachment.storage_path]);
+}
 async function uploadFile(file,target){
-  const owner=session?.user.id;if(!owner)throw Error('Entre na sua conta para enviar arquivos.');
-  file=await compressImage(file,'attachment');if(session?.user.id!==owner)throw Error('Sua conta mudou; envio cancelado.');
+  const owner=session?.user.id,version=sessionTransition,current=()=>session?.user.id===owner&&sessionTransition===version;
+  if(!owner)throw Error('Entre na sua conta para enviar arquivos.');
+  file=await compressImage(file,'attachment');if(!current())throw Error('Sua conta mudou; envio cancelado.');
   if(!config.storageConfigured)throw Error('O armazenamento de arquivos ainda não está pronto.');
   if(file.size>config.uploadLimit)throw Error('O limite é 25 MB por arquivo.');
   if(!target||!['text','voice'].includes(target.kind))throw Error('Escolha um canal ou conversa antes de enviar.');
@@ -1685,21 +1695,16 @@ async function uploadFile(file,target){
   const mime=file.type||'application/octet-stream';
   const {error:uploadError}=await db.storage.from('orbita-files').upload(path,file,{cacheControl:'3600',contentType:mime,upsert:false});
   if(uploadError)throw uploadError;
+  let attachment;
   try{
-    if(session?.user.id!==owner)throw Error('Sua conta mudou; envio cancelado.');const row={owner_id:owner,channel_id:target.private?null:target.id,conversation_id:target.private?target.id:null,
+    if(!current())throw Error('Sua conta mudou; envio cancelado.');const row={owner_id:owner,channel_id:target.private?null:target.id,conversation_id:target.private?target.id:null,
       file_id:path,storage_path:path,storage_proof:'supabase-private-v1',name:file.name.slice(0,180),mime_type:mime.slice(0,120),size:file.size};
-    return await checked(db.from('attachments').insert(row).select('id,owner_id,channel_id,conversation_id,file_id,storage_path,name,mime_type,size').single());
-  }catch(error){await db.storage.from('orbita-files').remove([path]);throw error;}
+    attachment=await checked(db.from('attachments').insert(row).select('id,owner_id,channel_id,conversation_id,file_id,storage_path,name,mime_type,size').single());
+    if(!current())throw Error('Sua conta mudou; envio cancelado.');
+    return attachment;
+  }catch(error){await discardUpload(attachment||{storage_path:path},owner);throw error;}
 }
 $('attach-file').onclick=()=>{if(!config.storageConfigured)return toast('O Storage do Supabase ainda não está configurado.');$('file-input').click();};
-$('file-input').onchange=async()=>{
-  const file=$('file-input').files[0],target=selected,version=generation;if(!file)return;
-  $('attach-file').disabled=true;try{toast('Enviando para o armazenamento privado…');const attachment=await uploadFile(file,target);
-    try{await checked(db.from(target.private?'direct_messages':'messages').insert({[scopeKey(target)]:target.id,author_id:session.user.id,content:'📎 '+attachment.name,attachment_id:attachment.id}));}
-    catch(error){await db.from('attachments').delete().eq('id',attachment.id).eq('owner_id',session.user.id);await db.storage.from('orbita-files').remove([attachment.storage_path]);throw error;}
-    if(version===generation)await refreshMessages();toast('Arquivo enviado.');
-  }catch(e){toast(errorText(e));}finally{$('attach-file').disabled=false;$('file-input').value='';$('file-input').accept='';}
-};
 let navigationEpoch=0;
 const communityViews=new Map(),communityNodes=new Map();
 function rememberCommunity(){if(!activeCommunity||!session)return;communityViews.delete(activeCommunity);communityViews.set(activeCommunity,{roles:communityRoleList,memberRoles,members:communityMemberList,emojis:communityEmojiList,emojiUrls:communityEmojiUrls,channels:channels.filter(c=>c.community_id===activeCommunity),categories:channelCategories.filter(c=>c.community_id===activeCommunity),lastChannel:selected?.community_id===activeCommunity?selected.id:null,expires:Date.now()+300000});while(communityViews.size>8)communityViews.delete(communityViews.keys().next().value);}
@@ -2341,13 +2346,11 @@ enhancements=initEnhancements({clearDrafts:()=>{drafts.erase();if(selected?.kind
   refreshMessages:()=>refreshMessages(),replyToMessage:message=>replyToMessage(message),
   messageAction:(message,action)=>messageAction(message,action),
   selectChannel:channel=>selectChannel(channel),openConversation:conversation=>openConversation(conversation),
-  uploadFile:(file,target)=>uploadFile(file,target),downloadAttachment:a=>downloadAttachment(a),resolveAttachmentUrl:a=>resolveAttachmentUrl(a),
+  uploadFile:(file,target)=>uploadFile(file,target),discardUpload,downloadAttachment:a=>downloadAttachment(a),resolveAttachmentUrl:a=>resolveAttachmentUrl(a),
   hasPermission:permission=>hasCommunityPermission(permission),publishPresence:()=>publishVoicePresence(true),
   updateCallUI:()=>updateCallUI(),closeMobileMenu,
   moderationChanged:async row=>{if(!row||row.user_id!==session?.user.id)return;if(row.banned&&callChannel?.community_id===row.community_id)await leaveCall();channels=await checked(db.from('channels').select('*').order('position'));if(selected&&!selected.private&&!channels.some(c=>c.id===selected.id))showFriends();renderChannels();toast(row.banned?'Seu acesso a este servidor foi suspenso.':row.timeout_until&&new Date(row.timeout_until)>new Date()?'Você está silenciado até '+new Date(row.timeout_until).toLocaleString('pt-BR'):'Sua restrição foi atualizada.');},
-  revealMessage:message=>{if(home||!selected||message[scopeKey(selected)]!==selected.id)return;// a navegação pode ter
-    // terminado em outra conversa: injetar ali escreveria a mensagem no cache do canal errado.
-    messages.set(message.id,message);renderMessages();requestAnimationFrame(()=>{const node=document.querySelector('[data-message-id="'+CSS.escape(message.id)+'"]');node?.scrollIntoView({block:'center'});node?.classList.add('message-target');});},
+  revealMessage:message=>revealConversationMessage(message),
   loadMessages:()=>loadMessages(generation),scrollToLatest:jumpToLatest
 });
 // Canal #ouvir-juntos: card fixo, validação de comandos e execução na chamada do autor.
@@ -2825,10 +2828,33 @@ function chooseOAuthNickname(next){
  return new Promise(resolve=>{const user=next.user.id;showDialog('Escolha seu nickname',box=>{box.append(el('p','muted','Este será seu nome na Órbita e seu @ para adicionar amigos. Você pode mudar depois.'));const form=el('form'),name=inputField(form,'Seu nickname','',24);name.pattern='[A-Za-z0-9_]{3,24}';name.minLength=3;name.required=true;const save=el('button','primary','Continuar');save.type='submit';form.append(save);form.onsubmit=async event=>{event.preventDefault();save.disabled=true;try{await checked(db.from('profiles').update({display_name:name.value.trim(),username:name.value.trim().toLowerCase()}).eq('id',user));if(session?.user.id!==user)return;await loadSocial();$('app-dialog').close();}catch(error){toast(error.code==='23505'?'Esse nickname já está em uso. Escolha outro.':errorText(error));}finally{save.disabled=false;}};box.append(form);});$('app-dialog').dataset.keep='1';$('app-dialog').addEventListener('close',resolve,{once:true});});
 }
 
+async function revealConversationMessage(message){
+ const user=session?.user.id,version=generation;
+ // Busca/navegação pode ter terminado em outra conversa; nunca injetar no escopo errado.
+ if(!user||home||selected?.kind!=='text'||message[scopeKey(selected)]!==selected.id||message.thread_root)return;
+ messages.set(message.id,message);
+ if(pinsOnly)setPinsOnly(false);
+ // O renderer mantém um sufixo cronológico: ampliar só até o alvo, incluindo empates por id.
+ const tail=[...messages.values(),...outbox.rows(user,selected)].filter(m=>!m.thread_root&&(m.created_at.localeCompare(message.created_at)||m.id.localeCompare(message.id))>=0).length;
+ renderWindow=Math.max(renderWindow,tail);followLatestUntil=0;renderMessages();cancelRestoration();
+ // aguarda a leitura pendente para que sua restauração não desfaça o foco.
+ if(loading){const signal=channelAbort?.signal;await new Promise(resolve=>{
+  const stop=()=>{observer.disconnect();signal?.removeEventListener('abort',stop);resolve();};
+  const observer=new MutationObserver(()=>{if(!loading||generation!==version)stop();});
+  observer.observe($('message-list'),{attributes:true,attributeFilter:['aria-busy']});signal?.addEventListener('abort',stop,{once:true});
+ });}
+ requestAnimationFrame(()=>{
+  if(generation!==version||session?.user.id!==user||home)return;
+  const tail=[...messages.values(),...outbox.rows(user,selected)].filter(m=>!m.thread_root&&(m.created_at.localeCompare(message.created_at)||m.id.localeCompare(message.id))>=0).length;
+  if(tail>renderWindow){renderWindow=tail;renderMessages();}cancelRestoration();
+  const node=$('message-list').querySelector('[data-message-id="'+CSS.escape(message.id)+'"]');
+  if(node){node.scrollIntoView({block:'center',behavior:'instant'});node.classList.add('message-target');lastViewport=capturePosition();}
+ });
+}
 async function jumpToReply(id){
  const user=session?.user.id,target=selected&&{...selected},version=generation;if(!target||!user)return;
  const root=messages.get(id)||await checked(db.from(target.private?'direct_messages':'messages').select(messageFields).eq(target.private?'conversation_id':'channel_id',target.id).eq('id',id).maybeSingle());
- if(session?.user.id!==user||selected?.id!==target.id||generation!==version)return;if(!root)throw Error('A mensagem não está mais disponível.');messages.set(root.id,root);renderMessages();requestAnimationFrame(()=>{if(generation!==version)return;const node=document.querySelector('[data-message-id="'+CSS.escape(root.id)+'"]');node?.scrollIntoView({block:'center'});node?.classList.add('message-target');});
+ if(session?.user.id!==user||selected?.id!==target.id||generation!==version)return;if(!root)throw Error('A mensagem não está mais disponível.');revealConversationMessage(root);
 }
 
 async function syncVoiceChat(force=false){

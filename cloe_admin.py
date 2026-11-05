@@ -642,8 +642,7 @@ class OwnerAdmin:
             rows = await self._channels(community_id, headers)
             target_channel = self._pick_named([row for row in rows if row.get('kind') == 'text'],
                                               args['channel'], 'canal de texto')
-            params = {'channel_id': str(target_channel['id']),
-                      'channel_name': target_channel['name'],
+            params = {'channel_id': 'eq.' + str(target_channel['id']),
                       'select': 'id,content,author_id,created_at',
                       'order': 'created_at.desc', 'limit': '1'}
             author = None
@@ -674,12 +673,14 @@ class OwnerAdmin:
                 'remove': f'Vou remover {label} do servidor {community}.',
                 'suspend': f'Vou suspender a conta de {label} por {args.get("duration")}.',
             }[intent.kind]
-            result = {
-                'ban': f'Pronto. {label} foi banido do servidor {community}.',
-                'unban': f'Pronto. {label} foi desbanido e pode voltar ao servidor {community}.',
-                'remove': f'Pronto. {label} foi removido do servidor {community}.',
-                'suspend': f'Pronto. A conta de {label} ficou suspensa por {args["duration"]}.',
-            }[intent.kind]
+            if intent.kind == 'suspend':
+                result = f'Pronto. A conta de {label} ficou suspensa por {args["duration"]}.'
+            else:
+                result = {
+                    'ban': f'Pronto. {label} foi banido do servidor {community}.',
+                    'unban': f'Pronto. {label} foi desbanido e pode voltar ao servidor {community}.',
+                    'remove': f'Pronto. {label} foi removido do servidor {community}.',
+                }[intent.kind]
             return Plan(intent.kind, summary, {
                 'community_id': str(community_id), 'member': str(member['id']),
                 'username': str(member.get('username') or ''), 'label': label,

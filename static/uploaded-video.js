@@ -1,6 +1,6 @@
 // Only uploaded clips use this controller; call tracks and YouTube stay independent.
-const clips=new Map();
-let visibilityObserver,removalObserver,soundBlocked=false,armed=false,gestureAt=0;
+const clips=new Map(),lightboxes=new Map();
+let mediaVersion=0,visibilityObserver,removalObserver,soundBlocked=false,armed=false,gestureAt=0;
 const RATIO=0.55;
 function armUnmute(){if(armed)return;armed=true;const go=()=>{armed=false;gestureAt=Date.now();soundBlocked=false;for(const [video,record] of clips)if(video.dataset.sound==='1'&&!record.userMuted&&visible(video,record)){record.quiet=true;video.muted=false;record.quiet=false;}for(const t of ['pointerdown','keydown','touchstart'])document.removeEventListener(t,go,true);};for(const t of ['pointerdown','keydown','touchstart'])document.addEventListener(t,go,{capture:true,passive:true});}
 
@@ -29,14 +29,26 @@ function start(video,record){
   }catch{finish();}
 }
 async function enlarge(video){
-  if(video.requestFullscreen){try{await video.requestFullscreen();return;}catch{}}
+  const version=mediaVersion,record=clips.get(video),current=()=>version===mediaVersion&&video.isConnected&&clips.get(video)===record&&!record?.disposed;
+  if(!current())return;
+  if(video.requestFullscreen){try{await video.requestFullscreen();if(!current()&&document.fullscreenElement===video)document.exitFullscreen().catch(()=>{});return;}catch{}}
+  if(!current())return;
   if(video.webkitEnterFullscreen){try{video.webkitEnterFullscreen();return;}catch{}}
   const dialog=document.createElement('dialog'),close=document.createElement('button'),large=video.cloneNode(true);
   close.type='button';close.textContent='Fechar vídeo';dialog.className='video-lightbox';dialog.setAttribute('aria-label','Vídeo ampliado');
   large.removeAttribute('id');large.controls=true;large.muted=video.muted;large.currentTime=video.currentTime;
   const sink=localStorage.getItem('orbita-audio-output');if(sink&&large.setSinkId)large.setSinkId(sink).catch(()=>{});
   const playing=!video.paused;video.pause();dialog.append(close,large);document.body.append(dialog);
-  close.onclick=()=>dialog.close();dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close();});dialog.addEventListener('close',()=>{video.currentTime=large.currentTime;large.pause();dialog.remove();if(playing&&video.isConnected)video.play().catch(()=>{});},{once:true});dialog.showModal();if(playing)large.play().catch(()=>{});close.focus();
+  const finish=(resume=true)=>{if(!lightboxes.delete(dialog))return;const time=large.currentTime;large.pause();large.removeAttribute('src');large.querySelectorAll('source').forEach(source=>source.remove());large.load();dialog.remove();if(resume&&current()){video.currentTime=time;if(playing)video.play().catch(()=>{});}};
+  lightboxes.set(dialog,()=>finish(false));
+  close.onclick=()=>dialog.close();dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close();});dialog.addEventListener('close',()=>finish(),{once:true});dialog.showModal();if(playing)large.play().catch(()=>{});close.focus();
+}
+// Invalida também fullscreen ainda pendente, antes de qualquer await na troca de conta.
+export function closeUploadedVideoPreviews(){
+  mediaVersion++;
+  if(clips.has(document.fullscreenElement))document.exitFullscreen().catch(()=>{});
+  for(const dismiss of lightboxes.values())dismiss();
+  for(const [video,record] of clips)release(video,record);
 }
 function expandButton(video,record){if(record.expand||!video.isConnected)return;const button=document.createElement('button');button.type='button';button.className='soft-button video-enlarge';button.textContent='Ampliar vídeo';button.setAttribute('aria-label','Ampliar vídeo em tela cheia');button.onclick=()=>enlarge(video);video.after(button);record.expand=button;}
 function release(video,record){

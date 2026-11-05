@@ -117,10 +117,11 @@
     min-height: 44px !important;
   }
   #voice-view .voice-stage {
-    align-items: center !important;
-    justify-content: center !important;
+    align-items: safe center !important;
+    justify-content: safe center !important;
     padding: 8px 10px !important;
-    overflow: hidden !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
   }
   #voice-view .call-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;

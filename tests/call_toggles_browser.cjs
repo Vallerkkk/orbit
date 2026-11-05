@@ -34,7 +34,7 @@ const viaMore=async id=>{await page.locator('#call-more').click();await page.loc
   const fold=page.locator('.ux-category-toggle[aria-controls="voice-channels"]');await fold.click();
   assert.equal(await fold.getAttribute('aria-expanded'),'false');assert.equal(await rows(),3);assert.equal(await page.locator('#voice-channels .voice-tree-person:visible').count(),3);assert.equal(await page.locator('#voice-channels .channel.has-peers:visible').count(),1);
   await fold.click();assert.equal(await fold.getAttribute('aria-expanded'),'true');assert.equal(await page.locator('#voice-channels .voice-tree-person:visible').count(),3);
-  if(mobile)await page.touchscreen.tap(385,420);
+  if(mobile){await page.locator('#mobile-menu-close').click();await page.waitForFunction(()=>document.getElementById('call-navigation').getAttribute('aria-expanded')==='false');}
   // Canais e conversas.
   const nav=page.locator('#call-navigation');assert.equal(await nav.isVisible(),true);
   if(!mobile){
@@ -48,7 +48,7 @@ const viaMore=async id=>{await page.locator('#call-more').click();await page.loc
   }else{
    assert.equal(await nav.getAttribute('aria-expanded'),'false');await nav.click();await page.waitForFunction(()=>document.body.classList.contains('mobile-menu-open'));assert.equal(await page.locator('.app>.sidebar').isVisible(),true);
    await page.waitForFunction(()=>document.getElementById('call-navigation').getAttribute('aria-expanded')==='true');await page.waitForTimeout(600);await shot('fix-sidebar-toggle-mobile.png');
-   await page.touchscreen.tap(385,420);await page.waitForFunction(()=>!document.body.classList.contains('mobile-menu-open'));
+   await page.locator('#mobile-menu-close').click();await page.waitForFunction(()=>!document.body.classList.contains('mobile-menu-open'));
   }
   assert.deepEqual(errors,[]);report.push({mobile,ok:true});await context.close();
  }

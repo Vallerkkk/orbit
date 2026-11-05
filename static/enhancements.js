@@ -184,7 +184,7 @@ export function initEnhancements(context) {
   async function sessionChanged() {
     const s = state(), uid = s.session?.user.id;
     runTimers();if (uid === subscribedUser) return;
-    const version=++sessionVersion,oldInbox=inbox,oldTyping=typing;inbox=typing=null;subscribedUser=uid;closePanel();clearTimeout(retryPush);seenActivity.clear();typingUsers.clear();unread={};
+    const version=++sessionVersion,oldInbox=inbox,oldTyping=typing;inbox=typing=null;subscribedUser=uid;clearTray();closePanel();clearTimeout(retryPush);seenActivity.clear();typingUsers.clear();unread={};
     await Promise.all([oldInbox,oldTyping].filter(Boolean).map(channel=>s.db.removeChannel(channel)));
     if(version!==sessionVersion)return;
     if(uid)syncNotificationPreferences(s.db,uid).catch(()=>{});
@@ -247,7 +247,10 @@ export function initEnhancements(context) {
     article.append(actions);return article;
   }
   async function openThread(message) {
-    const s=state(),target={...s.selected},rootId=message.thread_root||message.id,root=message.thread_root?await checked(s.db.from(target.private?'direct_messages':'messages').select(context.messageFields).eq('id',rootId).single()):message;
+    const s=state(),uid=s.session?.user.id;if(!uid||!s.selected||s.selected.kind!=='text'||s.home)return;
+    const target={...s.selected},rootId=message.thread_root||message.id,opening=++threadVersion,account=sessionVersion,channel=channelVersion;
+    const root=message.thread_root?await checked(s.db.from(target.private?'direct_messages':'messages').select(context.messageFields).eq('id',rootId).eq(target.private?'conversation_id':'channel_id',target.id).single()):message;
+    const current=state();if(current.session?.user.id!==uid||sessionVersion!==account||channelVersion!==channel||threadVersion!==opening||current.home||current.selected?.id!==target.id||!!current.selected?.private!==!!target.private)return;
     const content=openPanel('Thread', 'thread');threadRoot=rootId;threadTarget=target;const version=threadVersion;
     content.append(compactMessage(root),el('hr'));
     const list=el('div','thread-replies');content.append(list);
@@ -286,8 +289,8 @@ export function initEnhancements(context) {
     const target={...state().selected},root=panelKind==='thread'&&threadTarget?.id===state().selected?.id?threadRoot:null;if(!state().session||target.kind!=='text')return toast('Abra um canal de texto ou uma DM para anexar arquivos.');
     if(!files.length)return;if(uploading)return toast('Aguarde o envio atual terminar.');
     if(files.length>5)return toast('Envie até cinco arquivos por vez.');
-    const sender=state().session.user.id;uploading=true;$('attach-file').disabled=true;
-    try{for(const file of files){toast('Preparando '+file.name+'…');if(state().session?.user.id!==sender)throw Error('Sua conta mudou; envio cancelado.');const a=await context.uploadFile(file,target);try{if(state().session?.user.id!==sender)throw Error('Sua conta mudou; envio cancelado.');await checked(state().db.from(target.private?'direct_messages':'messages').insert({[target.private?'conversation_id':'channel_id']:target.id,author_id:sender,content:'📎 '+a.name,attachment_id:a.id,thread_root:root}));}catch(error){await state().db.from('attachments').delete().eq('id',a.id);await state().db.storage.from('orbita-files').remove([a.storage_path]);throw error;}}
+    const sender=state().session.user.id,version=sessionVersion;uploading=true;$('attach-file').disabled=true;
+    try{for(const file of files){toast('Preparando '+file.name+'…');if(state().session?.user.id!==sender||sessionVersion!==version)throw Error('Sua conta mudou; envio cancelado.');const a=await context.uploadFile(file,target);try{if(state().session?.user.id!==sender||sessionVersion!==version)throw Error('Sua conta mudou; envio cancelado.');await checked(state().db.from(target.private?'direct_messages':'messages').insert({[target.private?'conversation_id':'channel_id']:target.id,author_id:sender,content:'📎 '+a.name,attachment_id:a.id,thread_root:root}));}catch(error){await context.discardUpload(a,sender);throw error;}}
       if(state().selected?.id===target.id)await context.refreshMessages();if(root&&threadRoot===root)await loadThread(true);dispatchPush();toast('Arquivo enviado.');
     }catch(error){report(error);}finally{uploading=false;$('attach-file').disabled=false;}
   }

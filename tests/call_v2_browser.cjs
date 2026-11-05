@@ -76,7 +76,7 @@ function fakeYouTube(){window.YT={Player:class{constructor(id,o){this.options=o;
    await page.evaluate(()=>{for(const id of ['cam','scr']){const p=window.qaRemote.videoTrackPublications.get(id);window.__qaRoom.emit('TrackUnpublished',p,window.qaRemote);}});
    await toggle.click();await page.locator('#watch-panel').waitFor({state:'hidden'});
    const card=page.locator('.call-grid .participant').first();await card.waitFor();
-   const box=await card.boundingBox();assert.ok(box.width<=110,'avatar compacto: '+box.width);
+   const box=await card.locator('img, .avatar, [class*=avatar]').first().boundingBox();assert.ok(box.width<=110,'avatar compacto: '+box.width);
    const radius=await card.locator('img, .avatar, [class*=avatar]').first().evaluate(n=>getComputedStyle(n).borderRadius);assert.match(radius,/50%|9999|px/);
    if(shots)await page.screenshot({path:path.join(shots,'call-v2-mobile-avatars.png')});
    await toggle.click();await page.locator('#watch-panel').waitFor();
