@@ -1,8 +1,8 @@
 {
-  "version": "b8ccd4c58d3a65cf",
-  "entry": "/static/dist/app-Y6DRR4CP.js",
+  "version": "e02cb935907441eb",
+  "entry": "/static/dist/app-54LKL55Z.js",
   "files": [
-    "/static/dist/app-Y6DRR4CP.js",
+    "/static/dist/app-54LKL55Z.js",
     "/static/dist/call-discord-86fbff2e5e1dd111.css",
     "/static/dist/call-layout-f9f70c16e1d5a550.css",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js",
@@ -79,7 +79,7 @@
     "/static/call-discord.css": "/static/dist/call-discord-86fbff2e5e1dd111.css"
   },
   "integrity": {
-    "/static/dist/app-Y6DRR4CP.js": "5e516efcc93d31e7f9801d9d44608d038b3b6b73b2509003cbf0bdce3483d9d1",
+    "/static/dist/app-54LKL55Z.js": "309fa094f3586801712f10ec2df5cd9835ec2290944c135f520ec75794c05c9c",
     "/static/dist/call-discord-86fbff2e5e1dd111.css": "86fbff2e5e1dd11126e951e97b777a6438cdb42f31f4eab19b88cd9674545d82",
     "/static/dist/call-layout-f9f70c16e1d5a550.css": "f9f70c16e1d5a5509b31f2cc64049fe8efc02c7c9aadec0ce781d4bff0560355",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js": "20cfee0fc731efe53611da92202bd240b2f9d28e6b3115691ed50fc718851ee0",

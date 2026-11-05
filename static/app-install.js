@@ -31,7 +31,7 @@ export function detectPlatform(ua = navigator.userAgent, platform = navigator.pl
 }
 
 if (document.body?.dataset.installPage === 'true') {
-  const os = detectPlatform(), labels = {android:'Detectamos um Android: o APK está em destaque.', ios:'Detectamos um iPhone/iPad: siga os 3 passos no Safari.', windows:'Detectamos o Windows: o instalador está em destaque.', other:'Escolha a plataforma abaixo ou use pelo navegador.'};
+  const os = detectPlatform(), labels = {android:'Detectamos um Android: o APK está em destaque.', ios:'Detectamos um iPhone/iPad: siga os 3 passos no Safari.', windows:'Detectamos o Windows: o aplicativo está em destaque.', other:'Escolha a plataforma abaixo ou use pelo navegador.'};
   document.documentElement.dataset.platform = os;
   const hero = os === 'other' ? 'windows' : os;
   document.querySelectorAll('.actions .cta').forEach(a => { a.hidden = a.dataset.platform !== hero; });
