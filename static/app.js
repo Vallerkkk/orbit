@@ -440,6 +440,20 @@ function maybeDateSeparator(prev, msg){
   return null;
 }
 
+// Extensões, userscripts e temas injetam folhas de estilo DEPOIS das nossas e empatam em
+// especificidade com o guard de refino.css — quem ganha é a ordem de origem. Só o estilo inline
+// com !important pertence a um nível acima de qualquer regra de autor, então a geometria da
+// linha é fixada no próprio nó.
+const LAYOUT_ROW=[['display','flex'],['flex-direction','row'],['flex-wrap','nowrap'],['align-items','flex-start'],['text-indent','0']];
+const LAYOUT_AVATAR=[['float','none'],['position','relative'],['flex','0 0 40px'],['order','0'],['margin-left','0'],['margin-right','0']];
+const LAYOUT_COLUMN=[['display','block'],['position','static'],['float','none'],['flex','1 1 auto'],['order','1'],['width','auto'],['min-width','0'],['margin-left','0'],['padding-left','0'],['text-indent','0']];
+const LAYOUT_TEXT=[['display','block'],['position','static'],['float','none'],['width','auto'],['max-width','100%'],['margin','0'],['padding-left','0'],['text-indent','0']];
+function pinMessageLayout(item,avatar,content){
+  for(const [node,rules] of [[item,LAYOUT_ROW],[avatar,LAYOUT_AVATAR],[content,LAYOUT_COLUMN]])
+    for(const [property,value] of rules)node.style.setProperty(property,value,'important');
+  for(const child of content.children)if(child.matches('p,.message-text'))
+    for(const [property,value] of LAYOUT_TEXT)child.style.setProperty(property,value,'important');
+}
 function createMessageRow(message,grouped=false) {
     const messageProfile=peopleById.get(message.author_id)||message.profiles||{},name = messageProfile.display_name || 'Participante';
     const item = el('article', 'message'), content = el('div', 'message-content'), meta = el('div', 'message-meta');
@@ -451,7 +465,7 @@ function createMessageRow(message,grouped=false) {
     if(message.reply_to){const original=messages.get(message.reply_to);const quote=button(original?(original.profiles?.display_name||'Participante')+': '+original.content.slice(0,150):'↪ Resposta a uma mensagem anterior',()=>jumpToReply(message.reply_to),'reply-card');quote.setAttribute('aria-label','Ir para a mensagem respondida');content.append(quote);}
     {const media=chatMedia(message.content);if(media){item.classList.add('message-media',media.kind==='sticker'?'message-sticker':'message-gif');content.append(renderChatMedia(media));}else if(!(message.attachments&&message.attachments.name&&String(message.content||'').replace(/^\s*📎\s*/,'').trim()===String(message.attachments.name).trim()))content.append(safeRichText(message.content));}if(message.poll)content.append(renderPoll(message));
     if(message.attachments){const a=message.attachments;content.append(attachmentBlock(a));}
-    if(message.local_state){item.classList.add('message-local');item.dataset.delivery=message.local_state;const delivery=el('div','message-delivery');delivery.append(el('span','',message.local_state==='sending'?'Enviando…':message.local_state==='checking'?'Verificando envio…':message.local_state==='uncertain'?'Envio não confirmado.':('Falha no envio: '+(message.local_error||'tente novamente.'))));if(!['sending','checking'].includes(message.local_state)){delivery.append(button(message.local_state==='uncertain'?'Verificar envio':'Tentar novamente',()=>retryMessage(message.id),'text-button'),button('Descartar',()=>{outbox.remove(message.id);renderMessages();},'text-button'));}content.append(delivery);const avatar=el('div','avatar');setAvatar(avatar,messageProfile);item.append(avatar,content);item.dataset.messageId=message.id;return item;}
+    if(message.local_state){item.classList.add('message-local');item.dataset.delivery=message.local_state;const delivery=el('div','message-delivery');delivery.append(el('span','',message.local_state==='sending'?'Enviando…':message.local_state==='checking'?'Verificando envio…':message.local_state==='uncertain'?'Envio não confirmado.':('Falha no envio: '+(message.local_error||'tente novamente.'))));if(!['sending','checking'].includes(message.local_state)){delivery.append(button(message.local_state==='uncertain'?'Verificar envio':'Tentar novamente',()=>retryMessage(message.id),'text-button'),button('Descartar',()=>{outbox.remove(message.id);renderMessages();},'text-button'));}content.append(delivery);const avatar=el('div','avatar');setAvatar(avatar,messageProfile);item.append(avatar,content);pinMessageLayout(item,avatar,content);item.dataset.messageId=message.id;return item;}
     const actions=el('div','message-actions');{const reply=button('↩',()=>replyToMessage(message),'tiny-button');reply.setAttribute('aria-label','Responder');actions.append(reply);}
     for(const emoji of ['👍','❤️','😂','🎉','🔥','👀']){const count=(message.reactions||[]).filter(r=>r.emoji===emoji).length;actions.append(button(emoji+(count?' '+count:''),()=>react(message,emoji),'reaction'));}
     if(!selected.private)for(const custom of communityEmojiList){const token=':'+custom.name+':',count=(message.reactions||[]).filter(r=>r.emoji===token).length,reactButton=button('',()=>react(message,token),'reaction custom-reaction');const icon=el('img');icon.src=communityEmojiUrls.get(token)||'';icon.alt=token;reactButton.append(icon,document.createTextNode(count?' '+count:''));actions.append(reactButton);}
@@ -463,7 +477,7 @@ function createMessageRow(message,grouped=false) {
     const used=[...new Set((message.reactions||[]).map(r=>r.emoji))];
     if(used.length){const reactions=el('div','message-reactions');for(const emoji of used){const count=message.reactions.filter(r=>r.emoji===emoji).length,reactButton=button(emoji+' '+count,()=>react(message,emoji),'reaction');reactButton.classList.toggle('mine',message.reactions.some(r=>r.emoji===emoji&&r.user_id===session.user.id));if(communityEmojiUrls.has(emoji)){const icon=el('img','inline-custom-emoji');icon.src=communityEmojiUrls.get(emoji);icon.alt=emoji;reactButton.replaceChildren(icon,document.createTextNode(' '+count));}reactions.append(reactButton);}content.append(reactions);}
     const avatar=el('div','avatar');setAvatar(avatar,messageProfile);avatar.tabIndex=0;avatar.setAttribute('role','button');avatar.setAttribute('aria-label','Abrir perfil de '+name);avatar.onclick=()=>showProfile(person(message.author_id));avatar.onkeydown=e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();avatar.click();}};
-    item.append(avatar,content);enhancements?.enhanceMessage(item,message);item.classList.toggle('message-grouped',grouped);return item;
+    item.append(avatar,content);enhancements?.enhanceMessage(item,message);item.classList.toggle('message-grouped',grouped);pinMessageLayout(item,avatar,content);return item;
 }
 function renderMessages(scroll = false, position) {
   const list=$('message-list'),saved=position||lastViewport||capturePosition(),scope=(selected?.private?'dm:':'channel:')+selected?.id;
