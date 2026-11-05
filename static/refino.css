@@ -840,3 +840,13 @@ body #app-view .user-panel .up-name,body #app-view .user-panel .up-handle{max-wi
 .update-notice button:first-of-type{background:var(--ac)!important}
 .update-notice button:hover{background:#5d6069!important}
 .update-notice button:first-of-type:hover{background:var(--ac-h)!important}
+
+/* Invariantes de chat: o corpo da mensagem nunca escapa da coluna do conteúdo */
+#message-list .message>.message-content{display:block!important;min-width:0!important;text-indent:0!important}
+#message-list .message>.message-content>p,
+#message-list .message>.message-content>.message-text{display:block!important;width:auto!important;margin:0!important;text-indent:0!important}
+#message-list .message>.avatar{flex-shrink:0!important}
+/* Divisor de data sempre centralizado, com linhas simétricas */
+#message-list>.ux-day-divider,#message-list>.date-divider{justify-content:center!important}
+#message-list>.ux-day-divider::before,#message-list>.ux-day-divider::after,
+#message-list>.date-divider::before,#message-list>.date-divider::after{flex:1 1 0!important;min-width:0!important}

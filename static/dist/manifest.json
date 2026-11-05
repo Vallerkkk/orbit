@@ -1,5 +1,5 @@
 {
-  "version": "e02cb935907441eb",
+  "version": "2b2784ab5bc6e760",
   "entry": "/static/dist/app-54LKL55Z.js",
   "files": [
     "/static/dist/app-54LKL55Z.js",
@@ -51,7 +51,7 @@
     "/static/dist/orbita-v2-bd3eb2eb6b321f04.css",
     "/static/dist/polish-6f749e518969d62f.css",
     "/static/dist/profile-studio-aa2b37c86cd3c986.css",
-    "/static/dist/refino-57c8642015d02336.css",
+    "/static/dist/refino-6c3f17bfa67bc59d.css",
     "/static/dist/social-feed-3968bce45c84364b.css",
     "/static/dist/store-v2-475c9b3b166dd566.css",
     "/static/dist/style-038bf5ba8ea24a2a.css"
@@ -72,7 +72,7 @@
     "/static/profile-studio.css": "/static/dist/profile-studio-aa2b37c86cd3c986.css",
     "/static/store-v2.css": "/static/dist/store-v2-475c9b3b166dd566.css",
     "/static/grafite.css": "/static/dist/grafite-d44a80bbc23c34f7.css",
-    "/static/refino.css": "/static/dist/refino-57c8642015d02336.css",
+    "/static/refino.css": "/static/dist/refino-6c3f17bfa67bc59d.css",
     "/static/cosmos.css": "/static/dist/cosmos-634b58d97740ec30.css",
     "/static/loader.css": "/static/dist/loader-2d3fc658d3944c83.css",
     "/static/mobile-fixes.css": "/static/dist/mobile-fixes-5a7ff2ee79484797.css",
@@ -128,7 +128,7 @@
     "/static/dist/orbita-v2-bd3eb2eb6b321f04.css": "bd3eb2eb6b321f041455344f44b6952e7c7bd8f904cc0fa9038f292f79ecc64a",
     "/static/dist/polish-6f749e518969d62f.css": "6f749e518969d62f3f30d66037bdce6e76dcd2d574739a2605a82410870e3d63",
     "/static/dist/profile-studio-aa2b37c86cd3c986.css": "aa2b37c86cd3c98651fbfde3e08a23fedd8221aa325300a2454c30c42789bf53",
-    "/static/dist/refino-57c8642015d02336.css": "57c8642015d02336f6bafba65ff824f65545ae976a6e4e3402e9606d6cbbecf8",
+    "/static/dist/refino-6c3f17bfa67bc59d.css": "6c3f17bfa67bc59d9e72ea2743d46ed9b61858325945179d5db5471071794e28",
     "/static/dist/social-feed-3968bce45c84364b.css": "3968bce45c84364b85714648491bca2f0a75980d9bd146895a0d2d16a54c6602",
     "/static/dist/store-v2-475c9b3b166dd566.css": "475c9b3b166dd56686d48b67690480ea50234e9a2204de66642ab74d604a0f92",
     "/static/dist/style-038bf5ba8ea24a2a.css": "038bf5ba8ea24a2a05d8ffae56ec899b0c6e03f4e74023d13656e9374c3b9c7c"
