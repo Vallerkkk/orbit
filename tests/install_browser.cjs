@@ -12,7 +12,7 @@ let browser;
   await context.route('**/baixar/Orbita-Windows.zip',route=>route.fulfill({body:fs.readFileSync(path.join(__dirname,'../static/downloads/Orbita-Windows.zip')),contentType:'application/zip',headers:{'Content-Disposition':'attachment; filename="Orbita-Windows.zip"'}}));
   await page.goto(new URL('/instalar',base).href,{waitUntil:'networkidle'});
   const button=page.getByRole('button',{name:'Instalar versão do navegador',exact:true});await button.waitFor();
-  assert.equal(await page.getByRole('link',{name:/Baixar para Windows/}).getAttribute('href'),'/baixar/Orbita-Setup.exe');
+  assert.equal(await page.getByRole('link',{name:/Baixar o Orbita\.exe/}).getAttribute('href'),'/baixar/Orbita-Setup.exe');
   assert.equal(await page.getByRole('link',{name:'Baixar APK ↓'}).getAttribute('href'),'/baixar/Orbita.apk');
   await button.click();await page.getByRole('status').filter({hasText:'Use a opção de instalar'}).waitFor();
   assert.equal(await page.locator('#install-help').evaluate(node=>node===document.activeElement),true);
