@@ -1,0 +1,25 @@
+name: Vida da Órbita (keep-alive externo)
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: keep-alive
+  cancel-in-progress: false
+jobs:
+  ping:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - name: Acessar a Órbita
+        run: |
+          code=$(curl -s --max-time 90 -o /dev/null -w '%{http_code}' https://orbita-8nwu.onrender.com/healthz)
+          echo "healthz -> $code"
+          code2=$(curl -s --max-time 90 -o /dev/null -w '%{http_code}' https://orbita-8nwu.onrender.com/)
+          echo "raiz -> $code2"
+          if [ "$code" = "000" ] && [ "$code2" = "000" ]; then
+            echo "::warning::Instância não respondeu em nenhum dos dois acessos"
+            exit 1
+          fi
