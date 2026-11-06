@@ -1,24 +1,26 @@
 # Órbita Desktop para Windows
 
-A página `/instalar` oferece o aplicativo Electron como opção principal. Ele tem motor próprio, janela independente, sessão própria, bandeja e seletor nativo de telas/janelas com áudio do sistema opcional. Não precisa de um navegador instalado para abrir sua janela. A versão web/PWA continua como alternativa para navegador e celulares.
+A página `/instalar` oferece o aplicativo nativo `.NET 10 + WPF + WebView2` (`desktop-native/`) como opção principal. São 70 MB em um arquivo único, sem Chromium nem Node.js embarcados: a interface web é hospedada pelo runtime WebView2 que já vem no Windows, em janela e diálogos nativos, com bandeja e seletor nativo de telas/janelas. A versão web/PWA continua como alternativa para navegador e celulares.
 
-A versão 1.0.2 adiciona atualizações automáticas à versão instalada. Verifica versões estáveis, baixa diferenças quando possível, confere o SHA-512 e instala ao encerrar pela bandeja. Downloads completos podem ocorrer como alternativa automática. Não reinicia durante chamadas. Quem usa 1.0.0 ou 1.0.1 precisa instalar 1.0.2 uma vez para ativar o recurso. Os dados são preservados. O ZIP recebe atualização manual.
+Não há instalador nem atualização automática nesta versão. O programa é o próprio arquivo: baixe, abra, use. Sessão e permissões ficam em `%LOCALAPPDATA%\OrbitaNative`, separadas do navegador.
 
 ## Downloads
 
-- `/baixar/Orbita-Setup.exe` redireciona ao instalador `Orbita-Setup-1.0.2-x64.exe` na versão oficial do GitHub.
-- `/baixar/Orbita-Windows.zip` agora redireciona ao aplicativo ZIP `Orbita-1.0.2-x64.zip`, substituindo o antigo pacote de atalho de internet. Extraia todos os arquivos e abra `Orbita.exe`.
-- Versão: https://github.com/Vallerkkk/calldojoao/releases/tag/v1.0.2
-- Hashes em `SHA256SUMS.txt`, nos anexos da versão.
+- `/baixar/Orbita-Setup.exe` redireciona ao `Orbita.exe` da release oficial.
+- `/baixar/Orbita-Windows.zip` redireciona ao `Orbita-2.0.0-win-x64.zip`, que embrulha o mesmo executável e o `LEIA-ME.txt`.
+- Versão: https://github.com/Vallerkkk/orbit/releases/tag/v2.0.0
+- Hashes em `SHA256SUMS.txt` nos anexos da release e em `work/release/SHA256SUMS.txt` na máquina de build.
 
-O instalador é por usuário e cria atalhos. Não inicia automaticamente ao terminar nem com o Windows. Ao fechar a janela, o usuário escolhe continuar na bandeja ou encerrar. A primeira abertura pede login, pois o perfil do aplicativo é separado do navegador. Mensagens, arquivos e chamadas precisam da internet e usam o mesmo backend e banco existentes.
+Os dois arquivos publicados têm o conteúdo conferido por hash nesta máquina. O `Orbita.exe` tem SHA-256 `eff59588fafd86195c4df9a3eb8c2142c4244c0bf404166c7dae38e428b48988` e `desktop-native/build.ps1` reproduz exatamente esses bytes com o SDK 10.0.403 — ver a seção "Compilar" em `desktop-native/README.md`.
 
 O executável não possui assinatura Authenticode comercial. SmartScreen e outros antivírus podem mostrar avisos; não se garante ausência de bloqueios. Não desative proteções. Nenhuma técnica de evasão, alteração de antivírus ou exceção de certificado foi usada.
 
 ## Código e validação
 
-Código desktop e instruções de compilação em `desktop/README.md`, com Electron e empacotador fixados no lockfile. Os instaladores ficam nos anexos de Releases, sem binários grandes no Git ou no servidor Render. A página e os dois redirecionamentos são públicos e apontam somente para arquivos de versão fixos do repositório oficial.
+Código nativo e instruções de compilação em `desktop-native/README.md`, com os requisitos (Windows 10 1809+ x64, WebView2 Evergreen, .NET 10 SDK) e a lista do que foi e do que não foi testado. Os binários ficam nos anexos das Releases, sem pacotes grandes no Git nem no servidor Render. A página e os dois redirecionamentos são públicos e apontam somente para arquivos de versão fixa do repositório oficial; `tests/test_launcher.py` trava as URLs exatas.
 
-Validados: empacotamento e correspondência do código do ASAR; fuses de segurança; login de produção carregado pelo Electron real em perfil isolado de teste; renderer sem Node; seletor com fontes simuladas e áudio mediante seleção. SHA-256 dos dois arquivos enviados conferidos com os digests do GitHub. Não se instala o programa no perfil pessoal do usuário durante o teste.
+O funil da página é validado em navegador real nos 1440, 390 e 320 px (`tests/install_browser.cjs`). O download em si é verificado por hash, não por instalação no perfil pessoal de quem testa. Matriz de monitores e escalas DPI, Windows sem WebView2, ARM64, login OAuth dentro do aplicativo e reputação SmartScreen continuam sem validação manual.
 
-A página e seus estados de instalação web são testados em 1440, 390 e 320 px. O teste de download do navegador usa um arquivo pequeno simulado; os instaladores reais são verificados por hash separadamente. Chamadas entre duas pessoas, instalação em diferentes computadores e reputação SmartScreen ainda precisam de validação manual.
+## Legado Electron
+
+`desktop/` guarda o wrapper Electron 1.0.2 que foi a opção principal antes da versão nativa. Ele não é mais oferecido pela página: nenhum link em `/instalar` aponta para ele. O workflow `.github/workflows/desktop-release.yml` ainda publica o instalador Electron em qualquer tag `v*`, então criar uma tag de versão do site sem querer publica um instalador concorrente com o app nativo. Enquanto `desktop/` existir, use `native-v*` (`.github/workflows/native-release.yml`) para o aplicativo nativo e trate `v*` como decisão explícita.

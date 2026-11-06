@@ -14,9 +14,11 @@ O foco desta versão é **fluidez da interface e baixo consumo de RAM/CPU**: nã
 
 ## Baixar e executar
 
-O pacote é gerado por `build.ps1` (veja abaixo). Quando houver uma release publicada em <https://github.com/Vallerkkk/orbit/releases>, baixe o ZIP `Orbita-2.0.0-win-x64.zip`, extraia a pasta completa e abra `Orbita.exe`. Mantenha as DLLs e a pasta `runtimes/` junto do executável.
+O pacote é gerado por `build.ps1` (veja abaixo). Quando houver uma release publicada em <https://github.com/Vallerkkk/orbit/releases>, baixe `Orbita.exe` e abra o arquivo, ou baixe o ZIP `Orbita-2.0.0-win-x64.zip`, que traz o mesmo executável e o `LEIA-ME.txt`. O executável é único e autocontido: não há DLLs nem pasta `runtimes/` para manter junto.
 
-A versão publicada do site é atualizada automaticamente pelo Render; o executável nativo é versionado separadamente. Não há instalador nem atualização automática nesta versão. Para atualizar, encerre o aplicativo pela bandeja, substitua a pasta do programa e abra novamente. A sessão e as permissões ficam em `%LOCALAPPDATA%\OrbitaNative` e são preservadas.
+A versão publicada do site é atualizada automaticamente pelo Render; o executável nativo é versionado separadamente. Não há instalador nem atualização automática nesta versão. Para atualizar, encerre o aplicativo pela bandeja, substitua o `Orbita.exe` e abra novamente. A sessão e as permissões ficam em `%LOCALAPPDATA%\OrbitaNative` e são preservadas.
+
+O funil de download do site entrega exatamente estes arquivos: `/baixar/Orbita-Setup.exe` redireciona ao `Orbita.exe` e `/baixar/Orbita-Windows.zip` ao ZIP da release `v2.0.0` em <https://github.com/Vallerkkk/orbit/releases>. Rodar `.\build.ps1` com o SDK 10.0.403 reproduz o `Orbita.exe` publicado byte a byte (SHA-256 `eff59588fafd86195c4df9a3eb8c2142c4244c0bf404166c7dae38e428b48988`); outra versão de SDK ou a flag `PublishReadyToRun` muda o hash.
 
 ## Compilar
 
@@ -25,11 +27,11 @@ cd desktop-native
 .\build.ps1
 ```
 
-O script localiza o SDK do .NET (inclusive uma instalação local em `%USERPROFILE%\.dotnet-local`), publica `Release` autocontido para `win-x64` com ReadyToRun e gera:
+O script localiza o SDK do .NET (inclusive uma instalação local em `%USERPROFILE%\.dotnet-local`) e publica `Release` autocontido para `win-x64` em arquivo único comprimido, sem ReadyToRun, gerando:
 
-- `out/Orbita-2.0.0-win-x64/` — pasta pronta para uso;
-- `out/Orbita-2.0.0-win-x64.zip` — pacote para distribuir;
-- `out/SHA256SUMS.txt` — hash SHA-256 do ZIP.
+- `out/Orbita-2.0.0-win-x64/` — pasta com o executável, os XMLs de documentação dos pacotes e o `LEIA-ME.txt`;
+- `out/Orbita-2.0.0-win-x64.zip` — pacote para distribuir, com somente o `Orbita.exe` e o `LEIA-ME.txt`;
+- `out/SHA256SUMS.txt` — hash SHA-256 do executável e do ZIP.
 
 Use `.\build.ps1 -NoZip` para gerar somente a pasta. A primeira compilação baixa o pacote do WebView2 e os runtime packs do .NET.
 
