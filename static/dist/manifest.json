@@ -1,8 +1,8 @@
 {
-  "version": "0035fde27f734648",
-  "entry": "/static/dist/app-ZQ7DNH6Y.js",
+  "version": "1d31f47b4fa00b39",
+  "entry": "/static/dist/app-ATP7QZY4.js",
   "files": [
-    "/static/dist/app-ZQ7DNH6Y.js",
+    "/static/dist/app-ATP7QZY4.js",
     "/static/dist/call-discord-86fbff2e5e1dd111.css",
     "/static/dist/call-layout-f9f70c16e1d5a550.css",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js",
@@ -31,7 +31,7 @@
     "/static/dist/chunk-prod-BILYJVBG.js",
     "/static/dist/chunk-profile-appearance-GDA3C5VT.js",
     "/static/dist/chunk-profile-studio-GXWNFD4T.js",
-    "/static/dist/chunk-social-feed-KDWNCMND.js",
+    "/static/dist/chunk-social-feed-PSMJCYAE.js",
     "/static/dist/chunk-social-tools-FFJ47XCM.js",
     "/static/dist/chunk-telemetry-L3E3VUOP.js",
     "/static/dist/chunk-voice-chat-DLLG4XY7.js",
@@ -79,7 +79,7 @@
     "/static/call-discord.css": "/static/dist/call-discord-86fbff2e5e1dd111.css"
   },
   "integrity": {
-    "/static/dist/app-ZQ7DNH6Y.js": "d5e6954a0dcc4eeed38857eb8f1f79190fd1667946936ff9cfb27c938534d73e",
+    "/static/dist/app-ATP7QZY4.js": "612783cac5be1186e108135843fe07410c4a35b5e4484b52558269c56e0fbaf9",
     "/static/dist/call-discord-86fbff2e5e1dd111.css": "86fbff2e5e1dd11126e951e97b777a6438cdb42f31f4eab19b88cd9674545d82",
     "/static/dist/call-layout-f9f70c16e1d5a550.css": "f9f70c16e1d5a5509b31f2cc64049fe8efc02c7c9aadec0ce781d4bff0560355",
     "/static/dist/chunk-admin-controls-YRDKAMDE.js": "20cfee0fc731efe53611da92202bd240b2f9d28e6b3115691ed50fc718851ee0",
@@ -108,7 +108,7 @@
     "/static/dist/chunk-prod-BILYJVBG.js": "392e7c812c1ce2bb32af37ededef482035b91913c868d087465a8667a23b8a0a",
     "/static/dist/chunk-profile-appearance-GDA3C5VT.js": "2d06a66f69743c4f16a7500d3a4540863d8546e011fb908ffea5a0c934680e48",
     "/static/dist/chunk-profile-studio-GXWNFD4T.js": "47f8a8e9787cbce4ac26dbdb541c687ce25b798ad049fbc1cb4d792cbc75bcfb",
-    "/static/dist/chunk-social-feed-KDWNCMND.js": "2b3c79c6fb8314f3e15af80012b1afc41e00fff012a97c4e27c2ea0524f19487",
+    "/static/dist/chunk-social-feed-PSMJCYAE.js": "f8394d4e8fb315377d9429f951d11f91d53c746921aafea93ce6c89b0859e845",
     "/static/dist/chunk-social-tools-FFJ47XCM.js": "dba99d6f260e5d6abe078b521c5692425478c60e90fc743736086dcf65541538",
     "/static/dist/chunk-telemetry-L3E3VUOP.js": "3132e8830e5589029e82064b1fc2e9c325e2bcaaaf0f50eb9a7cc31f52ddba8c",
     "/static/dist/chunk-voice-chat-DLLG4XY7.js": "91d9b739c3598d41c1447c36651e6b483ad975be771c5d26f9538e3b855474ae",
