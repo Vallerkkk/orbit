@@ -1999,7 +1999,7 @@ body[data-color-mode=light] #auth-view .auth-card #auth-status:not(:empty){color
 /* Alvos de toque confortáveis. */
 @media(max-width:800px){
   #voice-view .call-tile-menu.call-icon{width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;max-height:40px!important;inset:6px 6px auto auto!important;opacity:1}
-  #server-banner-box .sb-btn{min-height:36px;padding:8px 12px}
+  #server-banner-box .sb-btn{min-height:36px!important;padding:8px 12px!important}
 }
 .pv2 .rp-link{min-height:36px!important;padding:8px 0!important}
 #message-list .message-meta strong{display:inline-flex;align-items:center;min-height:24px}

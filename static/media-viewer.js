@@ -37,8 +37,15 @@ export function attachmentMedia(a,{resolve,download,makeVideo=v=>v}){
   else{node.className='attachment-preview';node.alt=a.name;node.loading='lazy';node.decoding='async';node.width=480;node.height=320;node.tabIndex=0;node.setAttribute('role','button');node.title='Clique para ampliar';}
   // URL assinada; se falhar, usa o mesmo download autenticado do botão de baixar.
   const version=mediaSession,current=()=>version===mediaSession&&node.isConnected;
-  const ready=Promise.resolve().then(()=>current()?resolve(a):null).catch(()=>current()?download(a,true):null).then(u=>{if(!u||!current())return null;node.src=u;return u;}).catch(()=>{node.remove();return null;});
-  if(!video){const open=e=>{e?.preventDefault();ready.then(u=>{if(u&&current())openMediaViewer({url:u,name:a.name,kind:'image',onDownload:()=>download(a)});});};
+  // Remover o node em silêncio fazia a linha inteira sumir: o wrap colapsa a 0x0 e sobram só os
+  // botões "⋯". Deixar a <img> quebrada no lugar dá o outro extremo — um box do tamanho do texto
+  // alternativo, diferente a cada nome. O aviso fixo é o meio-termo visível e estável.
+  const fail=()=>{if(!node.isConnected)return;const note=document.createElement('div');
+    note.className='attachment-missing';note.textContent=(video?'Vídeo ':'Imagem ')+'não carregou · '+(a.name||'arquivo');
+    node.replaceWith(note);};
+  const ready=Promise.resolve().then(()=>current()?resolve(a):null).catch(()=>current()?download(a,true):null).then(u=>{if(!current())return null;if(!u){fail();return null;}node.src=u;return u;}).catch(()=>{fail();return null;});
+  if(!video){node.addEventListener('error',fail);
+    const open=e=>{e?.preventDefault();ready.then(u=>{if(u&&current())openMediaViewer({url:u,name:a.name,kind:'image',onDownload:()=>download(a)});});};
     node.addEventListener('click',open);node.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')open(e);});}
   return node;
 }
